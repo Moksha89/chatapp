@@ -75,6 +75,8 @@ export default function ChatPage() {
         } else if (data?.type === "read" && data.conversation_id === activeConv) {
           setMessages(prev => prev.map(m => ({ ...m, seen: true, delivered: m.delivered || true })));
           setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, unread_count: 0 } : c));
+        } else if (data?.type === "message-updated" && data.conversation_id === activeConv) {
+          setMessages(prev => prev.map(m => m.id === data.message_id ? { ...m, deleted_for_everyone: !!data.deleted_for_everyone } : m));
         }
       } catch {}
     };

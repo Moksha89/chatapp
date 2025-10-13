@@ -548,9 +548,17 @@ def act_on_message(message_id: int, payload: MessageAction, db: Session = Depend
     if payload.delete_for_me:
         if not db.query(MessageHide).filter_by(user_id=user.id, message_id=message_id).first():
             db.add(MessageHide(user_id=user.id, message_id=message_id))
+    broadcast_updated = False
     if payload.delete_for_everyone:
         if m.sender_id != user.id:
             raise HTTPException(status_code=403, detail="Only sender can delete for everyone")
         m.deleted_for_everyone = True
+        broadcast_updated = True
     db.commit()
+    if broadcast_updated:
+        try:
+            import asyncio as _asyncio
+            _asyncio.create_task(send_to_conversation(str(m.conversation_id), {"type": "message-updated", "conversation_id": m.conversation_id, "message_id": m.id, "deleted_for_everyone": True}))
+        except Exception:
+            pass
     return {"ok": True}
