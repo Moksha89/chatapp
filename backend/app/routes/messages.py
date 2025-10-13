@@ -227,6 +227,21 @@ def global_search(q: str, db: Session = Depends(get_db), user: User = Depends(ge
         )
         for m in msgs if m.id not in hidden_ids
     ]
+@router.get("/labels", response_model=List[str])
+def get_labels(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    conv_ids = [cid for (cid,) in db.query(ConversationParticipant.conversation_id).filter_by(user_id=user.id).all()]
+    if not conv_ids:
+        return []
+    metas = db.query(ConversationMeta).filter(ConversationMeta.conversation_id.in_(conv_ids), ConversationMeta.user_id == user.id).all()
+    labels: List[str] = []
+    for m in metas:
+        if m.labels:
+            for l in m.labels.split(","):
+                l2 = l.strip()
+                if l2 and l2 not in labels:
+                    labels.append(l2)
+    return labels
+
 
 
 
