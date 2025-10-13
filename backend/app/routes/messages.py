@@ -275,6 +275,17 @@ def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: 
     except Exception:
         pass
 
+    return MessageOut(
+        id=msg.id,
+        conversation_id=msg.conversation_id,
+        sender_id=msg.sender_id,
+        body=msg.body,
+        attachment_url=msg.attachment_url,
+        attachment_mime=msg.attachment_mime,
+        reply_to_id=msg.reply_to_id,
+        deleted_for_everyone=bool(msg.deleted_for_everyone),
+    )
+
 @router.patch("/conversations/{conversation_id}", response_model=ConversationOut)
 def update_conversation(conversation_id: int, payload: ConversationMetaUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     member = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
