@@ -47,6 +47,136 @@ def upload_attachment(file: UploadFile = File(...), user: User = Depends(get_cur
         f.write(file.file.read())
     url = f"/static/uploads/{file.filename}"
     return {"url": url, "mime": file.content_type or "application/octet-stream", "size": os.path.getsize(dest_path)}
+from pydantic import BaseModel
+class ConversationCreate(BaseModel):
+    type: str = "direct"
+    title: str | None = None
+    participant_ids: List[int]
+
+class ParticipantUpdate(BaseModel):
+    user_id: int
+    role: Optional[str] = None
+
+@router.post("/conversations", response_model=ConversationOut)
+def create_conversation(payload: ConversationCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    if not payload.participant_ids:
+        raise HTTPException(status_code=400, detail="participant_ids required")
+    ids = list({*payload.participant_ids, user.id})
+    conv = Conversation()
+    conv.type = payload.type or "direct"
+    conv.title = payload.title
+    db.add(conv)
+    db.flush()
+    for uid in ids:
+        role = "admin" if uid == user.id and conv.type in ("group","broadcast") else "member"
+        db.add(ConversationParticipant(conversation_id=conv.id, user_id=uid, role=role))
+    db.commit()
+    db.refresh(conv)
+    last_msg = None
+    unread = 0
+    others = (
+        db.query(User)
+        .join(ConversationParticipant, ConversationParticipant.user_id == User.id)
+        .filter(ConversationParticipant.conversation_id == conv.id, User.id != user.id)
+        .all()
+    )
+    title = conv.title or ((others[0].name or others[0].email) if len(others)==1 else (f"Group • {len(others)} participants" if len(others)>1 else f"Conversation {conv.id}"))
+    meta = db.query(ConversationMeta).filter_by(conversation_id=conv.id, user_id=user.id).first()
+    labels_list = []
+    if meta and meta.labels:
+        try:
+            labels_list = [x for x in meta.labels.split(",") if x]
+        except Exception:
+            labels_list = []
+    return ConversationOut(
+        id=conv.id,
+        title=title,
+        last_message=(last_msg.body if last_msg else None),
+        unread_count=int(unread),
+        pinned=bool(meta.pinned) if meta else False,
+        starred=bool(meta.starred) if meta else False,
+        labels=labels_list,
+    )
+
+@router.patch("/conversations/{conversation_id}/title", response_model=ConversationOut)
+def update_conversation_title(conversation_id: int, title: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    member = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a participant")
+    if conv.type in ("group","broadcast"):
+        me = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+        if not me or me.role != "admin":
+            raise HTTPException(status_code=403, detail="Admin only")
+    conv.title = title
+    db.commit()
+    last_msg = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+    unread = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id, Message.sender_id != user.id, Message.seen == False)
+        .count()
+    )
+    meta = db.query(ConversationMeta).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+    labels_list = []
+    if meta and meta.labels:
+        try:
+            labels_list = [x for x in meta.labels.split(",") if x]
+        except Exception:
+            labels_list = []
+    title_out = conv.title or f"Conversation {conversation_id}"
+    return ConversationOut(
+        id=conversation_id,
+        title=title_out,
+        last_message=(last_msg.body if last_msg else None),
+        unread_count=int(unread),
+        pinned=bool(meta.pinned) if meta else False,
+        starred=bool(meta.starred) if meta else False,
+        labels=labels_list,
+    )
+
+@router.post("/conversations/{conversation_id}/participants")
+def add_participant(conversation_id: int, payload: ParticipantUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    me = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+    if not me:
+        raise HTTPException(status_code=403, detail="Not a participant")
+    if conv.type in ("group","broadcast") and me.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    exists = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=payload.user_id).first()
+    if exists:
+        if payload.role:
+            exists.role = payload.role
+            db.commit()
+        return {"ok": True}
+    db.add(ConversationParticipant(conversation_id=conversation_id, user_id=payload.user_id, role=payload.role or "member"))
+    db.commit()
+    return {"ok": True}
+
+@router.delete("/conversations/{conversation_id}/participants/{user_id}")
+def remove_participant(conversation_id: int, user_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    me = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+    if not me:
+        raise HTTPException(status_code=403, detail="Not a participant")
+    if conv.type in ("group","broadcast") and me.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    target = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user_id).first()
+    if target:
+        db.delete(target)
+        db.commit()
+    return {"ok": True}
+
 
 @router.get("/conversations", response_model=List[ConversationOut])
 def list_conversations(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
@@ -78,13 +208,15 @@ def list_conversations(db: Session = Depends(get_db), user: User = Depends(get_c
             .filter(ConversationParticipant.conversation_id == cid, User.id != user.id)
             .all()
         )
-        if len(others) == 1:
+        if hasattr('conv','title'):
+            pass
+        if len(others) == 1 and not locals().get('title'):
             o = others[0]
             title = o.name or o.email
-        elif len(others) > 1:
+        elif len(others) > 1 and not locals().get('title'):
             title = f"Group • {len(others)} participants"
         else:
-            title = f"Conversation {cid}"
+            title = locals().get('title') or f"Conversation {cid}"
         meta = db.query(ConversationMeta).filter_by(conversation_id=cid, user_id=user.id).first()
         labels_list = []
         if meta and meta.labels:
