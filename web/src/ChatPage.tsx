@@ -93,6 +93,8 @@ export default function ChatPage() {
       }, store.token);
       await loadMessages(activeConv);
     } catch {}
+  }
+
   async function showStarred() {
     setShowStarredOnly(true);
     const starred = await getJson(`/api/starred`, store.token).catch(() => []);
@@ -101,6 +103,8 @@ export default function ChatPage() {
   function hideStarred() {
     setShowStarredOnly(false);
     if (activeConv != null) loadMessages(activeConv);
+}
+
   async function doSearch() {
     if (showStarredOnly) {
       setShowStarredOnly(false);
@@ -111,10 +115,6 @@ export default function ChatPage() {
     } else if (activeConv != null) {
       await loadMessages(activeConv);
     }
-  }
-
-  }
-
   }
 
 
