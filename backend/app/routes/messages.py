@@ -11,8 +11,8 @@ from sqlalchemy import func
 from typing import List, Optional
 import asyncio
 from ..db import get_db
-from ..models import Conversation, ConversationParticipant, ConversationMeta, Message, User
-from ..schemas import MessageOut, MessageCreate, ConversationOut, ConversationMetaUpdate
+from ..models import Conversation, ConversationParticipant, ConversationMeta, Message, User, MessageStar, MessageHide
+from ..schemas import MessageOut, MessageCreate, ConversationOut, ConversationMetaUpdate, MessageAction
 from ..auth import get_current_user
 from ..ws import send_to_conversation
 
@@ -106,7 +106,9 @@ def list_messages(conversation_id: int, db: Session = Depends(get_db), user: Use
     member = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
     if not member:
         raise HTTPException(status_code=403, detail="Not a participant")
-    msgs = db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.id.asc()).all()
+    msgs = db.query(Message).filter(Message.conversation_id == conversation_id, Message.deleted_for_everyone == False).order_by(Message.id.asc()).all()
+    hidden_ids = {mh.message_id for mh in db.query(MessageHide).filter_by(user_id=user.id).all()}
+
     db.query(Message).filter(
         Message.conversation_id == conversation_id,
         Message.sender_id != user.id,
@@ -121,8 +123,10 @@ def list_messages(conversation_id: int, db: Session = Depends(get_db), user: Use
             body=m.body,
             attachment_url=getattr(m, "attachment_url", None),
             attachment_mime=getattr(m, "attachment_mime", None),
+            reply_to_id=getattr(m, "reply_to_id", None),
+            deleted_for_everyone=bool(getattr(m, "deleted_for_everyone", False)),
         )
-        for m in msgs
+        for m in msgs if m.id not in hidden_ids
     ]
 
 @router.post("/messages", response_model=MessageOut)
@@ -147,6 +151,7 @@ def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: 
         body=payload.body or "",
         attachment_url=payload.attachment_url,
         attachment_mime=payload.attachment_mime,
+        reply_to_id=payload.reply_to_id,
     )
     db.add(msg)
     db.commit()
@@ -228,3 +233,26 @@ def update_conversation(conversation_id: int, payload: ConversationMetaUpdate, d
         starred=bool(meta.starred) if meta else False,
         labels=labels_list,
     )
+@router.patch("/messages/{message_id}")
+def act_on_message(message_id: int, payload: MessageAction, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    m = db.query(Message).filter(Message.id == message_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Message not found")
+    member = db.query(ConversationParticipant).filter_by(conversation_id=m.conversation_id, user_id=user.id).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a participant")
+    if payload.star is not None:
+        existing = db.query(MessageStar).filter_by(user_id=user.id, message_id=message_id).first()
+        if payload.star and not existing:
+            db.add(MessageStar(user_id=user.id, message_id=message_id))
+        if payload.star is False and existing:
+            db.delete(existing)
+    if payload.delete_for_me:
+        if not db.query(MessageHide).filter_by(user_id=user.id, message_id=message_id).first():
+            db.add(MessageHide(user_id=user.id, message_id=message_id))
+    if payload.delete_for_everyone:
+        if m.sender_id != user.id:
+            raise HTTPException(status_code=403, detail="Only sender can delete for everyone")
+        m.deleted_for_everyone = True
+    db.commit()
+    return {"ok": True}

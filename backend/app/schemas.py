@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -16,13 +16,11 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
-from typing import List, Optional
-from pydantic import BaseModel
 
 class ConversationMetaUpdate(BaseModel):
     pinned: Optional[bool] = None
     starred: Optional[bool] = None
-    labels: Optional[list[str]] = None
+    labels: Optional[List[str]] = None
 
 class ConversationOut(BaseModel):
     id: int
@@ -31,7 +29,7 @@ class ConversationOut(BaseModel):
     unread_count: int = 0
     pinned: Optional[bool] = False
     starred: Optional[bool] = False
-    labels: Optional[list[str]] = None
+    labels: Optional[List[str]] = None
     class Config:
         from_attributes = True
 
@@ -41,6 +39,7 @@ class MessageCreate(BaseModel):
     to_user_id: Optional[int] = None
     attachment_url: Optional[str] = None
     attachment_mime: Optional[str] = None
+    reply_to_id: Optional[int] = None
 
 class MessageOut(BaseModel):
     id: int
@@ -49,5 +48,12 @@ class MessageOut(BaseModel):
     body: str
     attachment_url: Optional[str] = None
     attachment_mime: Optional[str] = None
+    reply_to_id: Optional[int] = None
+    deleted_for_everyone: Optional[bool] = False
     class Config:
         from_attributes = True
+
+class MessageAction(BaseModel):
+    star: Optional[bool] = None
+    delete_for_me: Optional[bool] = None
+    delete_for_everyone: Optional[bool] = None

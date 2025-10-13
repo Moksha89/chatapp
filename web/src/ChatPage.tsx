@@ -4,7 +4,7 @@ import { store } from "./store";
 import CallPanel from "./CallPanel";
 
 type Conversation = { id: number; title: string; last_message?: string | null; unread_count: number; pinned?: boolean; starred?: boolean; labels?: string[] };
-type Message = { id: number; conversation_id: number; sender_id: number; body: string; created_at?: string; attachment_url?: string | null; attachment_mime?: string | null };
+type Message = { id: number; conversation_id: number; sender_id: number; body: string; created_at?: string; attachment_url?: string | null; attachment_mime?: string | null; reply_to_id?: number | null; deleted_for_everyone?: boolean };
 
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -284,24 +284,50 @@ export default function ChatPage() {
             <div className="subtitle">Select a conversation</div>
           ) : (
             (showStarredOnly ? messages.filter(() => false) : messages).map(m => (
-              <div key={m.id} className={`msg ${m.sender_id % 2 === 0 ? "out" : "in"}`} style={{ position: "relative" }}>
+              <div
+                key={m.id}
+                className={`msg ${m.sender_id % 2 === 0 ? "out" : "in"}`}
+                style={{ position: "relative" }}
+                onContextMenu={async (e) => {
+                  e.preventDefault();
+                  const action = window.prompt("Action: reply | star | unstar | delme | deleveryone");
+                  if (!action) return;
+                  try {
+                    if (action === "star") {
+                      await patchJson(`/api/messages/${m.id}`, { star: true }, store.token);
+                    } else if (action === "unstar") {
+                      await patchJson(`/api/messages/${m.id}`, { star: false }, store.token);
+                    } else if (action === "delme") {
+                      await patchJson(`/api/messages/${m.id}`, { delete_for_me: true }, store.token);
+                    } else if (action === "deleveryone") {
+                      if (window.confirm("Delete for everyone?")) {
+                        await patchJson(`/api/messages/${m.id}`, { delete_for_everyone: true }, store.token);
+                      }
+                    } else if (action === "reply") {
+                      const text = window.prompt("Reply text:");
+                      if (text && activeConv != null) {
+                        await postJson("/api/messages", { conversation_id: activeConv, body: text, reply_to_id: m.id }, store.token);
+                      }
+                    }
+                    if (activeConv != null) loadMessages(activeConv);
+                  } catch {}
+                }}
+              >
                 <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  {m.attachment_url ? (
+                  {m.deleted_for_everyone ? (
+                    <em>Message deleted</em>
+                  ) : m.attachment_url ? (
                     m.attachment_mime && m.attachment_mime.startsWith("image/") ? (
                       <img src={m.attachment_url} alt="attachment" style={{ maxWidth: 240, borderRadius: 8 }} />
                     ) : (
                       <a href={m.attachment_url} target="_blank" rel="noreferrer">Download attachment</a>
                     )
                   ) : (
-                    <span>{m.body}</span>
+                    <span>
+                      {m.reply_to_id ? <div className="reply-quote">Reply to #{m.reply_to_id}</div> : null}
+                      {m.body}
+                    </span>
                   )}
-                  <button className="icon-btn" title="More" onClick={(e)=>{e.stopPropagation(); setOpenMsgMenuId(openMsgMenuId===m.id?null:m.id);}}>⋮</button>
-                </div>
-                <div className={`msg-menu ${openMsgMenuId===m.id?"open":""}`} onClick={(e)=>e.stopPropagation()}>
-                  <button onClick={()=>replyTo(m.id)}>Reply</button>
-                  <button onClick={()=>forwardMsg(m.id)}>Forward</button>
-                  <button onClick={()=>toggleStarMessage(m.id)}>Star</button>
-                  <button onClick={()=>deleteForMe(m.id)}>Delete for me</button>
                 </div>
                 <div className="time">{m.created_at ? new Date(m.created_at).toLocaleTimeString() : ""}</div>
               </div>
