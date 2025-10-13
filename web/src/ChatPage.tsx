@@ -214,7 +214,7 @@ export default function ChatPage() {
         <div className="topbar">
           <div className="brand">Chats</div>
           <div className="top-actions">
-            <button className="icon-btn" title="New chat" onClick={() => newChatWith(2)}>+</button>
+            <button className="icon-btn" title="New chat" onClick={() => newChatWith(5)}>+</button>
             <button className="icon-btn" title="Menu">⋮</button>
           </div>
         </div>
