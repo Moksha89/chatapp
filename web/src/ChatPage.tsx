@@ -10,6 +10,8 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [openMsgMenuId, setOpenMsgMenuId] = useState<number | null>(null);
+  const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [body, setBody] = useState("");
   const [typing, setTyping] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
@@ -101,6 +103,21 @@ export default function ChatPage() {
     setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, labels: Array.from(new Set([...(c.labels || []), label])) } : c));
     setLabelPickerOpen(false);
   }
+  function toggleStarMessage(id: number) {
+    setMessages(prev => prev.map(m => (m.id === id ? ({ ...m, body: m.body }) : m)));
+    setOpenMsgMenuId(null);
+  }
+  function deleteForMe(id: number) {
+    setMessages(prev => prev.filter(m => m.id !== id));
+    setOpenMsgMenuId(null);
+  }
+  function replyTo(id: number) {
+    setOpenMsgMenuId(null);
+  }
+  function forwardMsg(id: number) {
+    setOpenMsgMenuId(null);
+  }
+
   function removeLabelFromActive(label: string) {
     if (activeConv == null) return;
     setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, labels: (c.labels || []).filter(l => l !== label) } : c));
@@ -178,6 +195,8 @@ export default function ChatPage() {
             ) : null}
           </div>
           <div className="chat-actions">
+            <button className="icon-btn" title="Search" onClick={() => setShowStarredOnly(false)}>🔎</button>
+            <button className="icon-btn" title="Starred messages" onClick={() => setShowStarredOnly(v => !v)}>⭐</button>
             <button className="icon-btn" title="Audio call">📞</button>
             <button className="icon-btn" title="Video call">🎥</button>
             <button className="icon-btn" title="Screen share">🖥️</button>
@@ -207,9 +226,18 @@ export default function ChatPage() {
           {activeConv == null ? (
             <div className="subtitle">Select a conversation</div>
           ) : (
-            messages.map(m => (
-              <div key={m.id} className={`msg ${m.sender_id % 2 === 0 ? "out" : "in"}`}>
-                <div>{m.body}</div>
+            (showStarredOnly ? messages.filter(() => false) : messages).map(m => (
+              <div key={m.id} className={`msg ${m.sender_id % 2 === 0 ? "out" : "in"}`} style={{ position: "relative" }}>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span>{m.body}</span>
+                  <button className="icon-btn" title="More" onClick={(e)=>{e.stopPropagation(); setOpenMsgMenuId(openMsgMenuId===m.id?null:m.id);}}>⋮</button>
+                </div>
+                <div className={`msg-menu ${openMsgMenuId===m.id?"open":""}`} onClick={(e)=>e.stopPropagation()}>
+                  <button onClick={()=>replyTo(m.id)}>Reply</button>
+                  <button onClick={()=>forwardMsg(m.id)}>Forward</button>
+                  <button onClick={()=>toggleStarMessage(m.id)}>Star</button>
+                  <button onClick={()=>deleteForMe(m.id)}>Delete for me</button>
+                </div>
                 <div className="time">{m.created_at ? new Date(m.created_at).toLocaleTimeString() : ""}</div>
               </div>
             ))

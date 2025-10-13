@@ -30,6 +30,11 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 syst
   flex-direction: column;
   background: var(--panel);
   border-right: 1px solid var(--border);
+.msg-menu{position:absolute; right:-6px; top:28px; background:var(--panel-light); border:1px solid var(--border); border-radius:8px; min-width:160px; z-index:20; display:none}
+.msg-menu.open{display:block}
+.msg-menu button{width:100%; text-align:left; padding:8px 12px; background:transparent; border:0; color:var(--text); cursor:pointer}
+.msg-menu button:hover{background:var(--panel-hover)}
+
 .label-chip{background:var(--panel-light);border:1px solid var(--border);color:var(--text);padding:2px 6px;border-radius:6px;font-size:11px}
 .labels{display:flex;gap:6px;flex-wrap:wrap}
 .label-picker{position:relative}
