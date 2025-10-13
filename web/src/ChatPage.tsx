@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { getJson, postJson, patchJson } from "./api";
+import { getJson, postJson, patchJson, uploadFile } from "./api";
 import { store } from "./store";
 import CallPanel from "./CallPanel";
 
 type Conversation = { id: number; title: string; last_message?: string | null; unread_count: number; pinned?: boolean; starred?: boolean; labels?: string[] };
-type Message = { id: number; conversation_id: number; sender_id: number; body: string; created_at?: string };
+type Message = { id: number; conversation_id: number; sender_id: number; body: string; created_at?: string; attachment_url?: string | null; attachment_mime?: string | null };
 
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -20,6 +20,8 @@ export default function ChatPage() {
 
   const [peerTyping, setPeerTyping] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const typingTimer = useRef<number | null>(null);
 
   async function loadConversations() {
@@ -77,6 +79,20 @@ export default function ChatPage() {
       sendTyping("typing-stop");
     }, 1200);
   }
+  async function sendAttachment(file: File) {
+    if (activeConv == null) return;
+    try {
+      const up = await uploadFile("/api/upload", file, store.token);
+      await postJson("/api/messages", {
+        conversation_id: activeConv,
+        body: "",
+        attachment_url: up.url,
+        attachment_mime: up.mime,
+      }, store.token);
+      await loadMessages(activeConv);
+    } catch {}
+  }
+
 
   async function send() {
     if (!body.trim() || activeConv == null) return;
@@ -270,7 +286,15 @@ export default function ChatPage() {
             (showStarredOnly ? messages.filter(() => false) : messages).map(m => (
               <div key={m.id} className={`msg ${m.sender_id % 2 === 0 ? "out" : "in"}`} style={{ position: "relative" }}>
                 <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span>{m.body}</span>
+                  {m.attachment_url ? (
+                    m.attachment_mime && m.attachment_mime.startsWith("image/") ? (
+                      <img src={m.attachment_url} alt="attachment" style={{ maxWidth: 240, borderRadius: 8 }} />
+                    ) : (
+                      <a href={m.attachment_url} target="_blank" rel="noreferrer">Download attachment</a>
+                    )
+                  ) : (
+                    <span>{m.body}</span>
+                  )}
                   <button className="icon-btn" title="More" onClick={(e)=>{e.stopPropagation(); setOpenMsgMenuId(openMsgMenuId===m.id?null:m.id);}}>⋮</button>
                 </div>
                 <div className={`msg-menu ${openMsgMenuId===m.id?"open":""}`} onClick={(e)=>e.stopPropagation()}>
@@ -288,7 +312,8 @@ export default function ChatPage() {
         <div className="composer">
           <div className="callbar">
             <button className="icon-btn" title="Emoji">😊</button>
-            <button className="icon-btn" title="Attach">📎</button>
+            <input ref={fileInputRef} type="file" style={{ display: "none" }} onChange={(e)=>{ const f = e.target.files?.[0]; if (f) sendAttachment(f); e.currentTarget.value=""; }} />
+            <button className="icon-btn" title="Attach" onClick={()=>fileInputRef.current?.click()}>📎</button>
             <button className="icon-btn" title="Voice note">🎤</button>
           </div>
           <div className="input-wrap">

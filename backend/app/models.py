@@ -37,6 +37,14 @@ class Message(Base):
     conversation_id = Column(Integer, ForeignKey("conversations.id"))
     sender_id = Column(Integer, ForeignKey("users.id"))
     body = Column(Text, nullable=False)
+    attachment_url = Column(String(512), nullable=True)
+    attachment_mime = Column(String(128), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     delivered = Column(Boolean, default=False)
     seen = Column(Boolean, default=False)
+class Attachment(Base):
+    __tablename__ = "attachments"
+    id = Column(Integer, primary_key=True)
+    url = Column(String(512), nullable=False)
+    mime = Column(String(128), nullable=False)
+    size = Column(Integer, default=0)

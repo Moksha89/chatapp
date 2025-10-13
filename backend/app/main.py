@@ -18,6 +18,9 @@ from .db import Base, engine
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
+from fastapi.staticfiles import StaticFiles
+app.mount("/static/uploads", StaticFiles(directory="/opt/akirah/uploads"), name="uploads")
+
 
 @app.get("/api/health")
 def health():

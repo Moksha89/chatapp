@@ -36,14 +36,18 @@ class ConversationOut(BaseModel):
         from_attributes = True
 
 class MessageCreate(BaseModel):
-    body: str
+    body: str = ""
     conversation_id: Optional[int] = None
     to_user_id: Optional[int] = None
+    attachment_url: Optional[str] = None
+    attachment_mime: Optional[str] = None
 
 class MessageOut(BaseModel):
     id: int
     conversation_id: int
     sender_id: int
     body: str
+    attachment_url: Optional[str] = None
+    attachment_mime: Optional[str] = None
     class Config:
         from_attributes = True

@@ -1,3 +1,6 @@
+from fastapi import UploadFile, File
+import os
+
 from fastapi import BackgroundTasks
 import asyncio
 from ..ws import send_to_conversation
@@ -32,6 +35,16 @@ def get_or_create_conversation(db: Session, user_ids: List[int]) -> Conversation
             db.add(ConversationParticipant(conversation_id=conv.id, user_id=uid))
         db.commit()
         db.refresh(conv)
+@router.post("/upload")
+def upload_attachment(file: UploadFile = File(...), user: User = Depends(get_current_user)):
+    uploads_dir = "/opt/akirah/uploads"
+    os.makedirs(uploads_dir, exist_ok=True)
+    dest_path = os.path.join(uploads_dir, file.filename)
+    with open(dest_path, "wb") as f:
+        f.write(file.file.read())
+    url = f"/static/uploads/{file.filename}"
+    return {"url": url, "mime": file.content_type or "application/octet-stream", "size": os.path.getsize(dest_path)}
+
     return conv
 
 @router.get("/conversations", response_model=List[ConversationOut])
@@ -101,7 +114,17 @@ def list_messages(conversation_id: int, db: Session = Depends(get_db), user: Use
         Message.seen == False
     ).update({Message.seen: True}, synchronize_session=False)
     db.commit()
-    return msgs
+    return [
+        MessageOut(
+            id=m.id,
+            conversation_id=m.conversation_id,
+            sender_id=m.sender_id,
+            body=m.body,
+            attachment_url=getattr(m, "attachment_url", None),
+            attachment_mime=getattr(m, "attachment_mime", None),
+        )
+        for m in msgs
+    ]
 
 @router.post("/messages", response_model=MessageOut)
 def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
@@ -119,15 +142,34 @@ def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: 
         if not member:
             raise HTTPException(status_code=403, detail="Not a participant")
 
-    msg = Message(conversation_id=conversation_id, sender_id=user.id, body=payload.body)
+    msg = Message(
+        conversation_id=conversation_id,
+        sender_id=user.id,
+        body=payload.body or "",
+        attachment_url=payload.attachment_url,
+        attachment_mime=payload.attachment_mime,
+    )
     db.add(msg)
     db.commit()
     db.refresh(msg)
 
     try:
-        background_tasks.add_task(asyncio.run, send_to_conversation(str(conversation_id), {"from": user.email if hasattr(user, "email") else str(user.id), "type": "text", "body": payload.body}))
+        background_tasks.add_task(
+            asyncio.run,
+            send_to_conversation(
+                str(conversation_id),
+                {
+                    "from": user.email if hasattr(user, "email") else str(user.id),
+                    "type": "message",
+                    "body": payload.body,
+                    "attachment_url": payload.attachment_url,
+                    "attachment_mime": payload.attachment_mime,
+                },
+            ),
+        )
     except Exception:
         pass
+
 @router.patch("/conversations/{conversation_id}", response_model=ConversationOut)
 def update_conversation(conversation_id: int, payload: ConversationMetaUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     member = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()

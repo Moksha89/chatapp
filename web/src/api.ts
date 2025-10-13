@@ -24,6 +24,20 @@ export async function postForm(path: string, form: Record<string, string>) {
   return r.json();
 }
 
+export async function uploadFile(path: string, file: File, token: string) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const r = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: fd,
+  });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}
+
 export async function getJson(path: string, token: string) {
   const r = await fetch(`${API_URL}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
