@@ -275,6 +275,11 @@ def mark_read(conversation_id: int, db: Session = Depends(get_db), user: User = 
         Message.seen == False
     ).update({Message.seen: True}, synchronize_session=False)
     db.commit()
+    try:
+        import asyncio as _asyncio
+        _asyncio.create_task(send_to_conversation(str(conversation_id), {"type": "read", "conversation_id": conversation_id}))
+    except Exception:
+        pass
     return {"ok": True}
 @router.post("/conversations/{conversation_id}/read")
 def mark_read_post(conversation_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
@@ -287,6 +292,11 @@ def mark_read_post(conversation_id: int, db: Session = Depends(get_db), user: Us
         Message.seen == False
     ).update({Message.seen: True}, synchronize_session=False)
     db.commit()
+    try:
+        import asyncio as _asyncio
+        _asyncio.create_task(send_to_conversation(str(conversation_id), {"type": "read", "conversation_id": conversation_id}))
+    except Exception:
+        pass
     return {"ok": True}
 
 @router.get("/starred", response_model=List[MessageOut])
@@ -426,6 +436,11 @@ def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: 
     msg.delivered = True
     db.commit()
     db.refresh(msg)
+
+    try:
+        asyncio.create_task(send_to_conversation(str(conversation_id), {"type": "delivered", "conversation_id": conversation_id, "message_id": msg.id}))
+    except Exception:
+        pass
 
     try:
         background_tasks.add_task(

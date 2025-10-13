@@ -70,6 +70,11 @@ export default function ChatPage() {
           setPeerTyping(true);
         } else if (data?.type === "typing-stop") {
           setPeerTyping(false);
+        } else if (data?.type === "delivered" && data.conversation_id === activeConv) {
+          setMessages(prev => prev.map(m => m.id === data.message_id ? { ...m, delivered: true } : m));
+        } else if (data?.type === "read" && data.conversation_id === activeConv) {
+          setMessages(prev => prev.map(m => ({ ...m, seen: true, delivered: m.delivered || true })));
+          setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, unread_count: 0 } : c));
         }
       } catch {}
     };
