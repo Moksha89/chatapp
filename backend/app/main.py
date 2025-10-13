@@ -13,11 +13,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from .db import Base, engine
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
+
 
 @app.get("/api/health")
 def health():
     return {"ok": True, "name": "Akirah"}
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+from .routes import messages
+app.include_router(messages.router, prefix="/api", tags=["messages"])
+
 app.include_router(link.router, prefix="/api/link", tags=["link"])
 app.include_router(ws_router)

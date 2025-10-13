@@ -16,3 +16,23 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+from typing import List, Optional
+from pydantic import BaseModel
+
+class ConversationOut(BaseModel):
+    id: int
+    class Config:
+        from_attributes = True
+
+class MessageCreate(BaseModel):
+    body: str
+    conversation_id: Optional[int] = None
+    to_user_id: Optional[int] = None
+
+class MessageOut(BaseModel):
+    id: int
+    conversation_id: int
+    sender_id: int
+    body: str
+    class Config:
+        from_attributes = True
