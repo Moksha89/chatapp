@@ -50,6 +50,8 @@ class MessageOut(BaseModel):
     attachment_mime: Optional[str] = None
     reply_to_id: Optional[int] = None
     deleted_for_everyone: Optional[bool] = False
+    delivered: Optional[bool] = False
+    seen: Optional[bool] = False
     class Config:
         from_attributes = True
 

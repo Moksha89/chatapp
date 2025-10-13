@@ -127,6 +127,8 @@ def list_messages(conversation_id: int, db: Session = Depends(get_db), user: Use
             attachment_mime=getattr(m, "attachment_mime", None),
             reply_to_id=getattr(m, "reply_to_id", None),
             deleted_for_everyone=bool(getattr(m, "deleted_for_everyone", False)),
+            delivered=bool(getattr(m, "delivered", False)),
+            seen=bool(getattr(m, "seen", False)),
         )
         for m in msgs if m.id not in hidden_ids
     ]
@@ -162,6 +164,8 @@ def get_starred(db: Session = Depends(get_db), user: User = Depends(get_current_
             attachment_mime=m.attachment_mime,
             reply_to_id=m.reply_to_id,
             deleted_for_everyone=bool(m.deleted_for_everyone),
+            delivered=bool(getattr(m, "delivered", False)),
+            seen=bool(getattr(m, "seen", False)),
         )
         for m in q if m.id not in hidden_ids
     ]
@@ -192,6 +196,8 @@ def search_in_conversation(conversation_id: int, q: str, db: Session = Depends(g
             attachment_mime=m.attachment_mime,
             reply_to_id=m.reply_to_id,
             deleted_for_everyone=bool(m.deleted_for_everyone),
+            delivered=bool(getattr(m, "delivered", False)),
+            seen=bool(getattr(m, "seen", False)),
         )
         for m in msgs if m.id not in hidden_ids
     ]
@@ -224,6 +230,8 @@ def global_search(q: str, db: Session = Depends(get_db), user: User = Depends(ge
             attachment_mime=m.attachment_mime,
             reply_to_id=m.reply_to_id,
             deleted_for_everyone=bool(m.deleted_for_everyone),
+            delivered=bool(getattr(m, "delivered", False)),
+            seen=bool(getattr(m, "seen", False)),
         )
         for m in msgs if m.id not in hidden_ids
     ]
@@ -270,6 +278,7 @@ def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: 
         reply_to_id=payload.reply_to_id,
     )
     db.add(msg)
+    msg.delivered = True
     db.commit()
     db.refresh(msg)
 
@@ -299,6 +308,8 @@ def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: 
         attachment_mime=msg.attachment_mime,
         reply_to_id=msg.reply_to_id,
         deleted_for_everyone=bool(msg.deleted_for_everyone),
+        delivered=bool(getattr(msg, "delivered", False)),
+        seen=bool(getattr(msg, "seen", False)),
     )
 
 @router.patch("/conversations/{conversation_id}", response_model=ConversationOut)

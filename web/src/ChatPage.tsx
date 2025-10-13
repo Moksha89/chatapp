@@ -4,7 +4,7 @@ import { store } from "./store";
 import CallPanel from "./CallPanel";
 
 type Conversation = { id: number; title: string; last_message?: string | null; unread_count: number; pinned?: boolean; starred?: boolean; labels?: string[] };
-type Message = { id: number; conversation_id: number; sender_id: number; body: string; created_at?: string; attachment_url?: string | null; attachment_mime?: string | null; reply_to_id?: number | null; deleted_for_everyone?: boolean };
+type Message = { id: number; conversation_id: number; sender_id: number; body: string; created_at?: string; attachment_url?: string | null; attachment_mime?: string | null; reply_to_id?: number | null; deleted_for_everyone?: boolean; delivered?: boolean; seen?: boolean };
 
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -355,6 +355,14 @@ export default function ChatPage() {
                       {m.body}
                     </span>
                   )}
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4, display: "flex", gap: 6, alignItems: "center", justifyContent: m.sender_id % 2 === 0 ? "flex-end" : "flex-start" }}>
+                  {m.sender_id % 2 === 0 ? (
+                    <span title={m.seen ? "Read" : m.delivered ? "Delivered" : "Sent"}>
+                      {m.seen ? "✅✅" : m.delivered ? "✅✅" : "✅"}
+                    </span>
+                  ) : null}
+                </div>
+
                 </div>
                 <div className="time">{m.created_at ? new Date(m.created_at).toLocaleTimeString() : ""}</div>
               </div>
