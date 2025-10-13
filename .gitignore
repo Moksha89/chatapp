@@ -1,0 +1,39 @@
+# General
+.DS_Store
+*.log
+.env
+.env.*
+venv/
+.dist/
+build/
+node_modules/
+dist/
+.gradle/
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.pyc
+.poetry/
+.mypy_cache/
+.pytest_cache/
+
+# Android
+android/.cxx/
+android/.gradle/
+android/local.properties
+android/app/build/
+android/build/
+
+# Web
+web/node_modules/
+web/dist/
+web/.vite/
+
+# Backend
+backend/.venv/
+backend/.mypy_cache/
+backend/.pytest_cache/
+backend/alembic/*.pyc
+backend/alembic/versions/*.pyc

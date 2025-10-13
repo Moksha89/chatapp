@@ -1,0 +1,23 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from .routes import auth, link
+from .config import settings
+from .ws import router as ws_router
+
+app = FastAPI(title="Akirah API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in settings.allowed_origins.split(",")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/api/health")
+def health():
+    return {"ok": True, "name": "Akirah"}
+
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(link.router, prefix="/api/link", tags=["link"])
+app.include_router(ws_router)
