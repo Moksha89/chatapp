@@ -17,6 +17,10 @@ export default function ChatPage() {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [labelPickerOpen, setLabelPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState<null | "group" | "broadcast">(null);
+  const [participantIdsInput, setParticipantIdsInput] = useState("");
+  const [groupTitle, setGroupTitle] = useState("");
+
 
   const [peerTyping, setPeerTyping] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -197,6 +201,20 @@ export default function ChatPage() {
   async function removeLabelFromActive(label: string) {
     if (activeConv == null) return;
     try {
+  async function createConversation(kind: "group" | "broadcast") {
+    const ids = participantIdsInput.split(",").map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n));
+    if (!ids.length) return;
+    const payload: any = { type: kind, title: groupTitle || null, participant_ids: ids };
+    try {
+      const conv = await postJson("/api/conversations", payload, store.token);
+      setShowCreateModal(null);
+      setParticipantIdsInput("");
+      setGroupTitle("");
+      await loadConversations();
+      if (conv?.id) setActiveConv(conv.id);
+    } catch {}
+  }
+
       const current = conversations.find(c => c.id === activeConv);
       const nextLabels = (current?.labels || []).filter(l => l !== label);
       const res = await patchJson(`/api/conversations/${activeConv}`, {
@@ -217,6 +235,14 @@ export default function ChatPage() {
           <div className="brand">Chats</div>
           <div className="top-actions">
             <button className="icon-btn" title="New chat" onClick={() => newChatWith(6)}>+</button>
+            <div className="dropdown" style={{ position: "relative" }}>
+              <button className="icon-btn" title="Menu" onClick={() => setMenuOpenId(menuOpenId ? null : -1)}>⋮</button>
+              <div className={`chatmenu ${menuOpenId === -1 ? "open" : ""}`} style={{ right: 12, top: 40 }}>
+                <button onClick={() => { setShowCreateModal("group"); setMenuOpenId(null); }}>Create Group</button>
+                <button onClick={() => { setShowCreateModal("broadcast"); setMenuOpenId(null); }}>Create Broadcast</button>
+              </div>
+            </div>
+
             <button className="icon-btn" title="Menu">⋮</button>
           </div>
         </div>
@@ -370,6 +396,22 @@ export default function ChatPage() {
               </div>
             ))
           )}
+        {showCreateModal && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "grid", placeItems: "center", zIndex: 50 }}>
+            <div style={{ width: 420, background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 8, padding: 16 }}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{showCreateModal === "group" ? "Create Group" : "Create Broadcast"}</div>
+              {showCreateModal === "group" && (
+                <input value={groupTitle} onChange={e => setGroupTitle(e.target.value)} placeholder="Group title (optional)" style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: 0, background: "var(--panel-light)", color: "var(--text)", marginBottom: 8 }} />
+              )}
+              <input value={participantIdsInput} onChange={e => setParticipantIdsInput(e.target.value)} placeholder="Participant user IDs, comma-separated (e.g., 2,3,4)" style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: 0, background: "var(--panel-light)", color: "var(--text)", marginBottom: 12 }} />
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button className="icon-btn" onClick={() => { setShowCreateModal(null); setParticipantIdsInput(\"\"); setGroupTitle(\"\"); }}>Cancel</button>
+                <button className="send-btn" onClick={() => createConversation(showCreateModal)}>{showCreateModal === "group" ? "Create Group" : "Create Broadcast"}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         </div>
 
         <div className="composer">
@@ -398,5 +440,6 @@ export default function ChatPage() {
         ) : null}
       </div>
     </div>
+
   );
 }
