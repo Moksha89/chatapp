@@ -3,7 +3,7 @@ import { getJson, postJson } from "./api";
 import { store } from "./store";
 import CallPanel from "./CallPanel";
 
-type Conversation = { id: number; title?: string };
+type Conversation = { id: number; title: string; last_message?: string | null; unread_count: number };
 type Message = { id: number; conversation_id: number; sender_id: number; body: string; created_at?: string };
 
 export default function ChatPage() {
@@ -80,12 +80,12 @@ export default function ChatPage() {
             <div key={c.id} className="chatitem" onClick={() => setActiveConv(c.id)}>
               <div className="avatar">{String(c.id).slice(-2).padStart(2, "0")}</div>
               <div>
-                <div className="title">{c.title || `Conversation ${c.id}`}</div>
-                <div className="subtitle">Last message preview…</div>
+                <div className="title">{c.title}</div>
+                <div className="subtitle">{c.last_message || "No messages yet"}</div>
               </div>
               <div style={{ display: "grid", justifyItems: "end", gap: 6 }}>
                 <div className="subtitle">now</div>
-                <span className="badge">2</span>
+                {c.unread_count > 0 ? <span className="badge">{c.unread_count}</span> : null}
               </div>
             </div>
           ))}

@@ -36,13 +36,48 @@ def get_or_create_conversation(db: Session, user_ids: List[int]) -> Conversation
 
 @router.get("/conversations", response_model=List[ConversationOut])
 def list_conversations(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    convs = (
-        db.query(Conversation)
+    conv_ids = (
+        db.query(Conversation.id)
         .join(ConversationParticipant)
         .filter(ConversationParticipant.user_id == user.id)
         .all()
     )
-    return convs
+    conv_ids = [c[0] for c in conv_ids]
+    results: List[ConversationOut] = []
+    if not conv_ids:
+        return results
+    for cid in conv_ids:
+        last_msg = (
+            db.query(Message)
+            .filter(Message.conversation_id == cid)
+            .order_by(Message.id.desc())
+            .first()
+        )
+        unread = (
+            db.query(Message)
+            .filter(Message.conversation_id == cid, Message.sender_id != user.id, Message.seen == False)
+            .count()
+        )
+        others = (
+            db.query(User)
+            .join(ConversationParticipant, ConversationParticipant.user_id == User.id)
+            .filter(ConversationParticipant.conversation_id == cid, User.id != user.id)
+            .all()
+        )
+        if len(others) == 1:
+            o = others[0]
+            title = o.name or o.email
+        elif len(others) > 1:
+            title = f"Group • {len(others)} participants"
+        else:
+            title = f"Conversation {cid}"
+        results.append(ConversationOut(
+            id=cid,
+            title=title,
+            last_message=(last_msg.body if last_msg else None),
+            unread_count=int(unread),
+        ))
+    return results
 
 @router.get("/conversations/{conversation_id}/messages", response_model=List[MessageOut])
 def list_messages(conversation_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
@@ -50,6 +85,12 @@ def list_messages(conversation_id: int, db: Session = Depends(get_db), user: Use
     if not member:
         raise HTTPException(status_code=403, detail="Not a participant")
     msgs = db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.id.asc()).all()
+    db.query(Message).filter(
+        Message.conversation_id == conversation_id,
+        Message.sender_id != user.id,
+        Message.seen == False
+    ).update({Message.seen: True}, synchronize_session=False)
+    db.commit()
     return msgs
 
 @router.post("/messages", response_model=MessageOut)

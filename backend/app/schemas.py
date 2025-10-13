@@ -21,6 +21,9 @@ from pydantic import BaseModel
 
 class ConversationOut(BaseModel):
     id: int
+    title: str
+    last_message: str | None = None
+    unread_count: int = 0
     class Config:
         from_attributes = True
 
