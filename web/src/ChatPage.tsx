@@ -358,9 +358,11 @@ export default function ChatPage() {
                       await patchJson(`/api/messages/${m.id}`, { star: false }, store.token);
                     } else if (action === "delme") {
                       await patchJson(`/api/messages/${m.id}`, { delete_for_me: true }, store.token);
+                      setMessages(prev => prev.filter(x => x.id !== m.id));
                     } else if (action === "deleveryone") {
                       if (window.confirm("Delete for everyone?")) {
                         await patchJson(`/api/messages/${m.id}`, { delete_for_everyone: true }, store.token);
+                        setMessages(prev => prev.map(x => x.id === m.id ? { ...x, deleted_for_everyone: true, body: "" } : x));
                       }
                     } else if (action === "reply") {
                       const text = window.prompt("Reply text:");
@@ -401,6 +403,29 @@ export default function ChatPage() {
                 </div>
                 <div className="time">{m.created_at ? new Date(m.created_at).toLocaleTimeString() : ""}</div>
               </div>
+{/*
+Render body or deleted stub + ticks
+*/}
+{m.deleted_for_everyone ? (
+  <div style={{ fontStyle: "italic", color: "var(--text-dim)" }}>Message deleted</div>
+) : (
+  <>
+    {m.attachment_url ? (
+      <div className="attachment">
+        {m.attachment_mime?.startsWith("image/") ? (
+          <img src={m.attachment_url} style={{ maxWidth: 260, borderRadius: 6 }} />
+        ) : (
+          <a href={m.attachment_url} target="_blank" rel="noreferrer">Attachment</a>
+        )}
+      </div>
+    ) : null}
+    {m.body ? <div className="body">{m.body}</div> : null}
+    <div style={{ position: "absolute", right: 8, bottom: 6, fontSize: 12, opacity: 0.7 }}>
+      {m.seen ? "✓✓" : m.delivered ? "✓" : ""}
+    </div>
+  </>
+)}
+
             ))
           )}
         {showCreateModal && (
