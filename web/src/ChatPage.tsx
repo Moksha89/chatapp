@@ -33,6 +33,8 @@ export default function ChatPage() {
   async function loadMessages(convId: number) {
     const msgs = await getJson(`/api/conversations/${convId}/messages`, store.token).catch(() => []);
     setMessages(msgs);
+    try { await patchJson(`/api/conversations/${convId}/read`, {}, store.token); } catch {}
+    await loadConversations();
   }
 
   useEffect(() => { loadConversations(); }, []);
