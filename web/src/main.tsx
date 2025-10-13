@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import LoginPage from "./LoginPage";
+import AuthLogin from "./AuthLogin";
 import ChatPage from "./ChatPage";
 import QrPage from "./QrPage";
 import { store } from "./store";
@@ -21,7 +21,7 @@ function App() {
         <a href="#" onClick={(e) => { e.preventDefault(); setRoute("qr"); }}>QR</a>
         <a href="#" onClick={(e) => { e.preventDefault(); store.clear(); setRoute("login"); }}>Logout</a>
       </div>
-      {route === "login" && <LoginPage onLoggedIn={() => setRoute("chat")} />}
+      {route === "login" && <AuthLogin onLoggedIn={() => setRoute("chat")} />}
       {route === "chat" && store.token && <ChatPage />}
       {route === "qr" && <QrPage />}
     </div>
