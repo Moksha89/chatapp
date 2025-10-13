@@ -81,9 +81,12 @@ export default function ChatPage() {
               <div className="avatar">{String(c.id).slice(-2).padStart(2, "0")}</div>
               <div>
                 <div className="title">{c.title || `Conversation ${c.id}`}</div>
-                <div className="subtitle">Tap to open chat</div>
+                <div className="subtitle">Last message preview…</div>
               </div>
-              <div className="subtitle">now</div>
+              <div style={{ display: "grid", justifyItems: "end", gap: 6 }}>
+                <div className="subtitle">now</div>
+                <span className="badge">2</span>
+              </div>
             </div>
           ))}
         </div>
@@ -99,6 +102,7 @@ export default function ChatPage() {
           <div className="chat-actions">
             <button className="icon-btn" title="Audio call">📞</button>
             <button className="icon-btn" title="Video call">🎥</button>
+            <button className="icon-btn" title="Screen share">🖥️</button>
             <button className="icon-btn" title="Info">ℹ️</button>
           </div>
         </div>
@@ -120,6 +124,7 @@ export default function ChatPage() {
           <div className="callbar">
             <button className="icon-btn" title="Emoji">😊</button>
             <button className="icon-btn" title="Attach">📎</button>
+            <button className="icon-btn" title="Voice note">🎤</button>
           </div>
           <div className="input-wrap">
             <input
