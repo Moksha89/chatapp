@@ -31,3 +31,16 @@ export async function getJson(path: string, token: string) {
   if (!r.ok) throw new Error(`${r.status}`);
   return r.json();
 }
+
+export async function patchJson(path: string, body: any, token: string) {
+  const r = await fetch(`${API_URL}${path}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { getJson, postJson } from "./api";
+import { getJson, postJson, patchJson } from "./api";
 import { store } from "./store";
 import CallPanel from "./CallPanel";
 
@@ -94,17 +94,44 @@ export default function ChatPage() {
     if (msg?.conversation_id) setActiveConv(msg.conversation_id);
   }
 
-  function togglePin(id: number) {
-    setConversations(prev => prev.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c));
+  async function togglePin(id: number) {
+    try {
+      const current = conversations.find(c => c.id === id);
+      const nextPinned = !current?.pinned;
+      const res = await patchJson(`/api/conversations/${id}`, {
+        pinned: nextPinned,
+        starred: current?.starred ?? false,
+        labels: current?.labels ?? [],
+      }, store.token);
+      setConversations(prev => prev.map(c => c.id === id ? { ...c, pinned: !!res.pinned, starred: !!res.starred, labels: res.labels || [], last_message: res.last_message, unread_count: res.unread_count } : c));
+    } catch {}
     setMenuOpenId(null);
   }
-  function toggleStar(id: number) {
-    setConversations(prev => prev.map(c => c.id === id ? { ...c, starred: !c.starred } : c));
+  async function toggleStar(id: number) {
+    try {
+      const current = conversations.find(c => c.id === id);
+      const nextStar = !current?.starred;
+      const res = await patchJson(`/api/conversations/${id}`, {
+        pinned: current?.pinned ?? false,
+        starred: nextStar,
+        labels: current?.labels ?? [],
+      }, store.token);
+      setConversations(prev => prev.map(c => c.id === id ? { ...c, pinned: !!res.pinned, starred: !!res.starred, labels: res.labels || [], last_message: res.last_message, unread_count: res.unread_count } : c));
+    } catch {}
     setMenuOpenId(null);
   }
-  function addLabelToActive(label: string) {
+  async function addLabelToActive(label: string) {
     if (activeConv == null) return;
-    setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, labels: Array.from(new Set([...(c.labels || []), label])) } : c));
+    try {
+      const current = conversations.find(c => c.id === activeConv);
+      const nextLabels = Array.from(new Set([...(current?.labels || []), label]));
+      const res = await patchJson(`/api/conversations/${activeConv}`, {
+        pinned: current?.pinned ?? false,
+        starred: current?.starred ?? false,
+        labels: nextLabels,
+      }, store.token);
+      setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, pinned: !!res.pinned, starred: !!res.starred, labels: res.labels || [], last_message: res.last_message, unread_count: res.unread_count } : c));
+    } catch {}
     setLabelPickerOpen(false);
   }
   function toggleStarMessage(id: number) {
@@ -122,9 +149,18 @@ export default function ChatPage() {
     setOpenMsgMenuId(null);
   }
 
-  function removeLabelFromActive(label: string) {
+  async function removeLabelFromActive(label: string) {
     if (activeConv == null) return;
-    setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, labels: (c.labels || []).filter(l => l !== label) } : c));
+    try {
+      const current = conversations.find(c => c.id === activeConv);
+      const nextLabels = (current?.labels || []).filter(l => l !== label);
+      const res = await patchJson(`/api/conversations/${activeConv}`, {
+        pinned: current?.pinned ?? false,
+        starred: current?.starred ?? false,
+        labels: nextLabels,
+      }, store.token);
+      setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, pinned: !!res.pinned, starred: !!res.starred, labels: res.labels || [], last_message: res.last_message, unread_count: res.unread_count } : c));
+    } catch {}
   }
 
 
