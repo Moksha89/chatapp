@@ -37,3 +37,4 @@ backend/.mypy_cache/
 backend/.pytest_cache/
 backend/alembic/*.pyc
 backend/alembic/versions/*.pyc
+web/src/LoginPage.tsx
