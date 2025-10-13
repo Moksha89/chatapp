@@ -4,6 +4,8 @@ import AuthLogin from "./AuthLogin";
 import ChatPage from "./ChatPage";
 import QrPage from "./QrPage";
 import { store } from "./store";
+import "./styles.css";
+
 
 function App() {
   const [route, setRoute] = useState<"login" | "chat" | "qr">("login");

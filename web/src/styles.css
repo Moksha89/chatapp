@@ -1,0 +1,114 @@
+:root {
+  --bg: #0b141a;
+  --panel: #111b21;
+  --panel-light: #202c33;
+  --panel-hover: #2a3942;
+  --text: #e9edef;
+  --text-dim: #8696a0;
+  --accent: #00a884;
+  --accent-2: #27c2a0;
+  --bubble-out: #005c4b;
+  --bubble-in: #1f2c33;
+  --border: #1f2c33;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+
+.app {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+.topbar {
+  height: 60px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.brand { font-weight: 700; letter-spacing: .3px; }
+.top-actions { margin-left: auto; display: flex; gap: 8px; }
+.icon-btn {
+  width: 36px; height: 36px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text); cursor: pointer;
+}
+.icon-btn:hover { background: var(--panel-hover); }
+
+.search {
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+}
+.search input {
+  width: 100%; padding: 10px 12px; border-radius: 8px; border: 0;
+  background: var(--panel-light); color: var(--text); outline: none;
+}
+
+.chatlist { overflow: auto; }
+.chatitem {
+  display: grid; grid-template-columns: 48px 1fr auto; align-items: center;
+  gap: 12px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border);
+}
+.chatitem:hover { background: var(--panel-hover); }
+.avatar {
+  width: 48px; height: 48px; border-radius: 50%; background: #2b3942; display: grid; place-items: center; color: var(--text-dim);
+}
+.title { font-weight: 600; }
+.subtitle { color: var(--text-dim); font-size: 12px; }
+
+/* Main pane */
+.main {
+  display: grid; grid-template-rows: 60px 1fr auto;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width=\"16\" height=\"16\"><rect fill=\"%23111b21\" width=\"16\" height=\"16\"/></svg>') repeat;
+}
+.chat-header {
+  display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+  background: var(--panel); border-bottom: 1px solid var(--border);
+}
+.chat-actions { margin-left: auto; display: flex; gap: 8px; }
+
+.messages { padding: 20px 24px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.msg {
+  max-width: 68%; padding: 8px 10px; border-radius: 10px; position: relative;
+  display: inline-flex; flex-direction: column; gap: 4px;
+}
+.out { align-self: flex-end; background: var(--bubble-out); }
+.in { align-self: flex-start; background: var(--bubble-in); }
+.time { color: #c7d5ccaa; font-size: 11px; align-self: flex-end; }
+
+.composer {
+  padding: 10px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 8px;
+  background: var(--panel); border-top: 1px solid var(--border);
+}
+.input-wrap {
+  display: flex; align-items: center; gap: 8px; background: var(--panel-light); border-radius: 10px; padding: 0 8px;
+}
+.input-wrap input {
+  flex: 1; height: 42px; border: 0; outline: none; background: transparent; color: var(--text); font-size: 14px;
+}
+.send-btn {
+  background: var(--accent); color: #082f29; border: 0; border-radius: 10px; padding: 0 16px; height: 42px; font-weight: 700; cursor: pointer;
+}
+.send-btn:hover { background: var(--accent-2); }
+
+/* Call panel (UI only for now) */
+.callbar {
+  display: flex; gap: 8px;
+}
+.video-strip {
+  display: flex; gap: 8px; padding: 8px 16px; background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+.video {
+  width: 180px; height: 120px; background: #000; border-radius: 8px;
+  border: 1px solid var(--border);
+}
