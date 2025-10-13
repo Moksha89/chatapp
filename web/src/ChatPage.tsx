@@ -101,6 +101,18 @@ export default function ChatPage() {
   function hideStarred() {
     setShowStarredOnly(false);
     if (activeConv != null) loadMessages(activeConv);
+  async function doSearch() {
+    if (showStarredOnly) {
+      setShowStarredOnly(false);
+    }
+    if (activeConv != null && query.trim()) {
+      const res = await getJson(`/api/conversations/${activeConv}/search?q=${encodeURIComponent(query)}`, store.token).catch(() => []);
+      setMessages(res);
+    } else if (activeConv != null) {
+      await loadMessages(activeConv);
+    }
+  }
+
   }
 
   }
@@ -204,7 +216,7 @@ export default function ChatPage() {
           </div>
         </div>
         <div className="search">
-          <input placeholder="Search or start new chat" value={query} onChange={(e)=>setQuery(e.target.value)} />
+          <input placeholder="Search or start new chat" value={query} onChange={(e)=>setQuery(e.target.value)} onKeyDown={(e)=>{ if (e.key === "Enter") { e.preventDefault(); doSearch(); } }} />
         </div>
         <div className="chatlist">
           {conversations.length === 0 ? (
@@ -264,7 +276,7 @@ export default function ChatPage() {
             ) : null}
           </div>
           <div className="chat-actions">
-            <button className="icon-btn" title="Search" onClick={() => hideStarred()}>🔎</button>
+            <button className="icon-btn" title="Search" onClick={() => doSearch()}>🔎</button>
             <button className="icon-btn" title="Starred messages" onClick={() => (showStarredOnly ? hideStarred() : showStarred())}>⭐</button>
             <button className="icon-btn" title="Audio call">📞</button>
             <button className="icon-btn" title="Video call">🎥</button>
