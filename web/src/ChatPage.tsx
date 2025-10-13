@@ -16,6 +16,7 @@ export default function ChatPage() {
   const [typing, setTyping] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [labelPickerOpen, setLabelPickerOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   const [peerTyping, setPeerTyping] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -44,7 +45,10 @@ export default function ChatPage() {
       try {
         const data = JSON.parse(ev.data);
         if (data?.type === "text") {
-          loadMessages(activeConv);
+          if (activeConv != null) {
+            loadMessages(activeConv);
+            setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, last_message: data.body, unread_count: 0 } : c));
+          }
         } else if (data?.type === "typing-start") {
           setPeerTyping(true);
         } else if (data?.type === "typing-stop") {
@@ -136,7 +140,7 @@ export default function ChatPage() {
           </div>
         </div>
         <div className="search">
-          <input placeholder="Search or start new chat" />
+          <input placeholder="Search or start new chat" value={query} onChange={(e)=>setQuery(e.target.value)} />
         </div>
         <div className="chatlist">
           {conversations.length === 0 ? (
@@ -144,6 +148,7 @@ export default function ChatPage() {
           ) : null}
           {conversations
             .slice()
+            .filter(c => (c.title?.toLowerCase() || "").includes(query.toLowerCase()))
             .sort((a,b) => Number(b.pinned) - Number(a.pinned))
             .map(c => (
               <div key={c.id} className="chatitem" onClick={() => setActiveConv(c.id)}>
