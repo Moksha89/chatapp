@@ -35,6 +35,7 @@ def get_or_create_conversation(db: Session, user_ids: List[int]) -> Conversation
             db.add(ConversationParticipant(conversation_id=conv.id, user_id=uid))
         db.commit()
         db.refresh(conv)
+    return conv
 @router.post("/upload")
 def upload_attachment(file: UploadFile = File(...), user: User = Depends(get_current_user)):
     uploads_dir = "/opt/akirah/uploads"
@@ -44,8 +45,6 @@ def upload_attachment(file: UploadFile = File(...), user: User = Depends(get_cur
         f.write(file.file.read())
     url = f"/static/uploads/{file.filename}"
     return {"url": url, "mime": file.content_type or "application/octet-stream", "size": os.path.getsize(dest_path)}
-
-    return conv
 
 @router.get("/conversations", response_model=List[ConversationOut])
 def list_conversations(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
