@@ -8,8 +8,8 @@ from sqlalchemy import func
 from typing import List, Optional
 import asyncio
 from ..db import get_db
-from ..models import Conversation, ConversationParticipant, Message, User
-from ..schemas import MessageOut, MessageCreate, ConversationOut
+from ..models import Conversation, ConversationParticipant, ConversationMeta, Message, User
+from ..schemas import MessageOut, MessageCreate, ConversationOut, ConversationMetaUpdate
 from ..auth import get_current_user
 from ..ws import send_to_conversation
 
@@ -71,11 +71,21 @@ def list_conversations(db: Session = Depends(get_db), user: User = Depends(get_c
             title = f"Group • {len(others)} participants"
         else:
             title = f"Conversation {cid}"
+        meta = db.query(ConversationMeta).filter_by(conversation_id=cid, user_id=user.id).first()
+        labels_list = []
+        if meta and meta.labels:
+            try:
+                labels_list = [x for x in meta.labels.split(",") if x]
+            except Exception:
+                labels_list = []
         results.append(ConversationOut(
             id=cid,
             title=title,
             last_message=(last_msg.body if last_msg else None),
             unread_count=int(unread),
+            pinned=bool(meta.pinned) if meta else False,
+            starred=bool(meta.starred) if meta else False,
+            labels=labels_list if meta else [],
         ))
     return results
 
@@ -118,5 +128,62 @@ def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: 
         background_tasks.add_task(asyncio.run, send_to_conversation(str(conversation_id), {"from": user.email if hasattr(user, "email") else str(user.id), "type": "text", "body": payload.body}))
     except Exception:
         pass
-
-    return msg
+@router.patch("/conversations/{conversation_id}", response_model=ConversationOut)
+def update_conversation(conversation_id: int, payload: ConversationMetaUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    member = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a participant")
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    meta = db.query(ConversationMeta).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+    if not meta:
+        meta = ConversationMeta(conversation_id=conversation_id, user_id=user.id)
+        db.add(meta)
+        db.flush()
+    if payload.pinned is not None:
+        meta.pinned = payload.pinned
+    if payload.starred is not None:
+        meta.starred = payload.starred
+    if payload.labels is not None:
+        meta.labels = ",".join(payload.labels)
+    db.commit()
+    last_msg = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+    unread = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id, Message.sender_id != user.id, Message.seen == False)
+        .count()
+    )
+    labels_list = []
+    if meta and meta.labels:
+        try:
+            labels_list = [x for x in meta.labels.split(",") if x]
+        except Exception:
+            labels_list = []
+    others = (
+        db.query(User)
+        .join(ConversationParticipant, ConversationParticipant.user_id == User.id)
+        .filter(ConversationParticipant.conversation_id == conversation_id, User.id != user.id)
+        .all()
+    )
+    if len(others) == 1:
+        o = others[0]
+        title = o.name or o.email
+    elif len(others) > 1:
+        title = f"Group • {len(others)} participants"
+    else:
+        title = f"Conversation {conversation_id}"
+    return ConversationOut(
+        id=conversation_id,
+        title=title,
+        last_message=(last_msg.body if last_msg else None),
+        unread_count=int(unread),
+        pinned=bool(meta.pinned) if meta else False,
+        starred=bool(meta.starred) if meta else False,
+        labels=labels_list,
+    )

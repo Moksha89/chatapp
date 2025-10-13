@@ -19,11 +19,19 @@ class Token(BaseModel):
 from typing import List, Optional
 from pydantic import BaseModel
 
+class ConversationMetaUpdate(BaseModel):
+    pinned: Optional[bool] = None
+    starred: Optional[bool] = None
+    labels: Optional[list[str]] = None
+
 class ConversationOut(BaseModel):
     id: int
     title: str
     last_message: str | None = None
     unread_count: int = 0
+    pinned: Optional[bool] = False
+    starred: Optional[bool] = False
+    labels: Optional[list[str]] = None
     class Config:
         from_attributes = True
 

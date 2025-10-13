@@ -15,6 +15,15 @@ class Conversation(Base):
     __tablename__ = "conversations"
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+class ConversationMeta(Base):
+    __tablename__ = "conversation_meta"
+    id = Column(Integer, primary_key=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    pinned = Column(Boolean, default=False)
+    starred = Column(Boolean, default=False)
+    labels = Column(String(512), nullable=True)
+
 
 class ConversationParticipant(Base):
     __tablename__ = "conversation_participants"
