@@ -10,6 +10,9 @@ from ..auth import get_current_user, create_access_token
 router = APIRouter()
 r = redis.Redis.from_url(settings.redis_url) if settings.redis_url else None
 
+def _devices_key(user_id: int) -> str:
+    return f"link:devices:{user_id}"
+
 @router.get("/qr")
 def generate_qr():
     token = str(uuid4())
@@ -39,5 +42,22 @@ def confirm_link(token: str, user=Depends(get_current_user)):
     if not val:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     r.delete(f"qr:{token}")
+    device_id = str(uuid4())
+    r.hset(_devices_key(user.id), device_id, "web")
     web_jwt = create_access_token(sub=user.email, expires_minutes=settings.jwt_expires_min)
-    return {"access_token": web_jwt, "token_type": "bearer"}
+    return {"access_token": web_jwt, "token_type": "bearer", "device_id": device_id}
+
+@router.get("/devices")
+def list_devices(user=Depends(get_current_user)):
+    if not r:
+        raise HTTPException(status_code=500, detail="Redis not configured")
+    data = r.hgetall(_devices_key(user.id))
+    out = [{"id": k.decode(), "name": v.decode()} for k, v in data.items()]
+    return out
+
+@router.delete("/devices/{device_id}")
+def revoke_device(device_id: str, user=Depends(get_current_user)):
+    if not r:
+        raise HTTPException(status_code=500, detail="Redis not configured")
+    r.hdel(_devices_key(user.id), device_id)
+    return {"ok": True}

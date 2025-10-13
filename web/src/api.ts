@@ -58,3 +58,14 @@ export async function patchJson(path: string, body: any, token: string) {
   if (!r.ok) throw new Error(`${r.status}`);
   return r.json();
 }
+export async function del(path: string, token: string) {
+  const r = await fetch(`${API_URL}${path}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!r.ok) throw new Error(`${r.status}`);
+  try { return await r.json(); } catch { return { ok: r.ok }; }
+}
