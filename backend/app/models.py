@@ -14,6 +14,8 @@ class User(Base):
 class Conversation(Base):
     __tablename__ = "conversations"
     id = Column(Integer, primary_key=True)
+    type = Column(String(16), default="direct", index=True)
+    title = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class ConversationMeta(Base):
@@ -30,6 +32,7 @@ class ConversationParticipant(Base):
     id = Column(Integer, primary_key=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
+    role = Column(String(16), default="member")
 
 class Message(Base):
     __tablename__ = "messages"
