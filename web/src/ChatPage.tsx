@@ -11,8 +11,10 @@ export default function ChatPage() {
   const [activeConv, setActiveConv] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [body, setBody] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const typingTimer = useRef<number | null>(null);
 
   async function loadConversations() {
     const convs = await getJson("/api/conversations", store.token).catch(() => []);
@@ -36,20 +38,44 @@ export default function ChatPage() {
     _ws.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
-        if (data && (data.type === "text" || data.type?.startsWith("call-"))) {
+        if (data?.type === "text") {
           loadMessages(activeConv);
+        } else if (data?.type === "typing-start") {
+          setPeerTyping(true);
+        } else if (data?.type === "typing-stop") {
+          setPeerTyping(false);
         }
       } catch {}
     };
     wsRef.current = _ws;
-    setWs(_ws);
-    return () => { try { _ws.close(); } finally { setWs(null); } };
+    return () => { try { _ws.close(); } finally { wsRef.current = null; setPeerTyping(false); } };
   }, [activeConv]);
+
+  function sendTyping(type: "typing-start" | "typing-stop") {
+    if (!wsRef.current) return;
+    try { wsRef.current.send(JSON.stringify({ type })); } catch {}
+  }
+
+  function onInputChange(v: string) {
+    setBody(v);
+    if (!typing) {
+      setTyping(true);
+      sendTyping("typing-start");
+    }
+    if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    typingTimer.current = window.setTimeout(() => {
+      setTyping(false);
+      sendTyping("typing-stop");
+    }, 1200);
+  }
 
   async function send() {
     if (!body.trim() || activeConv == null) return;
     await postJson("/api/messages", { conversation_id: activeConv, body }, store.token).catch(() => {});
     setBody("");
+    if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    setTyping(false);
+    sendTyping("typing-stop");
     if (activeConv != null) loadMessages(activeConv);
   }
 
@@ -97,7 +123,7 @@ export default function ChatPage() {
           <div className="avatar">{activeConv ?? "--"}</div>
           <div>
             <div className="title">{activeConv ? `Conversation ${activeConv}` : "Select a conversation"}</div>
-            <div className="subtitle">online</div>
+            <div className="subtitle">{peerTyping ? "typing…" : "online"}</div>
           </div>
           <div className="chat-actions">
             <button className="icon-btn" title="Audio call">📞</button>
@@ -129,7 +155,7 @@ export default function ChatPage() {
           <div className="input-wrap">
             <input
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(e) => onInputChange(e.target.value)}
               placeholder="Type a message"
               disabled={activeConv == null}
             />
