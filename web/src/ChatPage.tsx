@@ -440,10 +440,7 @@ export default function ChatPage() {
         </div>
 
         {activeConv != null ? (
-          <div className="video-strip">
-            <div className="video" />
-            <div className="video" />
-          </div>
+          <CallPanel conversationId={activeConv} ws={wsRef.current} />
         ) : null}
       </div>
     </div>
