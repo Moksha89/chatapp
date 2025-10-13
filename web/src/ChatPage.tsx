@@ -37,7 +37,11 @@ export default function ChatPage() {
   async function loadMessages(convId: number) {
     const msgs = await getJson(`/api/conversations/${convId}/messages`, store.token).catch(() => []);
     setMessages(msgs);
-    try { await patchJson(`/api/conversations/${convId}/read`, {}, store.token); } catch {}
+    try {
+      await patchJson(`/api/conversations/${convId}/read`, {}, store.token);
+    } catch {
+      try { await postJson(`/api/conversations/${convId}/read`, {}, store.token); } catch {}
+    }
     await loadConversations();
   }
 
@@ -345,7 +349,7 @@ export default function ChatPage() {
                 style={{ position: "relative" }}
                 onContextMenu={async (e) => {
                   e.preventDefault();
-                  const action = window.prompt("Action: reply | star | unstar | delme | deleveryone");
+                  const action = window.prompt("Action: reply | star | unstar | delme | deleveryone | copy");
                   if (!action) return;
                   try {
                     if (action === "star") {
@@ -363,6 +367,9 @@ export default function ChatPage() {
                       if (text && activeConv != null) {
                         await postJson("/api/messages", { conversation_id: activeConv, body: text, reply_to_id: m.id }, store.token);
                       }
+                    } else if (action === "copy") {
+                      const text = m.body || (m.attachment_url ? m.attachment_url : "");
+                      if (text) { try { await navigator.clipboard.writeText(text); } catch {} }
                     }
                     if (activeConv != null) loadMessages(activeConv);
                   } catch {}

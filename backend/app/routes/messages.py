@@ -276,6 +276,19 @@ def mark_read(conversation_id: int, db: Session = Depends(get_db), user: User = 
     ).update({Message.seen: True}, synchronize_session=False)
     db.commit()
     return {"ok": True}
+@router.post("/conversations/{conversation_id}/read")
+def mark_read_post(conversation_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    member = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a participant")
+    db.query(Message).filter(
+        Message.conversation_id == conversation_id,
+        Message.sender_id != user.id,
+        Message.seen == False
+    ).update({Message.seen: True}, synchronize_session=False)
+    db.commit()
+    return {"ok": True}
+
 @router.get("/starred", response_model=List[MessageOut])
 def get_starred(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     hidden_ids = {mh.message_id for mh in db.query(MessageHide).filter_by(user_id=user.id).all()}
