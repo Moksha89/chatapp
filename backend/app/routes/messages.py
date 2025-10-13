@@ -240,7 +240,7 @@ def list_messages(conversation_id: int, db: Session = Depends(get_db), user: Use
     member = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
     if not member:
         raise HTTPException(status_code=403, detail="Not a participant")
-    msgs = db.query(Message).filter(Message.conversation_id == conversation_id, Message.deleted_for_everyone == False).order_by(Message.id.asc()).all()
+    msgs = db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.id.asc()).all()
     hidden_ids = {mh.message_id for mh in db.query(MessageHide).filter_by(user_id=user.id).all()}
 
     db.query(Message).filter(
