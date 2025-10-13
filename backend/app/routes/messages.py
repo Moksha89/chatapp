@@ -140,6 +140,92 @@ def mark_read(conversation_id: int, db: Session = Depends(get_db), user: User = 
     ).update({Message.seen: True}, synchronize_session=False)
     db.commit()
     return {"ok": True}
+@router.get("/starred", response_model=List[MessageOut])
+def get_starred(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    hidden_ids = {mh.message_id for mh in db.query(MessageHide).filter_by(user_id=user.id).all()}
+    q = (
+        db.query(Message)
+        .join(MessageStar, MessageStar.message_id == Message.id)
+        .filter(MessageStar.user_id == user.id, Message.deleted_for_everyone == False)
+        .order_by(Message.id.desc())
+        .all()
+    )
+    return [
+        MessageOut(
+            id=m.id,
+            conversation_id=m.conversation_id,
+            sender_id=m.sender_id,
+            body=m.body,
+            attachment_url=m.attachment_url,
+            attachment_mime=m.attachment_mime,
+            reply_to_id=m.reply_to_id,
+            deleted_for_everyone=bool(m.deleted_for_everyone),
+        )
+        for m in q if m.id not in hidden_ids
+    ]
+
+@router.get("/conversations/{conversation_id}/search", response_model=List[MessageOut])
+def search_in_conversation(conversation_id: int, q: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    member = db.query(ConversationParticipant).filter_by(conversation_id=conversation_id, user_id=user.id).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a participant")
+    hidden_ids = {mh.message_id for mh in db.query(MessageHide).filter_by(user_id=user.id).all()}
+    msgs = (
+        db.query(Message)
+        .filter(
+            Message.conversation_id == conversation_id,
+            Message.deleted_for_everyone == False,
+            Message.body.ilike(f"%{q}%"),
+        )
+        .order_by(Message.id.desc())
+        .all()
+    )
+    return [
+        MessageOut(
+            id=m.id,
+            conversation_id=m.conversation_id,
+            sender_id=m.sender_id,
+            body=m.body,
+            attachment_url=m.attachment_url,
+            attachment_mime=m.attachment_mime,
+            reply_to_id=m.reply_to_id,
+            deleted_for_everyone=bool(m.deleted_for_everyone),
+        )
+        for m in msgs if m.id not in hidden_ids
+    ]
+
+@router.get("/search", response_model=List[MessageOut])
+def global_search(q: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    hidden_ids = {mh.message_id for mh in db.query(MessageHide).filter_by(user_id=user.id).all()}
+    conv_ids = [
+        cid for (cid,) in db.query(ConversationParticipant.conversation_id).filter_by(user_id=user.id).all()
+    ]
+    if not conv_ids:
+        return []
+    msgs = (
+        db.query(Message)
+        .filter(
+            Message.conversation_id.in_(conv_ids),
+            Message.deleted_for_everyone == False,
+            Message.body.ilike(f"%{q}%"),
+        )
+        .order_by(Message.id.desc())
+        .all()
+    )
+    return [
+        MessageOut(
+            id=m.id,
+            conversation_id=m.conversation_id,
+            sender_id=m.sender_id,
+            body=m.body,
+            attachment_url=m.attachment_url,
+            attachment_mime=m.attachment_mime,
+            reply_to_id=m.reply_to_id,
+            deleted_for_everyone=bool(m.deleted_for_everyone),
+        )
+        for m in msgs if m.id not in hidden_ids
+    ]
+
 
 
 @router.post("/messages", response_model=MessageOut)
