@@ -93,6 +93,16 @@ export default function ChatPage() {
       }, store.token);
       await loadMessages(activeConv);
     } catch {}
+  async function showStarred() {
+    setShowStarredOnly(true);
+    const starred = await getJson(`/api/starred`, store.token).catch(() => []);
+    setMessages(starred);
+  }
+  function hideStarred() {
+    setShowStarredOnly(false);
+    if (activeConv != null) loadMessages(activeConv);
+  }
+
   }
 
 
@@ -254,8 +264,8 @@ export default function ChatPage() {
             ) : null}
           </div>
           <div className="chat-actions">
-            <button className="icon-btn" title="Search" onClick={() => setShowStarredOnly(false)}>🔎</button>
-            <button className="icon-btn" title="Starred messages" onClick={() => setShowStarredOnly(v => !v)}>⭐</button>
+            <button className="icon-btn" title="Search" onClick={() => hideStarred()}>🔎</button>
+            <button className="icon-btn" title="Starred messages" onClick={() => (showStarredOnly ? hideStarred() : showStarred())}>⭐</button>
             <button className="icon-btn" title="Audio call">📞</button>
             <button className="icon-btn" title="Video call">🎥</button>
             <button className="icon-btn" title="Screen share">🖥️</button>
@@ -285,7 +295,7 @@ export default function ChatPage() {
           {activeConv == null ? (
             <div className="subtitle">Select a conversation</div>
           ) : (
-            (showStarredOnly ? messages.filter(() => false) : messages).map(m => (
+            (messages).map(m => (
               <div
                 key={m.id}
                 className={`msg ${m.sender_id % 2 === 0 ? "out" : "in"}`}
