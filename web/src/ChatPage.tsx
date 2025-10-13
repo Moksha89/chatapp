@@ -3,7 +3,7 @@ import { getJson, postJson } from "./api";
 import { store } from "./store";
 import CallPanel from "./CallPanel";
 
-type Conversation = { id: number; title: string; last_message?: string | null; unread_count: number };
+type Conversation = { id: number; title: string; last_message?: string | null; unread_count: number; pinned?: boolean; starred?: boolean; labels?: string[] };
 type Message = { id: number; conversation_id: number; sender_id: number; body: string; created_at?: string };
 
 export default function ChatPage() {
@@ -12,6 +12,9 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [body, setBody] = useState("");
   const [typing, setTyping] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+  const [labelPickerOpen, setLabelPickerOpen] = useState(false);
+
   const [peerTyping, setPeerTyping] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const typingTimer = useRef<number | null>(null);
@@ -85,8 +88,28 @@ export default function ChatPage() {
     if (msg?.conversation_id) setActiveConv(msg.conversation_id);
   }
 
+  function togglePin(id: number) {
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c));
+    setMenuOpenId(null);
+  }
+  function toggleStar(id: number) {
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, starred: !c.starred } : c));
+    setMenuOpenId(null);
+  }
+  function addLabelToActive(label: string) {
+    if (activeConv == null) return;
+    setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, labels: Array.from(new Set([...(c.labels || []), label])) } : c));
+    setLabelPickerOpen(false);
+  }
+  function removeLabelFromActive(label: string) {
+    if (activeConv == null) return;
+    setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, labels: (c.labels || []).filter(l => l !== label) } : c));
+  }
+
+
   return (
     <div className="app">
+
       <div className="sidebar">
         <div className="topbar">
           <div className="brand">Chats</div>
@@ -102,18 +125,34 @@ export default function ChatPage() {
           {conversations.length === 0 ? (
             <div style={{ padding: 16, color: "var(--text-dim)" }}>No conversations yet</div>
           ) : null}
-          {conversations.map(c => (
-            <div key={c.id} className="chatitem" onClick={() => setActiveConv(c.id)}>
-              <div className="avatar">{String(c.id).slice(-2).padStart(2, "0")}</div>
-              <div>
-                <div className="title">{c.title}</div>
-                <div className="subtitle">{c.last_message || "No messages yet"}</div>
+          {conversations
+            .slice()
+            .sort((a,b) => Number(b.pinned) - Number(a.pinned))
+            .map(c => (
+              <div key={c.id} className="chatitem" onClick={() => setActiveConv(c.id)}>
+                <div className="avatar">{String(c.id).slice(-2).padStart(2, "0")}</div>
+                <div>
+                  <div className="title">
+                    {c.title} {c.starred ? "★" : ""}
+                  </div>
+                  <div className="subtitle">{c.last_message || "No messages yet"}</div>
+                </div>
+                <div style={{ display: "grid", justifyItems: "end", gap: 6 }}>
+                  <div className="subtitle">now</div>
+                  {c.unread_count > 0 ? <span className="badge">{c.unread_count}</span> : null}
+                </div>
+                <div style={{ position: "absolute", right: 12, top: 10 }}>
+                  <button
+                    className="icon-btn"
+                    title="More"
+                    onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === c.id ? null : c.id); }}
+                  >⋮</button>
+                </div>
+                <div className={`chatmenu ${menuOpenId === c.id ? "open" : ""}`} onClick={(e)=>e.stopPropagation()}>
+                  <button onClick={() => togglePin(c.id)}>{c.pinned ? "Unpin" : "Pin"}</button>
+                  <button onClick={() => toggleStar(c.id)}>{c.starred ? "Unstar" : "Star"}</button>
+                </div>
               </div>
-              <div style={{ display: "grid", justifyItems: "end", gap: 6 }}>
-                <div className="subtitle">now</div>
-                {c.unread_count > 0 ? <span className="badge">{c.unread_count}</span> : null}
-              </div>
-            </div>
           ))}
         </div>
       </div>
@@ -122,8 +161,21 @@ export default function ChatPage() {
         <div className="chat-header">
           <div className="avatar">{activeConv ?? "--"}</div>
           <div>
-            <div className="title">{activeConv ? `Conversation ${activeConv}` : "Select a conversation"}</div>
+            <div className="title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {activeConv ? `Conversation ${activeConv}` : "Select a conversation"}
+              {(() => {
+                const conv = conversations.find(c => c.id === activeConv);
+                return conv?.starred ? <span className="label-chip">Starred</span> : null;
+              })()}
+            </div>
             <div className="subtitle">{peerTyping ? "typing…" : "online"}</div>
+            {activeConv ? (
+              <div className="labels" style={{ marginTop: 6 }}>
+                {(conversations.find(c => c.id === activeConv)?.labels || []).map(l => (
+                  <span key={l} className="label-chip" onClick={() => removeLabelFromActive(l)}>{l} ✕</span>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="chat-actions">
             <button className="icon-btn" title="Audio call">📞</button>
@@ -131,7 +183,25 @@ export default function ChatPage() {
             <button className="icon-btn" title="Screen share">🖥️</button>
             <button className="icon-btn" title="Info">ℹ️</button>
           </div>
+          <div className="label-picker">
+            <button className="icon-btn" title="Labels" onClick={() => setLabelPickerOpen(v => !v)}>🏷️</button>
+            <div className={`label-dropdown ${labelPickerOpen ? "open" : ""}`} onClick={(e)=>e.stopPropagation()}>
+              <button onClick={() => addLabelToActive("New")}>Add “New”</button>
+              <button onClick={() => addLabelToActive("Pending")}>Add “Pending”</button>
+              <button onClick={() => addLabelToActive("VIP")}>Add “VIP”</button>
+            </div>
+          </div>
+
         </div>
+          <div className="label-picker">
+            <button className="icon-btn" title="Labels" onClick={() => setLabelPickerOpen(v => !v)}>🏷️</button>
+            <div className={`label-dropdown ${labelPickerOpen ? "open" : ""}`} onClick={(e)=>e.stopPropagation()}>
+              <button onClick={() => addLabelToActive("New")}>Add “New”</button>
+              <button onClick={() => addLabelToActive("Pending")}>Add “Pending”</button>
+              <button onClick={() => addLabelToActive("VIP")}>Add “VIP”</button>
+            </div>
+          </div>
+
 
         <div className="messages">
           {activeConv == null ? (
