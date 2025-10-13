@@ -13,6 +13,8 @@ export default function CallPanel({ conversationId, ws: wsProp }: Props) {
   const [ws, setWs] = useState<WebSocket | null>(wsProp ?? null);
   const [inCall, setInCall] = useState(false);
   const [pendingOffer, setPendingOffer] = useState<any>(null);
+  const screenSenderRef = useRef<RTCRtpSender | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!ws) return;
@@ -90,10 +92,38 @@ export default function CallPanel({ conversationId, ws: wsProp }: Props) {
     setInCall(true);
   }
 
+  async function startShare() {
+    if (!pcRef.current) return;
+    try {
+      // @ts-ignore
+      const displayStream: MediaStream = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: false });
+      screenStreamRef.current = displayStream;
+      const track = displayStream.getVideoTracks()[0];
+      const sender = pcRef.current.addTrack(track, displayStream);
+      screenSenderRef.current = sender;
+      track.onended = () => stopShare();
+    } catch {}
+  }
+
+  function stopShare() {
+    try {
+      screenSenderRef.current?.track?.stop();
+      if (pcRef.current && screenSenderRef.current) {
+        try { pcRef.current.removeTrack(screenSenderRef.current); } catch {}
+      }
+    } catch {}
+    try {
+      screenStreamRef.current?.getTracks().forEach(t => t.stop());
+    } catch {}
+    screenSenderRef.current = null;
+    screenStreamRef.current = null;
+  }
+
   function end() {
     try {
       ws?.send(JSON.stringify({ type: "call-end" }));
     } catch {}
+    stopShare();
     try {
       pcRef.current?.getSenders().forEach((s) => s.track?.stop());
       pcRef.current?.close();
@@ -116,6 +146,9 @@ export default function CallPanel({ conversationId, ws: wsProp }: Props) {
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
         <button onClick={start} disabled={inCall || !ws}>Start Call</button>
         <button onClick={answer} disabled={!pendingOffer || !ws}>Answer</button>
+        <button onClick={inCall && !screenSenderRef.current ? startShare : stopShare} disabled={!inCall}>
+          {screenSenderRef.current ? "Stop Share" : "Share Screen"}
+        </button>
         <button onClick={end} disabled={!inCall && !pendingOffer}>End</button>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
