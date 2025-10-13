@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import BackgroundTasks
+import asyncio
+from ..ws import send_to_conversation
+
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import asyncio
 from ..db import get_db
 from ..models import Conversation, ConversationParticipant, Message, User
 from ..schemas import MessageOut, MessageCreate, ConversationOut
 from ..auth import get_current_user
+from ..ws import send_to_conversation
 
 router = APIRouter()
 
@@ -46,7 +52,7 @@ def list_messages(conversation_id: int, db: Session = Depends(get_db), user: Use
     return msgs
 
 @router.post("/messages", response_model=MessageOut)
-def send_message(payload: MessageCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if payload.conversation_id is None and payload.to_user_id is None:
         raise HTTPException(status_code=400, detail="Provide conversation_id or to_user_id")
     if payload.conversation_id is None:
@@ -65,4 +71,10 @@ def send_message(payload: MessageCreate, db: Session = Depends(get_db), user: Us
     db.add(msg)
     db.commit()
     db.refresh(msg)
+
+    try:
+        background_tasks.add_task(asyncio.run, send_to_conversation(str(conversation_id), {"from": user.email if hasattr(user, "email") else str(user.id), "type": "text", "body": payload.body}))
+    except Exception:
+        pass
+
     return msg
