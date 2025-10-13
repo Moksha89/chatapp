@@ -2,13 +2,15 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 
 class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    password: Optional[str] = None
     name: Optional[str] = None
 
 class UserOut(BaseModel):
     id: int
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     name: Optional[str] = None
     class Config:
         from_attributes = True
@@ -16,6 +18,14 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class OtpRequest(BaseModel):
+    phone: str
+
+class OtpVerify(BaseModel):
+    phone: str
+    otp: str
+    name: Optional[str] = None
 
 class ConversationMetaUpdate(BaseModel):
     pinned: Optional[bool] = None

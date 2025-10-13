@@ -44,7 +44,8 @@ def confirm_link(token: str, user=Depends(get_current_user)):
     r.delete(f"qr:{token}")
     device_id = str(uuid4())
     r.hset(_devices_key(user.id), device_id, "web")
-    web_jwt = create_access_token(sub=user.email, expires_minutes=settings.jwt_expires_min)
+    sub = user.phone or user.email or str(user.id)
+    web_jwt = create_access_token(sub=sub, expires_minutes=settings.jwt_expires_min)
     return {"access_token": web_jwt, "token_type": "bearer", "device_id": device_id}
 
 @router.get("/devices")

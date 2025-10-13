@@ -29,12 +29,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
-        email: Optional[str] = payload.get("sub")
+        sub: Optional[str] = payload.get("sub")
     except Exception:
         raise credentials_exception
-    if email is None:
+    if sub is None:
         raise credentials_exception
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == sub).first()
+    if not user:
+        user = db.query(User).filter(User.phone == sub).first()
+    if not user and sub.isdigit():
+        user = db.query(User).filter(User.id == int(sub)).first()
     if not user:
         raise credentials_exception
     return user

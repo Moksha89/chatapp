@@ -13,6 +13,14 @@ export async function postJson(path: string, body: any, token?: string) {
   return r.json();
 }
 
+export function otpRequest(phone: string) {
+  return postJson("/api/auth/otp/request", { phone });
+}
+
+export function otpVerify(phone: string, otp: string, name?: string) {
+  return postJson("/api/auth/otp/verify", { phone, otp, name });
+}
+
 export async function postForm(path: string, form: Record<string, string>) {
   const params = new URLSearchParams(form);
   const r = await fetch(`${API_URL}${path}`, {
