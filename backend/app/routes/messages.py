@@ -4,6 +4,7 @@ from ..ws import send_to_conversation
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 import asyncio
 from ..db import get_db
@@ -20,7 +21,7 @@ def get_or_create_conversation(db: Session, user_ids: List[int]) -> Conversation
         .join(ConversationParticipant, Conversation.id == ConversationParticipant.conversation_id)
         .filter(ConversationParticipant.user_id.in_(user_ids))
         .group_by(Conversation.id)
-        .having(db.func.count(ConversationParticipant.id) == len(user_ids))
+        .having(func.count(ConversationParticipant.id) == len(user_ids))
         .first()
     )
     if not conv:
