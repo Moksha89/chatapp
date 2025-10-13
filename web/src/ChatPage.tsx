@@ -201,6 +201,17 @@ export default function ChatPage() {
   async function removeLabelFromActive(label: string) {
     if (activeConv == null) return;
     try {
+      const current = conversations.find(c => c.id === activeConv);
+      const nextLabels = (current?.labels || []).filter(l => l !== label);
+      const res = await patchJson(`/api/conversations/${activeConv}`, {
+        pinned: current?.pinned ?? false,
+        starred: current?.starred ?? false,
+        labels: nextLabels,
+      }, store.token);
+      setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, pinned: !!res.pinned, starred: !!res.starred, labels: res.labels || [], last_message: res.last_message, unread_count: res.unread_count } : c));
+    } catch {}
+  }
+
   async function createConversation(kind: "group" | "broadcast") {
     const ids = participantIdsInput.split(",").map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n));
     if (!ids.length) return;
@@ -212,17 +223,6 @@ export default function ChatPage() {
       setGroupTitle("");
       await loadConversations();
       if (conv?.id) setActiveConv(conv.id);
-    } catch {}
-  }
-
-      const current = conversations.find(c => c.id === activeConv);
-      const nextLabels = (current?.labels || []).filter(l => l !== label);
-      const res = await patchJson(`/api/conversations/${activeConv}`, {
-        pinned: current?.pinned ?? false,
-        starred: current?.starred ?? false,
-        labels: nextLabels,
-      }, store.token);
-      setConversations(prev => prev.map(c => c.id === activeConv ? { ...c, pinned: !!res.pinned, starred: !!res.starred, labels: res.labels || [], last_message: res.last_message, unread_count: res.unread_count } : c));
     } catch {}
   }
 
