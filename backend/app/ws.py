@@ -23,6 +23,7 @@ async def ws_messages(ws: WebSocket, conversation_id: str = Query(...), user: st
                 payload = json.loads(data)
             except Exception:
                 payload = {"type": "text", "body": data}
+            payload = {**payload, "relay": "ws"}
             await send_to_conversation(conv, {"from": user, **payload})
     except WebSocketDisconnect:
         connections.get(conv, set()).discard(ws)

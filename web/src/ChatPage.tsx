@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getJson, postJson } from "./api";
 import { store } from "./store";
+import CallPanel from "./CallPanel";
+
 
 type Conversation = { id: number };
 type Message = { id: number; conversation_id: number; sender_id: number; body: string };
@@ -84,6 +86,8 @@ export default function ChatPage() {
             ))
           }
         </div>
+        {activeConv != null && wsRef.current ? <CallPanel conversationId={activeConv} ws={wsRef.current} /> : null}
+
         <div style={{ borderTop: "1px solid #ddd", padding: 12, display: "flex", gap: 8 }}>
           <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type a message" style={{ flex: 1, padding: 8 }} />
           <button onClick={send}>Send</button>
