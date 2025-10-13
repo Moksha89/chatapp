@@ -3,17 +3,19 @@ import { createPeer, getLocalMedia } from "./webrtc";
 
 type Props = {
   conversationId: number;
-  ws: WebSocket;
+  ws?: WebSocket | null;
 };
 
-export default function CallPanel({ conversationId, ws }: Props) {
+export default function CallPanel({ conversationId, ws: wsProp }: Props) {
   const localRef = useRef<HTMLVideoElement>(null);
   const remoteRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const [ws, setWs] = useState<WebSocket | null>(wsProp ?? null);
   const [inCall, setInCall] = useState(false);
   const [pendingOffer, setPendingOffer] = useState<any>(null);
 
   useEffect(() => {
+    if (!ws) return;
     function onWs(ev: MessageEvent) {
       try {
         const msg = JSON.parse(ev.data);
@@ -32,14 +34,22 @@ export default function CallPanel({ conversationId, ws }: Props) {
           end();
         }
       } catch {
-        /* ignore */
       }
     }
     ws.addEventListener("message", onWs);
     return () => ws.removeEventListener("message", onWs);
   }, [ws]);
 
+  useEffect(() => {
+    if (wsProp) { setWs(wsProp); return; }
+    const url = `ws://${location.host}/ws?conversation_id=${conversationId}&user=web`;
+    const socket = new WebSocket(url);
+    setWs(socket);
+    return () => { try { socket.close(); } catch {} };
+  }, [conversationId, wsProp]);
+
   async function start() {
+    if (!ws) return;
     const pc = createPeer(
       (c) => ws.send(JSON.stringify({ type: "call-candidate", data: c })),
       (e) => {
@@ -59,7 +69,7 @@ export default function CallPanel({ conversationId, ws }: Props) {
   }
 
   async function answer() {
-    if (!pendingOffer) return;
+    if (!pendingOffer || !ws) return;
     const pc = createPeer(
       (c) => ws.send(JSON.stringify({ type: "call-candidate", data: c })),
       (e) => {
@@ -82,7 +92,7 @@ export default function CallPanel({ conversationId, ws }: Props) {
 
   function end() {
     try {
-      ws.send(JSON.stringify({ type: "call-end" }));
+      ws?.send(JSON.stringify({ type: "call-end" }));
     } catch {}
     try {
       pcRef.current?.getSenders().forEach((s) => s.track?.stop());
@@ -104,8 +114,8 @@ export default function CallPanel({ conversationId, ws }: Props) {
   return (
     <div style={{ borderTop: "1px solid #eee", paddingTop: 8, marginTop: 8 }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <button onClick={start} disabled={inCall}>Start Call</button>
-        <button onClick={answer} disabled={!pendingOffer}>Answer</button>
+        <button onClick={start} disabled={inCall || !ws}>Start Call</button>
+        <button onClick={answer} disabled={!pendingOffer || !ws}>Answer</button>
         <button onClick={end} disabled={!inCall && !pendingOffer}>End</button>
       </div>
       <div style={{ display: "flex", gap: 8 }}>

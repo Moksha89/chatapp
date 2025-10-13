@@ -13,6 +13,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [body, setBody] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
+  const [ws, setWs] = useState<WebSocket | null>(null);
 
   async function loadConversations() {
     const convs = await getJson("/api/conversations", store.token);
@@ -37,6 +38,8 @@ export default function ChatPage() {
     if (activeConv == null) return;
     if (wsRef.current) wsRef.current.close();
     const wsUrl = `ws://${location.host}/ws?conversation_id=${activeConv}&user=web`;
+    console.log("Creating WS for conversation", activeConv, wsUrl);
+
     const ws = new WebSocket(wsUrl);
     ws.onmessage = (ev) => {
       try {
@@ -47,7 +50,10 @@ export default function ChatPage() {
       } catch {}
     };
     wsRef.current = ws;
-    return () => ws.close();
+    console.log("WS set in state", !!ws);
+
+    setWs(ws);
+    return () => { try { ws.close(); } finally { setWs(null); } };
   }, [activeConv]);
 
   async function send() {
@@ -86,7 +92,7 @@ export default function ChatPage() {
             ))
           }
         </div>
-        {activeConv != null && wsRef.current ? <CallPanel conversationId={activeConv} ws={wsRef.current} /> : null}
+        {activeConv != null ? <CallPanel conversationId={activeConv} ws={ws} /> : null}
 
         <div style={{ borderTop: "1px solid #ddd", padding: 12, display: "flex", gap: 8 }}>
           <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type a message" style={{ flex: 1, padding: 8 }} />
