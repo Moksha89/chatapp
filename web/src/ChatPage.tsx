@@ -37,13 +37,16 @@ export default function ChatPage() {
     await loadConversations();
   }
 
+
+
   useEffect(() => { loadConversations(); }, []);
   useEffect(() => { if (activeConv != null) loadMessages(activeConv); }, [activeConv]);
-
   useEffect(() => {
     if (activeConv == null) return;
     if (wsRef.current) wsRef.current.close();
     const wsUrl = `ws://${location.host}/ws?conversation_id=${activeConv}&user=web`;
+
+
     const _ws = new WebSocket(wsUrl);
     _ws.onmessage = (ev) => {
       try {

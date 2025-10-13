@@ -1,3 +1,5 @@
+
+
 from fastapi import UploadFile, File
 import os
 
@@ -263,8 +265,8 @@ def send_message(payload: MessageCreate, background_tasks: BackgroundTasks, db: 
                 str(conversation_id),
                 {
                     "from": user.email if hasattr(user, "email") else str(user.id),
-                    "type": "message",
-                    "body": payload.body,
+                    "type": "text",
+                    "body": payload.body or "",
                     "attachment_url": payload.attachment_url,
                     "attachment_mime": payload.attachment_mime,
                 },
