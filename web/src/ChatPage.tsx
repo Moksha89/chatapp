@@ -405,7 +405,7 @@ export default function ChatPage() {
               )}
               <input value={participantIdsInput} onChange={e => setParticipantIdsInput(e.target.value)} placeholder="Participant user IDs, comma-separated (e.g., 2,3,4)" style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: 0, background: "var(--panel-light)", color: "var(--text)", marginBottom: 12 }} />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button className="icon-btn" onClick={() => { setShowCreateModal(null); setParticipantIdsInput(\"\"); setGroupTitle(\"\"); }}>Cancel</button>
+                <button className="icon-btn" onClick={() => { setShowCreateModal(null); setParticipantIdsInput(""); setGroupTitle(""); }}>Cancel</button>
                 <button className="send-btn" onClick={() => createConversation(showCreateModal)}>{showCreateModal === "group" ? "Create Group" : "Create Broadcast"}</button>
               </div>
             </div>
