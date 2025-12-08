@@ -1,0 +1,198 @@
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+class ApiService {
+  private accessToken: string | null = null;
+
+  setAccessToken(token: string | null) {
+    this.accessToken = token;
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (this.accessToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Request failed' }));
+      throw new Error(error.message || 'Request failed');
+    }
+
+    return response.json();
+  }
+
+  async sendOtp(phoneNumber: string) {
+    return this.request<{ message: string; otp?: string }>('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    });
+  }
+
+  async register(data: {
+    phoneNumber: string;
+    otp: string;
+    displayName: string;
+    deviceId: string;
+    deviceName: string;
+    deviceType: string;
+    isBusiness?: boolean;
+  }) {
+    return this.request<{
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      user: { id: string; phoneNumber: string; displayName: string };
+    }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async login(data: {
+    phoneNumber: string;
+    otp: string;
+    deviceId: string;
+    deviceName: string;
+    deviceType: string;
+  }) {
+    return this.request<{
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      user: { id: string; phoneNumber: string; displayName: string };
+    }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async logout() {
+    return this.request<{ message: string }>('/auth/logout', {
+      method: 'POST',
+    });
+  }
+
+  async getMe() {
+    return this.request<{
+      id: string;
+      phoneNumber: string;
+      displayName: string;
+      profilePhoto?: string;
+      status?: string;
+      isBusiness: boolean;
+    }>('/users/me');
+  }
+
+  async updateProfile(data: { displayName?: string; profilePhoto?: string; status?: string }) {
+    return this.request('/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getChats() {
+    return this.request<Array<{
+      id: string;
+      type: string;
+      name?: string;
+      participants: Array<{
+        id: string;
+        userId: string;
+        user?: { id: string; displayName: string; phoneNumber: string };
+      }>;
+      lastMessage?: {
+        id: string;
+        content?: string;
+        createdAt: string;
+        senderId: string;
+      };
+      unreadCount: number;
+    }>>('/chats');
+  }
+
+  async createChat(data: { type: 'direct' | 'group'; participantId?: string; name?: string }) {
+    return this.request<{ id: string; type: string }>('/chats', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMessages(chatId: string, limit = 50, before?: string) {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (before) params.append('before', before);
+    return this.request<Array<{
+      id: string;
+      chatId: string;
+      senderId: string;
+      content?: string;
+      type: string;
+      status: string;
+      createdAt: string;
+    }>>(`/chats/${chatId}/messages?${params}`);
+  }
+
+  async sendMessage(chatId: string, data: { content: string; type?: string; tempId?: string }) {
+    return this.request<{
+      id: string;
+      chatId: string;
+      senderId: string;
+      content: string;
+      type: string;
+      status: string;
+      createdAt: string;
+    }>(`/chats/${chatId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async markMessagesRead(chatId: string, messageIds: string[]) {
+    return this.request(`/chats/${chatId}/messages/read`, {
+      method: 'POST',
+      body: JSON.stringify({ messageIds }),
+    });
+  }
+
+  async searchUsers(phoneNumber: string) {
+    return this.request<Array<{ id: string; phoneNumber: string; displayName: string }>>('/users/search', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    });
+  }
+
+  async getLabels() {
+    return this.request<Array<{ id: string; name: string; color: string }>>('/labels');
+  }
+
+  async createLabel(data: { name: string; color?: string }) {
+    return this.request<{ id: string; name: string; color: string }>('/labels', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getQuickReplies() {
+    return this.request<Array<{ id: string; shortcode: string; message: string }>>('/quick-replies');
+  }
+
+  async createQuickReply(data: { shortcode: string; message: string }) {
+    return this.request<{ id: string; shortcode: string; message: string }>('/quick-replies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+}
+
+export const api = new ApiService();
