@@ -17,14 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class ChatItem(
-    val id: String,
-    val name: String,
-    val lastMessage: String,
-    val time: String,
-    val unreadCount: Int = 0
-)
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,19 +26,23 @@ fun ChatListScreen(
     onLogout: () -> Unit,
     onScanQr: () -> Unit = {},
     onSettings: () -> Unit = {},
-    onNewChat: () -> Unit = {}
+    onNewChat: () -> Unit = {},
+    viewModel: ChatListViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-
-    val sampleChats = remember {
-        listOf(
-            ChatItem("1", "John Doe", "Hello! How are you?", "10:30 AM", 2),
-            ChatItem("2", "Jane Smith", "See you tomorrow!", "Yesterday", 0),
-            ChatItem("3", "Business Support", "Your order has been shipped", "Monday", 1)
-        )
+    
+    // Show error snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("WhatsApp Business") },
@@ -75,25 +72,57 @@ fun ChatListScreen(
             }
         }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            items(sampleChats) { chat ->
-                ChatListItem(
-                    chat = chat,
-                    onClick = { onChatClick(chat.id) }
+            if (uiState.isLoading && uiState.chats.isEmpty()) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color(0xFF128C7E)
                 )
-                Divider(modifier = Modifier.padding(start = 72.dp))
+            } else if (uiState.chats.isEmpty()) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Message,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No chats yet",
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Start a new conversation",
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    )
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(uiState.chats) { chat ->
+                        ChatListItemView(
+                            chat = chat,
+                            onClick = { onChatClick(chat.id) }
+                        )
+                        Divider(modifier = Modifier.padding(start = 72.dp))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun ChatListItem(
-    chat: ChatItem,
+fun ChatListItemView(
+    chat: ChatSummary,
     onClick: () -> Unit
 ) {
     Row(
@@ -111,7 +140,7 @@ fun ChatListItem(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
-                    text = chat.name.first().toString(),
+                    text = chat.name.firstOrNull()?.toString() ?: "?",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
@@ -134,7 +163,7 @@ fun ChatListItem(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = chat.time,
+                    text = chat.lastMessageTime,
                     fontSize = 12.sp,
                     color = if (chat.unreadCount > 0) Color(0xFF25D366) else Color.Gray
                 )

@@ -1,6 +1,10 @@
 package com.chatapp.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -10,9 +14,11 @@ import com.chatapp.presentation.auth.LoginScreen
 import com.chatapp.presentation.chat.ChatListScreen
 import com.chatapp.presentation.chat.ChatScreen
 import com.chatapp.presentation.qr.QrScannerScreen
+import com.chatapp.presentation.qr.QrViewModel
 import com.chatapp.presentation.settings.SettingsScreen
 import com.chatapp.presentation.settings.PrivacySettingsScreen
 import com.chatapp.presentation.contacts.NewChatScreen
+import com.chatapp.presentation.contacts.NewChatViewModel
 import com.chatapp.presentation.contacts.ContactUser
 
 sealed class Screen(val route: String) {
@@ -79,11 +85,13 @@ fun AppNavigation() {
         }
 
         composable(Screen.QrScanner.route) {
+            val qrViewModel: QrViewModel = hiltViewModel()
+            
             QrScannerScreen(
                 onBack = { navController.popBackStack() },
                 onPairingCodeScanned = { },
                 onConfirmPairing = { pairingCode ->
-                    Result.success(true)
+                    qrViewModel.confirmPairing(pairingCode)
                 }
             )
         }
@@ -109,18 +117,38 @@ fun AppNavigation() {
         }
 
         composable(Screen.NewChat.route) {
-            // Sample users - in real app, fetch from API
-            val sampleUsers = listOf(
-                ContactUser("1", "John Doe", "+1234567890"),
-                ContactUser("2", "Jane Smith", "+0987654321"),
-                ContactUser("3", "Business Contact", "+1122334455")
-            )
+            val newChatViewModel: NewChatViewModel = hiltViewModel()
+            val newChatUiState by newChatViewModel.uiState.collectAsState()
+            
+            // Navigate to chat when created
+            LaunchedEffect(newChatUiState.createdChatId) {
+                newChatUiState.createdChatId?.let { chatId ->
+                    navController.navigate(Screen.Chat.createRoute(chatId)) {
+                        popUpTo(Screen.NewChat.route) { inclusive = true }
+                    }
+                    newChatViewModel.clearCreatedChatId()
+                }
+            }
+            
+            // Convert Contact to ContactUser for the screen
+            val contactUsers = newChatUiState.contacts.map { contact ->
+                ContactUser(
+                    id = contact.id,
+                    displayName = contact.displayName,
+                    phoneNumber = contact.phoneNumber
+                )
+            }
+            
             NewChatScreen(
                 onBack = { navController.popBackStack() },
                 onUserSelected = { userId ->
-                    navController.navigate(Screen.Chat.createRoute(userId))
+                    newChatViewModel.createChat(userId)
                 },
-                users = sampleUsers
+                users = contactUsers,
+                isLoading = newChatUiState.isLoading,
+                onSearch = { query ->
+                    newChatViewModel.searchUsers(query)
+                }
             )
         }
     }

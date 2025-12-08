@@ -26,10 +26,10 @@ export class VersionController {
     
     return {
       android: {
-        versionCode: 6,
-        versionName: '1.5.0',
+        versionCode: 7,
+        versionName: '1.6.0',
         downloadUrl: `${baseUrl}/version/download/android`,
-        releaseNotes: 'Phase 3 API Integration: Real backend integration for chat messages, reactions, edit/delete, and privacy settings',
+        releaseNotes: 'Real API Integration: Fixed login with real Twilio OTP, real chat list from API, real QR pairing, and real contacts search',
         forceUpdate: false,
         minVersionCode: 1,
       },
