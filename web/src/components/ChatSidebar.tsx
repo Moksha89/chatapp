@@ -110,14 +110,25 @@ export function ChatSidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setShowNewChat(true)}
-          title="New Chat"
-        >
-          <MessageSquarePlus className="h-5 w-5 text-gray-600" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowNewChat(true)}
+            title="New Chat"
+          >
+            <MessageSquarePlus className="h-5 w-5 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={logout}
+            title="Logout"
+            className="text-gray-600 hover:text-red-600"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       <div className="p-2">

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useChat } from '../context/ChatContext';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { Search, UserPlus } from 'lucide-react';
+import { Search, UserPlus, Users } from 'lucide-react';
 
 interface User {
   id: string;
@@ -26,17 +27,50 @@ interface NewChatDialogProps {
 
 export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
   const { createChat, selectChat, chats } = useChat();
+  const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  // Load all users when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadAllUsers();
+    }
+  }, [open]);
+
+  const loadAllUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      // Search with empty string to get all users
+      const results = await api.searchUsers('');
+      // Filter out current user
+      const filteredUsers = results.filter((u: User) => u.id !== currentUser?.id);
+      setAllUsers(filteredUsers);
+      if (!searchQuery) {
+        setSearchResults(filteredUsers);
+      }
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      setSearchResults(allUsers);
+      return;
+    }
     setIsSearching(true);
     try {
       const results = await api.searchUsers(searchQuery);
-      setSearchResults(results);
+      // Filter out current user
+      const filteredResults = results.filter((u: User) => u.id !== currentUser?.id);
+      setSearchResults(filteredResults);
     } catch (error) {
       console.error('Search failed:', error);
       setSearchResults([]);
@@ -76,7 +110,7 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
         <DialogHeader>
           <DialogTitle>New Chat</DialogTitle>
           <DialogDescription>
-            Search for a user by phone number to start a conversation
+            Select a user to start a conversation or search by phone number
           </DialogDescription>
         </DialogHeader>
 
@@ -97,9 +131,20 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
             </Button>
           </div>
 
-          <div className="space-y-2">
-            {searchResults.length === 0 && searchQuery && !isSearching && (
-              <p className="text-center text-gray-500 py-4">No users found</p>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {isLoadingUsers && (
+              <p className="text-center text-gray-500 py-4">Loading users...</p>
+            )}
+            {!isLoadingUsers && searchResults.length === 0 && (
+              <p className="text-center text-gray-500 py-4">
+                {searchQuery ? 'No users found' : 'No other users registered yet'}
+              </p>
+            )}
+            {!isLoadingUsers && searchResults.length > 0 && (
+              <p className="text-xs text-gray-500 mb-2">
+                <Users className="inline h-3 w-3 mr-1" />
+                {searchResults.length} user{searchResults.length !== 1 ? 's' : ''} available
+              </p>
             )}
 
             {searchResults.map((user) => (
