@@ -103,7 +103,8 @@ export class TwilioOtpProvider implements OtpProvider {
       return { success: false, message: 'Invalid OTP' };
     }
 
-    this.otpStore.delete(normalizedPhone);
+    // Don't delete OTP on success - let it expire naturally after 5 minutes
+    // This allows multiple verification attempts (e.g., login fails -> register) to work
     this.logger.log(`OTP verified successfully for ${normalizedPhone}`);
     return { success: true, message: 'OTP verified successfully' };
   }
