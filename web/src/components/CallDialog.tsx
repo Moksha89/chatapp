@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useCall } from '../context/CallContext';
-import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, X } from 'lucide-react';
+import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { Button } from './ui/button';
 
 export function CallDialog() {
