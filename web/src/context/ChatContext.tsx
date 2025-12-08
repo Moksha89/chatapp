@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { api } from '../services/api';
 import { socketService } from '../services/socket';
 import { useAuth } from './AuthContext';
+import { sessionManager } from '../crypto';
 
 interface User {
   id: string;
@@ -40,23 +41,104 @@ interface ChatContextType {
   isLoadingChats: boolean;
   isLoadingMessages: boolean;
   typingUsers: Map<string, Set<string>>;
+  e2eeEnabled: boolean;
   selectChat: (chat: Chat | null) => void;
   sendMessage: (content: string) => void;
   createChat: (userId: string) => Promise<Chat>;
   refreshChats: () => Promise<void>;
   loadMoreMessages: () => Promise<void>;
+  initializeE2EE: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, deviceId } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, Set<string>>>(new Map());
+  const [e2eeEnabled, setE2eeEnabled] = useState(false);
+
+  const initializeE2EE = useCallback(async () => {
+    if (!isAuthenticated || !deviceId) return;
+    
+    try {
+      await sessionManager.initialize();
+      const publicKeys = sessionManager.getPublicKeysForUpload();
+      
+      if (publicKeys) {
+        await api.uploadKeys(deviceId, publicKeys);
+        setE2eeEnabled(true);
+        console.log('E2EE initialized and keys uploaded');
+      }
+    } catch (error) {
+      console.error('Failed to initialize E2EE:', error);
+    }
+  }, [isAuthenticated, deviceId]);
+
+  const ensureSession = useCallback(async (recipientId: string, recipientDeviceId: string): Promise<boolean> => {
+    if (sessionManager.hasSession(recipientId, recipientDeviceId)) {
+      return true;
+    }
+
+    try {
+      const keyBundle = await api.getKeyBundle(recipientId, recipientDeviceId);
+      if (!keyBundle) {
+        console.warn('No key bundle available for recipient');
+        return false;
+      }
+
+      await sessionManager.createSession(recipientId, recipientDeviceId, keyBundle);
+      return true;
+    } catch (error) {
+      console.error('Failed to create session:', error);
+      return false;
+    }
+  }, []);
+
+  const encryptMessageContent = useCallback(async (
+    recipientId: string,
+    recipientDeviceId: string,
+    plaintext: string
+  ): Promise<string | null> => {
+    const hasSession = await ensureSession(recipientId, recipientDeviceId);
+    if (!hasSession) return null;
+
+    try {
+      const encrypted = await sessionManager.encryptMessage(recipientId, recipientDeviceId, plaintext);
+      return encrypted.ciphertext;
+    } catch (error) {
+      console.error('Failed to encrypt message:', error);
+      return null;
+    }
+  }, [ensureSession]);
+
+  const decryptMessageContent = useCallback(async (
+    senderId: string,
+    senderDeviceId: string,
+    ciphertext: string,
+    senderIdentityKey?: string,
+    ephemeralKey?: string,
+    usedOneTimePreKeyId?: number
+  ): Promise<string | null> => {
+    try {
+      const plaintext = await sessionManager.decryptMessage(
+        senderId,
+        senderDeviceId,
+        ciphertext,
+        senderIdentityKey,
+        ephemeralKey,
+        usedOneTimePreKeyId
+      );
+      return plaintext;
+    } catch (error) {
+      console.error('Failed to decrypt message:', error);
+      return null;
+    }
+  }, []);
 
   const refreshChats = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -228,11 +310,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         isLoadingChats,
         isLoadingMessages,
         typingUsers,
+        e2eeEnabled,
         selectChat,
         sendMessage,
         createChat,
         refreshChats,
         loadMoreMessages,
+        initializeE2EE,
       }}
     >
       {children}

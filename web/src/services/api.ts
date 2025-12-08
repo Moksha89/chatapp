@@ -193,6 +193,36 @@ class ApiService {
       body: JSON.stringify(data),
     });
   }
+
+  async uploadKeys(deviceId: string, data: {
+    identityKey: string;
+    signedPrekey: { keyId: number; publicKey: string; signature: string };
+    oneTimePrekeys: Array<{ keyId: number; publicKey: string }>;
+  }) {
+    return this.request<{ success: boolean }>(`/crypto/keys/${deviceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getKeyBundle(userId: string, deviceId?: string) {
+    const params = deviceId ? `?deviceId=${deviceId}` : '';
+    return this.request<{
+      identityKey: string;
+      signedPrekey: { keyId: number; publicKey: string; signature: string };
+      oneTimePrekey?: { keyId: number; publicKey: string };
+    } | null>(`/crypto/keys/${userId}/bundle${params}`);
+  }
+
+  async getPrekeyCount(deviceId: string) {
+    return this.request<{ count: number }>(`/crypto/keys/${deviceId}/prekey-count`);
+  }
+
+  async getUserDevices(userId: string) {
+    return this.request<{ devices: Array<{ deviceId: string; identityKey: string | null }> }>(
+      `/crypto/keys/${userId}`
+    );
+  }
 }
 
 export const api = new ApiService();

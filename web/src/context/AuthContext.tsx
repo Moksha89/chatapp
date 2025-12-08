@@ -15,6 +15,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  deviceId: string | null;
   login: (phoneNumber: string, otp: string) => Promise<void>;
   register: (phoneNumber: string, otp: string, displayName: string, isBusiness?: boolean) => Promise<void>;
   logout: () => void;
@@ -35,6 +36,12 @@ function generateDeviceId(): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = generateDeviceId();
+    setDeviceId(id);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -116,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: !!user,
         isLoading,
+        deviceId,
         login,
         register,
         logout,
