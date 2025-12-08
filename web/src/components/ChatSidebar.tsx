@@ -74,7 +74,7 @@ export function ChatSidebar() {
   };
 
   return (
-    <div className="w-96 border-r bg-white flex flex-col h-full">
+    <div className="w-full md:w-96 border-r bg-white flex flex-col h-full">
       <div className="p-3 bg-gray-100 flex items-center justify-between">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

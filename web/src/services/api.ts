@@ -625,6 +625,64 @@ class ApiService {
       method: 'POST',
     });
   }
+
+  async uploadMedia(file: File): Promise<{
+    id: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+    url: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: HeadersInit = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(`${API_URL}/media/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.message || 'Upload failed');
+    }
+
+    return response.json();
+  }
+
+  async sendMediaMessage(chatId: string, data: {
+    content: string;
+    type: 'image' | 'video' | 'audio' | 'video-note' | 'file';
+    mediaUrl: string;
+    mediaType: string;
+    mediaName: string;
+    mediaSize: number;
+    mediaDuration?: number;
+    tempId?: string;
+  }) {
+    return this.request<{
+      id: string;
+      chatId: string;
+      senderId: string;
+      content: string;
+      type: string;
+      status: string;
+      mediaUrl: string;
+      mediaType: string;
+      mediaName: string;
+      mediaSize: number;
+      mediaDuration?: number;
+      createdAt: string;
+    }>(`/chats/${chatId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const api = new ApiService();

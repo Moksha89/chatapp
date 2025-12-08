@@ -27,6 +27,21 @@ export class MessageEntity {
   @Column()
   status: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  mediaUrl: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  mediaType: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  mediaName: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  mediaSize: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  mediaDuration: number | null;
+
   @Column({ type: 'timestamp', nullable: true })
   deliveredAt: Date | null;
 

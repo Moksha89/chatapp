@@ -225,6 +225,11 @@ export class ChatsService {
       ciphertext: data.ciphertext || null,
       type: data.type || 'text',
       status: 'sent',
+      mediaUrl: data.mediaUrl || null,
+      mediaType: data.mediaType || null,
+      mediaName: data.mediaName || null,
+      mediaSize: data.mediaSize || null,
+      mediaDuration: data.mediaDuration || null,
       deliveredAt: null,
       readAt: null,
     });

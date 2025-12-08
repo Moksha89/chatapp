@@ -5,11 +5,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
 
-interface QrLoginPageProps {
-  onSwitchToOtp: () => void;
-}
-
-export function QrLoginPage({ onSwitchToOtp }: QrLoginPageProps) {
+export function QrLoginPage() {
   const { loginWithToken } = useAuth();
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
@@ -148,13 +144,6 @@ export function QrLoginPage({ onSwitchToOtp }: QrLoginPageProps) {
               Code expires in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
             </p>
           )}
-
-          <div className="text-center">
-            <p className="text-sm text-gray-500 mb-2">Or login with</p>
-            <Button variant="link" onClick={onSwitchToOtp} className="text-green-600">
-              Phone Number & OTP
-            </Button>
-          </div>
         </div>
 
         <div className="w-80 bg-green-600 p-8 text-white flex flex-col justify-center">

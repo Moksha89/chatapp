@@ -112,6 +112,11 @@ export interface Message {
   ciphertext: string | null;
   type: string;
   status: string;
+  mediaUrl: string | null;
+  mediaType: string | null;
+  mediaName: string | null;
+  mediaSize: number | null;
+  mediaDuration: number | null;
   createdAt: Date;
   deliveredAt: Date | null;
   readAt: Date | null;
