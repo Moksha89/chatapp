@@ -125,6 +125,11 @@ async function seed() {
     mediaDuration: null,
     isStarred: false,
     forwardedFrom: null,
+    replyToMessageId: null,
+    reactions: null,
+    isEdited: false,
+    isDeleted: false,
+    editedAt: null,
     expiresAt: null,
   });
 
@@ -145,6 +150,11 @@ async function seed() {
     mediaDuration: null,
     isStarred: false,
     forwardedFrom: null,
+    replyToMessageId: null,
+    reactions: null,
+    isEdited: false,
+    isDeleted: false,
+    editedAt: null,
     expiresAt: null,
   });
 
@@ -165,6 +175,11 @@ async function seed() {
     mediaDuration: null,
     isStarred: false,
     forwardedFrom: null,
+    replyToMessageId: null,
+    reactions: null,
+    isEdited: false,
+    isDeleted: false,
+    editedAt: null,
     expiresAt: null,
   });
 

@@ -15,7 +15,7 @@ interface BlockedUser {
 }
 
 export function PrivacySettings({ isOpen, onClose }: PrivacySettingsProps) {
-  const { t, language, setLanguage, availableLanguages } = useI18n();
+  const { language, setLanguage, availableLanguages } = useI18n();
   const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(true);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [loading, setLoading] = useState(false);
