@@ -26,10 +26,10 @@ export class VersionController {
     
     return {
       android: {
-        versionCode: 8,
-        versionName: '1.7.0',
+        versionCode: 9,
+        versionName: '1.8.0',
         downloadUrl: `${baseUrl}/version/download/android`,
-        releaseNotes: 'Linked Devices: Added real linked devices list with ability to view and remove devices',
+        releaseNotes: 'v1.8.0: Added runtime permission requests on startup, improved device removal with force logout, app download button on web',
         forceUpdate: false,
         minVersionCode: 1,
       },

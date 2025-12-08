@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Smartphone, RefreshCw, Shield, Loader2 } from 'lucide-react';
+import { Smartphone, RefreshCw, Shield, Loader2, Download } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
@@ -182,10 +182,18 @@ export function QrLoginPage() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-white/20">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm mb-4">
               <Shield className="w-4 h-4" />
               <span>End-to-end encrypted</span>
             </div>
+            
+            <a 
+              href="/api/version/download/android" 
+              className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-white/20 hover:bg-white/30 rounded-lg text-white font-medium transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download Android App
+            </a>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { DevicesService } from './devices.service';
+import { WebsocketService } from '../websocket/websocket.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserData } from '../common/decorators';
 import { RegisterDeviceDto } from './dto/register-device.dto';
@@ -10,7 +11,10 @@ import { RegisterDeviceDto } from './dto/register-device.dto';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class DevicesController {
-  constructor(private readonly devicesService: DevicesService) {}
+  constructor(
+    private readonly devicesService: DevicesService,
+    private readonly websocketService: WebsocketService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List user devices' })
@@ -64,6 +68,9 @@ export class DevicesController {
     if (!device || device.userId !== user.id) {
       return { message: 'Device not found' };
     }
+
+    // Disconnect any active WebSocket connections for this device
+    this.websocketService.disconnectDevice(user.id, device.deviceId);
 
     await this.devicesService.delete(id);
     return { message: 'Device removed successfully' };

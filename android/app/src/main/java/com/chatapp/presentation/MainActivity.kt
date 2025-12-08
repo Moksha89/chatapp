@@ -1,10 +1,15 @@
 package com.chatapp.presentation
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +23,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import com.chatapp.BuildConfig
 import com.chatapp.data.api.ApiService
 import com.chatapp.data.api.dto.AndroidVersion
@@ -61,6 +68,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
+                // Request permissions on startup
+                RequestPermissions()
+                
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -86,6 +96,52 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun RequestPermissions() {
+    val context = LocalContext.current
+    var permissionsRequested by remember { mutableStateOf(false) }
+    
+    val permissions = remember {
+        buildList {
+            add(Manifest.permission.CAMERA)
+            add(Manifest.permission.RECORD_AUDIO)
+            add(Manifest.permission.READ_CONTACTS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.READ_MEDIA_IMAGES)
+                add(Manifest.permission.READ_MEDIA_VIDEO)
+                add(Manifest.permission.READ_MEDIA_AUDIO)
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                add(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+        }.toTypedArray()
+    }
+    
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsMap ->
+        // Handle permission results - app continues regardless of results
+        permissionsMap.forEach { (permission, isGranted) ->
+            if (!isGranted) {
+                println("Permission denied: $permission")
+            }
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        if (!permissionsRequested) {
+            permissionsRequested = true
+            val permissionsToRequest = permissions.filter { permission ->
+                ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED
+            }.toTypedArray()
+            
+            if (permissionsToRequest.isNotEmpty()) {
+                permissionLauncher.launch(permissionsToRequest)
             }
         }
     }

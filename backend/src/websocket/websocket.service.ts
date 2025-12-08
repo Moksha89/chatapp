@@ -97,4 +97,47 @@ export class WebsocketService {
   getOnlineUsers(): string[] {
     return Array.from(this.connectedUsers.keys());
   }
+
+  disconnectDevice(userId: string, deviceId: string): void {
+    const user = this.connectedUsers.get(userId);
+    if (!user || !this.server) return;
+
+    // Find sockets associated with this deviceId
+    const socketsToDisconnect: string[] = [];
+    user.deviceIds.forEach((dId, socketId) => {
+      if (dId === deviceId) {
+        socketsToDisconnect.push(socketId);
+      }
+    });
+
+    // Emit force_logout event and disconnect each socket
+    for (const socketId of socketsToDisconnect) {
+      this.server.to(socketId).emit('force_logout', { 
+        reason: 'device_removed',
+        deviceId 
+      });
+      
+      // Get the socket and disconnect it
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket) {
+        socket.disconnect(true);
+      }
+      
+      // Clean up our tracking
+      this.removeConnection(socketId);
+    }
+    
+    console.log(`Disconnected ${socketsToDisconnect.length} sockets for device ${deviceId}`);
+  }
+
+  emitToDevice(userId: string, deviceId: string, event: string, data: unknown): void {
+    const user = this.connectedUsers.get(userId);
+    if (!user || !this.server) return;
+
+    user.deviceIds.forEach((dId, socketId) => {
+      if (dId === deviceId) {
+        this.server!.to(socketId).emit(event, data);
+      }
+    });
+  }
 }

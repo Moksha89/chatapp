@@ -64,6 +64,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Listen for force_logout event when device is removed from another device
+  useEffect(() => {
+    const handleForceLogout = (data: unknown) => {
+      console.log('Force logout received:', data);
+      // Clear all auth data
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('deviceId');
+      api.setAccessToken(null);
+      socketService.disconnect();
+      setUser(null);
+      // Show alert to user
+      alert('Your session has been ended because this device was removed from your account.');
+    };
+
+    const unsubscribe = socketService.on('force_logout', handleForceLogout);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   const sendOtp = async (phoneNumber: string) => {
     const response = await api.sendOtp(phoneNumber);
     return { otp: response.otp };
