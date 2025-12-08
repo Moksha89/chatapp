@@ -48,7 +48,7 @@ const entities = [
             type: 'postgres',
             url: databaseUrl,
             entities,
-            synchronize: configService.get<string>('NODE_ENV') !== 'production',
+            synchronize: true,
             logging: configService.get<string>('NODE_ENV') === 'development',
           };
         }
