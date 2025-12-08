@@ -8,13 +8,15 @@ import { Checkbox } from './ui/checkbox';
 import { MessageCircle, QrCode } from 'lucide-react';
 import { QrLoginPage } from './QrLoginPage';
 
-type Step = 'phone' | 'otp' | 'register';
+type Step = 'phone' | 'otp';
 type LoginMode = 'otp' | 'qr';
+type AuthMode = 'login' | 'register';
 
 export function LoginPage() {
   const [loginMode, setLoginMode] = useState<LoginMode>('otp');
   const { login, register, sendOtp } = useAuth();
   const [step, setStep] = useState<Step>('phone');
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -43,38 +45,34 @@ export function LoginPage() {
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleSubmit = async () => {
     if (!otp.trim()) {
       setError('Please enter the OTP');
       return;
     }
-    setIsLoading(true);
-    setError('');
-    try {
-      await login(phoneNumber, otp);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login failed';
-      if (message.includes('not found')) {
-        setStep('register');
-      } else {
-        setError(message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async () => {
-    if (!displayName.trim()) {
+    if (authMode === 'register' && !displayName.trim()) {
       setError('Please enter your name');
       return;
     }
     setIsLoading(true);
     setError('');
     try {
-      await register(phoneNumber, otp, displayName, isBusiness);
+      if (authMode === 'register') {
+        await register(phoneNumber, otp, displayName, isBusiness);
+      } else {
+        await login(phoneNumber, otp);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      const message = err instanceof Error ? err.message : 'Authentication failed';
+      if (message.includes('not found') && authMode === 'login') {
+        setError('Account not found. Please select "New User" to create an account.');
+        setAuthMode('register');
+      } else if (message.includes('already exists') && authMode === 'register') {
+        setError('Account already exists. Please select "Existing User" to login.');
+        setAuthMode('login');
+      } else {
+        setError(message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -96,8 +94,7 @@ export function LoginPage() {
             <CardTitle className="text-2xl">WhatsApp Business Chat</CardTitle>
             <CardDescription>
               {step === 'phone' && 'Enter your phone number to get started'}
-              {step === 'otp' && 'Enter the verification code'}
-              {step === 'register' && 'Create your account'}
+              {step === 'otp' && (authMode === 'register' ? 'Create your account' : 'Enter the verification code')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -154,6 +151,31 @@ export function LoginPage() {
 
           {step === 'otp' && (
             <div className="space-y-4">
+              <div className="flex rounded-md border mb-4">
+                <button
+                  type="button"
+                  className={`flex-1 py-2 text-sm font-medium rounded-l-md ${
+                    authMode === 'login'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  onClick={() => setAuthMode('login')}
+                >
+                  Existing User
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 py-2 text-sm font-medium rounded-r-md ${
+                    authMode === 'register'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  onClick={() => setAuthMode('register')}
+                >
+                  New User
+                </button>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="otp">Verification Code</Label>
                 <Input
@@ -162,16 +184,45 @@ export function LoginPage() {
                   placeholder="Enter 6-digit code"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyOtp()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                   maxLength={6}
                 />
               </div>
+
+              {authMode === 'register' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Display Name</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Your name"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="business"
+                      checked={isBusiness}
+                      onCheckedChange={(checked) => setIsBusiness(checked === true)}
+                    />
+                    <Label htmlFor="business" className="text-sm font-normal">
+                      This is a business account
+                    </Label>
+                  </div>
+                </>
+              )}
+
               <Button
                 className="w-full bg-green-500 hover:bg-green-600"
-                onClick={handleVerifyOtp}
+                onClick={handleSubmit}
                 disabled={isLoading}
               >
-                {isLoading ? 'Verifying...' : 'Verify'}
+                {isLoading 
+                  ? (authMode === 'register' ? 'Creating Account...' : 'Logging in...') 
+                  : (authMode === 'register' ? 'Create Account' : 'Login')}
               </Button>
               <Button
                 variant="ghost"
@@ -180,42 +231,10 @@ export function LoginPage() {
                   setStep('phone');
                   setOtp('');
                   setDevOtp(null);
+                  setError('');
                 }}
               >
                 Change Phone Number
-              </Button>
-            </div>
-          )}
-
-          {step === 'register' && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Display Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Your name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="business"
-                  checked={isBusiness}
-                  onCheckedChange={(checked) => setIsBusiness(checked === true)}
-                />
-                <Label htmlFor="business" className="text-sm font-normal">
-                  This is a business account
-                </Label>
-              </div>
-              <Button
-                className="w-full bg-green-500 hover:bg-green-600"
-                onClick={handleRegister}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </div>
           )}
