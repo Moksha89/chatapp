@@ -102,4 +102,14 @@ interface ApiService {
 
     @HTTP(method = "DELETE", path = "users/me/block", hasBody = true)
     suspend fun unblockUser(@Body request: BlockUserRequest)
+
+    // Devices
+    @GET("devices")
+    suspend fun getDevices(): List<DeviceResponse>
+
+    @POST("devices")
+    suspend fun registerDevice(@Body request: RegisterDeviceRequest): DeviceResponse
+
+    @DELETE("devices/{deviceId}")
+    suspend fun removeDevice(@Path("deviceId") deviceId: String): RemoveDeviceResponse
 }

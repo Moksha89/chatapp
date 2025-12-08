@@ -17,6 +17,7 @@ import com.chatapp.presentation.qr.QrScannerScreen
 import com.chatapp.presentation.qr.QrViewModel
 import com.chatapp.presentation.settings.SettingsScreen
 import com.chatapp.presentation.settings.PrivacySettingsScreen
+import com.chatapp.presentation.settings.LinkedDevicesScreen
 import com.chatapp.presentation.contacts.NewChatScreen
 import com.chatapp.presentation.contacts.NewChatViewModel
 import com.chatapp.presentation.contacts.ContactUser
@@ -30,6 +31,7 @@ sealed class Screen(val route: String) {
     object QrScanner : Screen("qr_scanner")
     object Settings : Screen("settings")
     object Privacy : Screen("privacy")
+    object LinkedDevices : Screen("linked_devices")
     object NewChat : Screen("new_chat")
 }
 
@@ -100,13 +102,20 @@ fun AppNavigation() {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onBusinessProfile = { },
-                onLinkedDevices = { navController.navigate(Screen.QrScanner.route) },
+                onLinkedDevices = { navController.navigate(Screen.LinkedDevices.route) },
                 onPrivacy = { navController.navigate(Screen.Privacy.route) },
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable(Screen.LinkedDevices.route) {
+            LinkedDevicesScreen(
+                onBack = { navController.popBackStack() },
+                onLinkNewDevice = { navController.navigate(Screen.QrScanner.route) }
             )
         }
 

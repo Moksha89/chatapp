@@ -26,10 +26,10 @@ export class VersionController {
     
     return {
       android: {
-        versionCode: 7,
-        versionName: '1.6.0',
+        versionCode: 8,
+        versionName: '1.7.0',
         downloadUrl: `${baseUrl}/version/download/android`,
-        releaseNotes: 'Real API Integration: Fixed login with real Twilio OTP, real chat list from API, real QR pairing, and real contacts search',
+        releaseNotes: 'Linked Devices: Added real linked devices list with ability to view and remove devices',
         forceUpdate: false,
         minVersionCode: 1,
       },
