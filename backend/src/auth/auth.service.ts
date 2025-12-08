@@ -21,9 +21,20 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
+export interface QrPairingSession {
+  pairingCode: string;
+  webDeviceId: string;
+  webPublicKey?: string;
+  createdAt: Date;
+  expiresAt: Date;
+  status: 'pending' | 'scanned' | 'completed' | 'expired';
+  userId?: string;
+}
+
 @Injectable()
 export class AuthService {
   private otpStore: Map<string, { otp: string; expiresAt: Date }> = new Map();
+  private qrPairingSessions: Map<string, QrPairingSession> = new Map();
 
   constructor(
     private readonly usersService: UsersService,
@@ -177,15 +188,120 @@ export class AuthService {
     this.databaseService.deleteRefreshTokensByUserId(userId);
   }
 
-  async validateUser(phoneNumber: string): Promise<{ id: string; phoneNumber: string } | null> {
-    const user = await this.usersService.findByPhone(phoneNumber);
-    if (user) {
-      return { id: user.id, phoneNumber: user.phoneNumber };
+    async validateUser(phoneNumber: string): Promise<{ id: string; phoneNumber: string } | null> {
+      const user = await this.usersService.findByPhone(phoneNumber);
+      if (user) {
+        return { id: user.id, phoneNumber: user.phoneNumber };
+      }
+      return null;
     }
-    return null;
-  }
 
-  private async generateTokens(userId: string, phoneNumber: string, deviceId?: string): Promise<AuthTokens> {
+    async createQrPairingSession(webDeviceId: string, webPublicKey?: string): Promise<{ pairingCode: string; expiresAt: Date }> {
+      const pairingCode = this.generatePairingCode();
+      const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
+
+      const session: QrPairingSession = {
+        pairingCode,
+        webDeviceId,
+        webPublicKey,
+        createdAt: new Date(),
+        expiresAt,
+        status: 'pending',
+      };
+
+      this.qrPairingSessions.set(pairingCode, session);
+
+      setTimeout(() => {
+        const s = this.qrPairingSessions.get(pairingCode);
+        if (s && s.status === 'pending') {
+          s.status = 'expired';
+        }
+      }, 2 * 60 * 1000);
+
+      return { pairingCode, expiresAt };
+    }
+
+    async getQrPairingStatus(pairingCode: string): Promise<{ status: string; tokens?: AuthTokens; user?: { id: string; phoneNumber: string; displayName: string } }> {
+      const session = this.qrPairingSessions.get(pairingCode);
+    
+      if (!session) {
+        return { status: 'not_found' };
+      }
+
+      if (new Date() > session.expiresAt) {
+        session.status = 'expired';
+        return { status: 'expired' };
+      }
+
+      if (session.status === 'completed' && session.userId) {
+        const user = await this.usersService.findById(session.userId);
+        if (user) {
+          const tokens = await this.generateTokens(user.id, user.phoneNumber, session.webDeviceId);
+          this.qrPairingSessions.delete(pairingCode);
+          return {
+            status: 'completed',
+            tokens,
+            user: {
+              id: user.id,
+              phoneNumber: user.phoneNumber,
+              displayName: user.displayName,
+            },
+          };
+        }
+      }
+
+      return { status: session.status };
+    }
+
+    async confirmQrPairing(
+      pairingCode: string,
+      userId: string,
+      mobileDeviceId: string,
+    ): Promise<{ success: boolean; message: string }> {
+      const session = this.qrPairingSessions.get(pairingCode);
+    
+      if (!session) {
+        return { success: false, message: 'Pairing session not found' };
+      }
+
+      if (new Date() > session.expiresAt) {
+        session.status = 'expired';
+        return { success: false, message: 'Pairing session expired' };
+      }
+
+      if (session.status !== 'pending' && session.status !== 'scanned') {
+        return { success: false, message: 'Invalid pairing session status' };
+      }
+
+      const user = await this.usersService.findById(userId);
+      if (!user) {
+        return { success: false, message: 'User not found' };
+      }
+
+      await this.devicesService.create({
+        userId,
+        deviceId: session.webDeviceId,
+        deviceName: 'Web Browser',
+        deviceType: 'web',
+        isPrimary: false,
+      });
+
+      session.status = 'completed';
+      session.userId = userId;
+
+      return { success: true, message: 'Device linked successfully' };
+    }
+
+    private generatePairingCode(): string {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return code;
+    }
+
+    private async generateTokens(userId: string, phoneNumber: string, deviceId?: string): Promise<AuthTokens> {
     const payload: JwtPayload = {
       sub: userId,
       phone: phoneNumber,

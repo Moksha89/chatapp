@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, Settings, LogOut, User, Tag, MessageSquare, Building2 } from 'lucide-react';
+import { Search, MessageSquarePlus, Settings, LogOut, User, Tag, MessageSquare, Building2, Smartphone } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,15 +17,17 @@ import { NewChatDialog } from './NewChatDialog';
 import { LabelsManager } from './LabelsManager';
 import { QuickRepliesManager } from './QuickRepliesManager';
 import { BusinessProfileSettings } from './BusinessProfileSettings';
+import { LinkedDevicesManager } from './LinkedDevicesManager';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
   const { chats, activeChat, selectChat, isLoadingChats } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
-  const [showLabels, setShowLabels] = useState(false);
-  const [showQuickReplies, setShowQuickReplies] = useState(false);
-  const [showBusinessProfile, setShowBusinessProfile] = useState(false);
+    const [showLabels, setShowLabels] = useState(false);
+    const [showQuickReplies, setShowQuickReplies] = useState(false);
+    const [showBusinessProfile, setShowBusinessProfile] = useState(false);
+    const [showLinkedDevices, setShowLinkedDevices] = useState(false);
 
   const filteredChats = chats.filter((chat) => {
     const chatName = chat.name || chat.participants.find((p) => p.userId !== user?.id)?.user?.displayName || '';
@@ -88,15 +90,19 @@ export function ChatSidebar() {
                           <MessageSquare className="mr-2 h-4 w-4" />
                           Quick Replies
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setShowBusinessProfile(true)}>
-                          <Building2 className="mr-2 h-4 w-4" />
-                          Business Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <Settings className="mr-2 h-4 w-4" />
-                          Settings
-                        </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setShowBusinessProfile(true)}>
+                                                  <Building2 className="mr-2 h-4 w-4" />
+                                                  Business Profile
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setShowLinkedDevices(true)}>
+                                                  <Smartphone className="mr-2 h-4 w-4" />
+                                                  Linked Devices
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem>
+                                                  <Settings className="mr-2 h-4 w-4" />
+                                                  Settings
+                                                </DropdownMenuItem>
                         <DropdownMenuItem onClick={logout} className="text-red-600">
                           <LogOut className="mr-2 h-4 w-4" />
                           Logout
@@ -174,6 +180,7 @@ export function ChatSidebar() {
       <LabelsManager isOpen={showLabels} onClose={() => setShowLabels(false)} />
       <QuickRepliesManager isOpen={showQuickReplies} onClose={() => setShowQuickReplies(false)} />
       <BusinessProfileSettings isOpen={showBusinessProfile} onClose={() => setShowBusinessProfile(false)} />
+      <LinkedDevicesManager isOpen={showLinkedDevices} onClose={() => setShowLinkedDevices(false)} />
     </div>
   );
 }

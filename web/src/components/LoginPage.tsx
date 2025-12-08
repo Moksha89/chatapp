@@ -5,11 +5,14 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, QrCode } from 'lucide-react';
+import { QrLoginPage } from './QrLoginPage';
 
 type Step = 'phone' | 'otp' | 'register';
+type LoginMode = 'otp' | 'qr';
 
 export function LoginPage() {
+  const [loginMode, setLoginMode] = useState<LoginMode>('otp');
   const { login, register, sendOtp } = useAuth();
   const [step, setStep] = useState<Step>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -77,23 +80,27 @@ export function LoginPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-green-600 to-green-700 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="bg-green-500 p-4 rounded-full">
-              <MessageCircle className="h-12 w-12 text-white" />
+    if (loginMode === 'qr') {
+      return <QrLoginPage onSwitchToOtp={() => setLoginMode('otp')} />;
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-600 to-green-700 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-green-500 p-4 rounded-full">
+                <MessageCircle className="h-12 w-12 text-white" />
+              </div>
             </div>
-          </div>
-          <CardTitle className="text-2xl">WhatsApp Business Chat</CardTitle>
-          <CardDescription>
-            {step === 'phone' && 'Enter your phone number to get started'}
-            {step === 'otp' && 'Enter the verification code'}
-            {step === 'register' && 'Create your account'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+            <CardTitle className="text-2xl">WhatsApp Business Chat</CardTitle>
+            <CardDescription>
+              {step === 'phone' && 'Enter your phone number to get started'}
+              {step === 'otp' && 'Enter the verification code'}
+              {step === 'register' && 'Create your account'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm">
               {error}
@@ -119,15 +126,31 @@ export function LoginPage() {
                   onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
                 />
               </div>
-              <Button
-                className="w-full bg-green-500 hover:bg-green-600"
-                onClick={handleSendOtp}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Sending...' : 'Send OTP'}
-              </Button>
-            </div>
-          )}
+                        <Button
+                          className="w-full bg-green-500 hover:bg-green-600"
+                          onClick={handleSendOtp}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? 'Sending...' : 'Send OTP'}
+                        </Button>
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white px-2 text-gray-500">Or</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setLoginMode('qr')}
+                        >
+                          <QrCode className="w-4 h-4 mr-2" />
+                          Login with QR Code
+                        </Button>
+                      </div>
+                    )}
 
           {step === 'otp' && (
             <div className="space-y-4">

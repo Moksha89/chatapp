@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto, SendOtpDto } from './dto';
@@ -52,5 +52,37 @@ export class AuthController {
   async logout(@Request() req: { user: { id: string; deviceId?: string } }) {
     await this.authService.logout(req.user.id, req.user.deviceId);
     return { message: 'Logged out successfully' };
+  }
+
+  @Post('qr/create')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Create QR pairing session for web login' })
+  @ApiResponse({ status: 200, description: 'QR pairing session created' })
+  async createQrSession(@Body() body: { webDeviceId: string; webPublicKey?: string }) {
+    return this.authService.createQrPairingSession(body.webDeviceId, body.webPublicKey);
+  }
+
+  @Get('qr/status/:pairingCode')
+  @ApiOperation({ summary: 'Check QR pairing status' })
+  @ApiResponse({ status: 200, description: 'Pairing status retrieved' })
+  async getQrStatus(@Param('pairingCode') pairingCode: string) {
+    return this.authService.getQrPairingStatus(pairingCode);
+  }
+
+  @Post('qr/confirm')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Confirm QR pairing from mobile device' })
+  @ApiResponse({ status: 200, description: 'Pairing confirmed' })
+  async confirmQrPairing(
+    @Request() req: { user: { id: string; deviceId?: string } },
+    @Body() body: { pairingCode: string },
+  ) {
+    return this.authService.confirmQrPairing(
+      body.pairingCode,
+      req.user.id,
+      req.user.deviceId || '',
+    );
   }
 }

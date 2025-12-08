@@ -17,6 +17,7 @@ interface AuthContextType {
   isLoading: boolean;
   deviceId: string | null;
   login: (phoneNumber: string, otp: string) => Promise<void>;
+  loginWithToken: (accessToken: string, refreshToken: string, userData: User) => void;
   register: (phoneNumber: string, otp: string, displayName: string, isBusiness?: boolean) => Promise<void>;
   logout: () => void;
   sendOtp: (phoneNumber: string) => Promise<{ otp?: string }>;
@@ -108,28 +109,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     socketService.connect(response.accessToken);
   };
 
-  const logout = () => {
-    api.logout().catch(console.error);
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    api.setAccessToken(null);
-    socketService.disconnect();
-    setUser(null);
-  };
+    const loginWithToken = (accessToken: string, refreshToken: string, userData: User) => {
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      api.setAccessToken(accessToken);
+      setUser(userData);
+      socketService.connect(accessToken);
+    };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        deviceId,
-        login,
-        register,
-        logout,
-        sendOtp,
-      }}
-    >
+    const logout = () => {
+      api.logout().catch(console.error);
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      api.setAccessToken(null);
+      socketService.disconnect();
+      setUser(null);
+    };
+
+    return (
+      <AuthContext.Provider
+        value={{
+          user,
+          isAuthenticated: !!user,
+          isLoading,
+          deviceId,
+          login,
+          loginWithToken,
+          register,
+          logout,
+          sendOtp,
+        }}
+      >
       {children}
     </AuthContext.Provider>
   );

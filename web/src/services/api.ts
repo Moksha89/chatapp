@@ -353,6 +353,46 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  async createQrPairingSession(webDeviceId: string, webPublicKey?: string) {
+    return this.request<{ pairingCode: string; expiresAt: string }>('/auth/qr/create', {
+      method: 'POST',
+      body: JSON.stringify({ webDeviceId, webPublicKey }),
+    });
+  }
+
+  async getQrPairingStatus(pairingCode: string) {
+    return this.request<{
+      status: string;
+      tokens?: { accessToken: string; refreshToken: string; expiresIn: number };
+      user?: { id: string; phoneNumber: string; displayName: string };
+    }>(`/auth/qr/status/${pairingCode}`);
+  }
+
+  async confirmQrPairing(pairingCode: string) {
+    return this.request<{ success: boolean; message: string }>('/auth/qr/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ pairingCode }),
+    });
+  }
+
+  async getLinkedDevices() {
+    return this.request<Array<{
+      id: string;
+      deviceId: string;
+      deviceName: string;
+      deviceType: string;
+      lastSeen: string;
+      isActive: boolean;
+      isPrimary: boolean;
+    }>>('/devices');
+  }
+
+  async unlinkDevice(deviceId: string) {
+    return this.request<{ message: string }>(`/devices/${deviceId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiService();
