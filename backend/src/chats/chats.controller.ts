@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ChatsService } from './chats.service';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -39,6 +39,62 @@ export class ChatsController {
     @Param('id') id: string,
   ) {
     return this.chatsService.getChatById(id, user.id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update group chat info' })
+  @ApiResponse({ status: 200, description: 'Group info updated successfully' })
+  async updateGroupInfo(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+    @Body() body: { name?: string; description?: string; iconUrl?: string },
+  ) {
+    return this.chatsService.updateGroupInfo(id, user.id, body);
+  }
+
+  @Post(':id/participants')
+  @ApiOperation({ summary: 'Add participant to group' })
+  @ApiResponse({ status: 201, description: 'Participant added successfully' })
+  async addParticipant(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+    @Body() body: { userId: string },
+  ) {
+    return this.chatsService.addParticipant(id, user.id, body.userId);
+  }
+
+  @Delete(':id/participants/:participantId')
+  @ApiOperation({ summary: 'Remove participant from group' })
+  @ApiResponse({ status: 200, description: 'Participant removed successfully' })
+  async removeParticipant(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+    @Param('participantId') participantId: string,
+  ) {
+    await this.chatsService.removeParticipant(id, user.id, participantId);
+    return { message: 'Participant removed' };
+  }
+
+  @Post(':id/participants/:participantId/admin')
+  @ApiOperation({ summary: 'Make participant an admin' })
+  @ApiResponse({ status: 200, description: 'Participant promoted to admin' })
+  async makeAdmin(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+    @Param('participantId') participantId: string,
+  ) {
+    return this.chatsService.makeAdmin(id, user.id, participantId);
+  }
+
+  @Post(':id/leave')
+  @ApiOperation({ summary: 'Leave group chat' })
+  @ApiResponse({ status: 200, description: 'Left group successfully' })
+  async leaveGroup(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+  ) {
+    await this.chatsService.leaveGroup(id, user.id);
+    return { message: 'Left group' };
   }
 
   @Get(':id/messages')

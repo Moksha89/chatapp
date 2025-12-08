@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService, Chat, Message, ChatParticipant } from '../database/database.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -27,6 +27,9 @@ export class ChatsService {
     const chat = await this.databaseService.createChat({
       type: data.type,
       name: data.name || null,
+      description: data.description || null,
+      iconUrl: data.iconUrl || null,
+      createdBy: userId,
     });
 
     await this.databaseService.createChatParticipant({
@@ -47,8 +50,122 @@ export class ChatsService {
       });
     }
 
+    // Add multiple participants for group chats
+    if (data.participantIds && data.participantIds.length > 0) {
+      for (const participantId of data.participantIds) {
+        if (participantId !== userId) {
+          await this.databaseService.createChatParticipant({
+            chatId: chat.id,
+            userId: participantId,
+            role: 'member',
+            joinedAt: new Date(),
+            lastReadAt: null,
+          });
+        }
+      }
+    }
+
     const participants = await this.databaseService.findChatParticipantsByChatId(chat.id);
     return { ...chat, participants };
+  }
+
+  async addParticipant(chatId: string, userId: string, newParticipantId: string): Promise<ChatParticipant> {
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat || chat.type !== 'group') {
+      throw new BadRequestException('Can only add participants to group chats');
+    }
+
+    const adminParticipant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!adminParticipant || adminParticipant.role !== 'admin') {
+      throw new ForbiddenException('Only admins can add participants');
+    }
+
+    const existingParticipant = await this.databaseService.findChatParticipant(chatId, newParticipantId);
+    if (existingParticipant) {
+      throw new BadRequestException('User is already a participant');
+    }
+
+    return this.databaseService.createChatParticipant({
+      chatId,
+      userId: newParticipantId,
+      role: 'member',
+      joinedAt: new Date(),
+      lastReadAt: null,
+    });
+  }
+
+  async removeParticipant(chatId: string, userId: string, participantIdToRemove: string): Promise<void> {
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat || chat.type !== 'group') {
+      throw new BadRequestException('Can only remove participants from group chats');
+    }
+
+    const adminParticipant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!adminParticipant || (adminParticipant.role !== 'admin' && userId !== participantIdToRemove)) {
+      throw new ForbiddenException('Only admins can remove other participants');
+    }
+
+    const participantToRemove = await this.databaseService.findChatParticipant(chatId, participantIdToRemove);
+    if (!participantToRemove) {
+      throw new NotFoundException('Participant not found');
+    }
+
+    await this.databaseService.deleteChatParticipant(participantToRemove.id);
+  }
+
+  async makeAdmin(chatId: string, userId: string, targetUserId: string): Promise<ChatParticipant> {
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat || chat.type !== 'group') {
+      throw new BadRequestException('Can only manage admins in group chats');
+    }
+
+    const adminParticipant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!adminParticipant || adminParticipant.role !== 'admin') {
+      throw new ForbiddenException('Only admins can promote members');
+    }
+
+    const targetParticipant = await this.databaseService.findChatParticipant(chatId, targetUserId);
+    if (!targetParticipant) {
+      throw new NotFoundException('Participant not found');
+    }
+
+    const updated = await this.databaseService.updateChatParticipant(targetParticipant.id, { role: 'admin' });
+    if (!updated) {
+      throw new NotFoundException('Failed to update participant');
+    }
+    return updated;
+  }
+
+  async updateGroupInfo(chatId: string, userId: string, data: { name?: string; description?: string; iconUrl?: string }): Promise<Chat> {
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat || chat.type !== 'group') {
+      throw new BadRequestException('Can only update group chat info');
+    }
+
+    const adminParticipant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!adminParticipant || adminParticipant.role !== 'admin') {
+      throw new ForbiddenException('Only admins can update group info');
+    }
+
+    const updated = await this.databaseService.updateChat(chatId, data);
+    if (!updated) {
+      throw new NotFoundException('Chat not found');
+    }
+    return updated;
+  }
+
+  async leaveGroup(chatId: string, userId: string): Promise<void> {
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat || chat.type !== 'group') {
+      throw new BadRequestException('Can only leave group chats');
+    }
+
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Not a participant of this chat');
+    }
+
+    await this.databaseService.deleteChatParticipant(participant.id);
   }
 
   async getChatsForUser(userId: string) {

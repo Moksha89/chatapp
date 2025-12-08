@@ -11,3 +11,7 @@ export { QuickReplyEntity } from './quick-reply.entity';
 export { OneTimePrekeyEntity } from './one-time-prekey.entity';
 export { RefreshTokenEntity } from './refresh-token.entity';
 export { WebSessionEntity } from './web-session.entity';
+export { StatusEntity } from './status.entity';
+export { BroadcastEntity } from './broadcast.entity';
+export { ProductEntity } from './product.entity';
+export { AutoReplyEntity } from './auto-reply.entity';

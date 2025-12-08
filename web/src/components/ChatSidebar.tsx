@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, Settings, LogOut, User, Tag, MessageSquare, Building2, Smartphone } from 'lucide-react';
+import { Search, MessageSquarePlus, Settings, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,16 +18,26 @@ import { LabelsManager } from './LabelsManager';
 import { QuickRepliesManager } from './QuickRepliesManager';
 import { BusinessProfileSettings } from './BusinessProfileSettings';
 import { LinkedDevicesManager } from './LinkedDevicesManager';
+import { CreateGroupDialog } from './CreateGroupDialog';
+import { StatusManager } from './StatusManager';
+import { BroadcastManager } from './BroadcastManager';
+import { ProductCatalog } from './ProductCatalog';
+import { AutoReplySettings } from './AutoReplySettings';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
   const { chats, activeChat, selectChat, isLoadingChats } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
-    const [showLabels, setShowLabels] = useState(false);
-    const [showQuickReplies, setShowQuickReplies] = useState(false);
-    const [showBusinessProfile, setShowBusinessProfile] = useState(false);
-    const [showLinkedDevices, setShowLinkedDevices] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [showBusinessProfile, setShowBusinessProfile] = useState(false);
+  const [showLinkedDevices, setShowLinkedDevices] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [showProducts, setShowProducts] = useState(false);
+  const [showAutoReply, setShowAutoReply] = useState(false);
 
   const filteredChats = chats.filter((chat) => {
     const chatName = chat.name || chat.participants.find((p) => p.userId !== user?.id)?.user?.displayName || '';
@@ -94,19 +104,32 @@ export function ChatSidebar() {
                                                   <Building2 className="mr-2 h-4 w-4" />
                                                   Business Profile
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setShowLinkedDevices(true)}>
-                                                  <Smartphone className="mr-2 h-4 w-4" />
-                                                  Linked Devices
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem>
-                                                  <Settings className="mr-2 h-4 w-4" />
-                                                  Settings
-                                                </DropdownMenuItem>
-                        <DropdownMenuItem onClick={logout} className="text-red-600">
-                          <LogOut className="mr-2 h-4 w-4" />
-                          Logout
-                        </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowLinkedDevices(true)}>
+              <Smartphone className="mr-2 h-4 w-4" />
+              Linked Devices
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowStatus(true)}>
+              <Circle className="mr-2 h-4 w-4" />
+              Status Updates
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowBroadcast(true)}>
+              <Radio className="mr-2 h-4 w-4" />
+              Broadcast Lists
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowProducts(true)}>
+              <Package className="mr-2 h-4 w-4" />
+              Product Catalog
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowAutoReply(true)}>
+              <Clock className="mr-2 h-4 w-4" />
+              Auto-Reply Messages
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout} className="text-red-600">
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -118,6 +141,14 @@ export function ChatSidebar() {
             title="New Chat"
           >
             <MessageSquarePlus className="h-5 w-5 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowCreateGroup(true)}
+            title="Create Group"
+          >
+            <Users className="h-5 w-5 text-gray-600" />
           </Button>
           <Button
             variant="ghost"
@@ -192,6 +223,11 @@ export function ChatSidebar() {
       <QuickRepliesManager isOpen={showQuickReplies} onClose={() => setShowQuickReplies(false)} />
       <BusinessProfileSettings isOpen={showBusinessProfile} onClose={() => setShowBusinessProfile(false)} />
       <LinkedDevicesManager isOpen={showLinkedDevices} onClose={() => setShowLinkedDevices(false)} />
+      <CreateGroupDialog open={showCreateGroup} onOpenChange={setShowCreateGroup} />
+      <StatusManager isOpen={showStatus} onClose={() => setShowStatus(false)} />
+      <BroadcastManager isOpen={showBroadcast} onClose={() => setShowBroadcast(false)} />
+      <ProductCatalog isOpen={showProducts} onClose={() => setShowProducts(false)} />
+      <AutoReplySettings isOpen={showAutoReply} onClose={() => setShowAutoReply(false)} />
     </div>
   );
 }

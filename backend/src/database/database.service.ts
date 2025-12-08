@@ -87,6 +87,9 @@ export interface Chat {
   id: string;
   type: string;
   name: string | null;
+  description: string | null;
+  iconUrl: string | null;
+  createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -389,6 +392,11 @@ export class DatabaseService implements OnModuleInit {
     await this.chatParticipantRepository.update(id, data);
     const participant = await this.chatParticipantRepository.findOne({ where: { id } });
     return participant || undefined;
+  }
+
+  async deleteChatParticipant(id: string): Promise<boolean> {
+    const result = await this.chatParticipantRepository.delete(id);
+    return (result.affected ?? 0) > 0;
   }
 
   async createMessage(data: Omit<Message, 'id' | 'createdAt'>): Promise<Message> {

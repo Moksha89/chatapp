@@ -14,6 +14,15 @@ export class ChatEntity {
   @Column({ type: 'varchar', nullable: true })
   name: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  iconUrl: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  createdBy: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

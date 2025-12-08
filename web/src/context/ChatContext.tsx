@@ -48,6 +48,7 @@ interface ChatContextType {
   selectChat: (chat: Chat | null) => void;
   sendMessage: (content: string) => void;
   createChat: (userId: string) => Promise<Chat>;
+  createGroupChat: (name: string, participantIds: string[], description?: string) => Promise<Chat>;
   refreshChats: () => Promise<void>;
   loadMoreMessages: () => Promise<void>;
   initializeE2EE: () => Promise<void>;
@@ -258,6 +259,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return createdChat || (newChat as Chat);
   }, [refreshChats, chats]);
 
+  const createGroupChat = useCallback(async (name: string, participantIds: string[], description?: string): Promise<Chat> => {
+    const newChat = await api.createChat({ 
+      type: 'group', 
+      name,
+      participantIds,
+      description,
+    } as any);
+    await refreshChats();
+    const createdChat = chats.find((c) => c.id === newChat.id);
+    return createdChat || (newChat as Chat);
+  }, [refreshChats, chats]);
+
     useEffect(() => {
       if (isAuthenticated) {
         refreshChats();
@@ -385,6 +398,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         selectChat,
         sendMessage,
         createChat,
+        createGroupChat,
         refreshChats,
         loadMoreMessages,
         initializeE2EE,

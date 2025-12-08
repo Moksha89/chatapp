@@ -398,6 +398,233 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Status/Stories APIs
+  async getMyStatuses() {
+    return this.request<Array<{
+      id: string;
+      userId: string;
+      content: string;
+      type: string;
+      backgroundColor: string;
+      textColor: string;
+      expiresAt: string;
+      viewedBy: string[];
+      createdAt: string;
+    }>>('/status/my');
+  }
+
+  async getContactStatuses() {
+    return this.request<Array<{
+      id: string;
+      userId: string;
+      content: string;
+      type: string;
+      backgroundColor: string;
+      textColor: string;
+      expiresAt: string;
+      viewedBy: string[];
+      createdAt: string;
+      user?: { displayName: string };
+    }>>('/status/contacts');
+  }
+
+  async createStatus(data: {
+    content: string;
+    type: string;
+    backgroundColor?: string;
+    textColor?: string;
+    mediaUrl?: string;
+  }) {
+    return this.request<{ id: string }>('/status', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async viewStatus(statusId: string) {
+    return this.request<{ success: boolean }>(`/status/${statusId}/view`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteStatus(statusId: string) {
+    return this.request<{ message: string }>(`/status/${statusId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Broadcast APIs
+  async getBroadcasts() {
+    return this.request<Array<{
+      id: string;
+      name: string;
+      recipientIds: string[];
+      createdAt: string;
+      updatedAt: string;
+    }>>('/broadcasts');
+  }
+
+  async createBroadcast(data: { name: string; recipientIds: string[] }) {
+    return this.request<{ id: string; name: string; recipientIds: string[] }>('/broadcasts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateBroadcast(id: string, data: { name?: string; recipientIds?: string[] }) {
+    return this.request<{ id: string; name: string; recipientIds: string[] }>(`/broadcasts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteBroadcast(id: string) {
+    return this.request<{ message: string }>(`/broadcasts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Product Catalog APIs
+  async getProducts() {
+    return this.request<Array<{
+      id: string;
+      userId: string;
+      name: string;
+      description: string;
+      price: number;
+      currency: string;
+      imageUrls: string[];
+      category: string;
+      isAvailable: boolean;
+      link: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }>>('/products');
+  }
+
+  async createProduct(data: {
+    name: string;
+    description?: string;
+    price: number;
+    currency: string;
+    category?: string;
+    link?: string | null;
+    imageUrls?: string[];
+  }) {
+    return this.request<{ id: string }>('/products', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProduct(id: string, data: {
+    name?: string;
+    description?: string;
+    price?: number;
+    currency?: string;
+    category?: string;
+    link?: string | null;
+    imageUrls?: string[];
+  }) {
+    return this.request<{ id: string }>(`/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProduct(id: string) {
+    return this.request<{ message: string }>(`/products/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleProductAvailability(id: string) {
+    return this.request<{ id: string; isAvailable: boolean }>(`/products/${id}/toggle-availability`, {
+      method: 'POST',
+    });
+  }
+
+  // Auto-Reply APIs
+  async getAutoReplies() {
+    return this.request<Array<{
+      id: string;
+      userId: string;
+      type: 'greeting' | 'away' | 'quick_reply';
+      message: string;
+      isEnabled: boolean;
+      schedule: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }>>('/auto-replies');
+  }
+
+  async createAutoReply(data: {
+    type: 'greeting' | 'away' | 'quick_reply';
+    message: string;
+    schedule?: string | null;
+  }) {
+    return this.request<{ id: string }>('/auto-replies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAutoReply(id: string, data: {
+    type?: 'greeting' | 'away' | 'quick_reply';
+    message?: string;
+    schedule?: string | null;
+  }) {
+    return this.request<{ id: string }>(`/auto-replies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAutoReply(id: string) {
+    return this.request<{ message: string }>(`/auto-replies/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleAutoReply(id: string) {
+    return this.request<{ id: string; isEnabled: boolean }>(`/auto-replies/${id}/toggle`, {
+      method: 'POST',
+    });
+  }
+
+  // Group Chat APIs
+  async updateGroupInfo(chatId: string, data: { name?: string; description?: string; iconUrl?: string }) {
+    return this.request<{ id: string }>(`/chats/${chatId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async addParticipant(chatId: string, userId: string) {
+    return this.request<{ id: string }>(`/chats/${chatId}/participants`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  }
+
+  async removeParticipant(chatId: string, participantId: string) {
+    return this.request<{ message: string }>(`/chats/${chatId}/participants/${participantId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async makeAdmin(chatId: string, participantId: string) {
+    return this.request<{ id: string }>(`/chats/${chatId}/participants/${participantId}/admin`, {
+      method: 'POST',
+    });
+  }
+
+  async leaveGroup(chatId: string) {
+    return this.request<{ message: string }>(`/chats/${chatId}/leave`, {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new ApiService();

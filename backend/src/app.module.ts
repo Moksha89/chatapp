@@ -12,6 +12,10 @@ import { MediaModule } from './media/media.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { CryptoModule } from './crypto/crypto.module';
 import { DatabaseModule } from './database/database.module';
+import { StatusModule } from './status/status.module';
+import { BroadcastsModule } from './broadcasts/broadcasts.module';
+import { ProductsModule } from './products/products.module';
+import { AutoRepliesModule } from './auto-replies/auto-replies.module';
 
 @Module({
   imports: [
@@ -31,6 +35,10 @@ import { DatabaseModule } from './database/database.module';
     MediaModule,
     WebsocketModule,
     CryptoModule,
+    StatusModule,
+    BroadcastsModule,
+    ProductsModule,
+    AutoRepliesModule,
   ],
 })
 export class AppModule {}

@@ -15,6 +15,10 @@ import {
   OneTimePrekeyEntity,
   RefreshTokenEntity,
   WebSessionEntity,
+  StatusEntity,
+  BroadcastEntity,
+  ProductEntity,
+  AutoReplyEntity,
 } from './entities';
 import { DatabaseService } from './database.service';
 
@@ -32,6 +36,10 @@ const entities = [
   OneTimePrekeyEntity,
   RefreshTokenEntity,
   WebSessionEntity,
+  StatusEntity,
+  BroadcastEntity,
+  ProductEntity,
+  AutoReplyEntity,
 ];
 
 @Global()

@@ -78,6 +78,9 @@ async function seed() {
   const chat = await databaseService.createChat({
     type: 'direct',
     name: null,
+    description: null,
+    iconUrl: null,
+    createdBy: user1.id,
   });
 
   await databaseService.createChatParticipant({
