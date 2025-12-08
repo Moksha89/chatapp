@@ -11,6 +11,9 @@ import com.chatapp.presentation.auth.LoginScreen
 import com.chatapp.presentation.chat.ChatListScreen
 import com.chatapp.presentation.chat.ChatScreen
 import com.chatapp.presentation.qr.QrScannerScreen
+import com.chatapp.presentation.settings.SettingsScreen
+import com.chatapp.presentation.contacts.NewChatScreen
+import com.chatapp.presentation.contacts.ContactUser
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -19,6 +22,8 @@ sealed class Screen(val route: String) {
         fun createRoute(chatId: String) = "chat/$chatId"
     }
     object QrScanner : Screen("qr_scanner")
+    object Settings : Screen("settings")
+    object NewChat : Screen("new_chat")
 }
 
 @Composable
@@ -51,6 +56,12 @@ fun AppNavigation() {
                 },
                 onScanQr = {
                     navController.navigate(Screen.QrScanner.route)
+                },
+                onSettings = {
+                    navController.navigate(Screen.Settings.route)
+                },
+                onNewChat = {
+                    navController.navigate(Screen.NewChat.route)
                 }
             )
         }
@@ -73,6 +84,35 @@ fun AppNavigation() {
                 onConfirmPairing = { pairingCode ->
                     Result.success(true)
                 }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onBusinessProfile = { },
+                onLinkedDevices = { navController.navigate(Screen.QrScanner.route) },
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.NewChat.route) {
+            // Sample users - in real app, fetch from API
+            val sampleUsers = listOf(
+                ContactUser("1", "John Doe", "+1234567890"),
+                ContactUser("2", "Jane Smith", "+0987654321"),
+                ContactUser("3", "Business Contact", "+1122334455")
+            )
+            NewChatScreen(
+                onBack = { navController.popBackStack() },
+                onUserSelected = { userId ->
+                    navController.navigate(Screen.Chat.createRoute(userId))
+                },
+                users = sampleUsers
             )
         }
     }

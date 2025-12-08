@@ -1,0 +1,239 @@
+package com.chatapp.presentation.settings
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onBusinessProfile: () -> Unit,
+    onLinkedDevices: () -> Unit,
+    onLogout: () -> Unit,
+    userName: String = "User",
+    phoneNumber: String = ""
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF128C7E),
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Profile Section
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onBusinessProfile() }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape),
+                        color = Color(0xFF25D366)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = userName.firstOrNull()?.toString() ?: "U",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 28.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = userName,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp
+                        )
+                        if (phoneNumber.isNotEmpty()) {
+                            Text(
+                                text = phoneNumber,
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                    Icon(
+                        Icons.Default.QrCode,
+                        contentDescription = "QR Code",
+                        tint = Color(0xFF128C7E)
+                    )
+                }
+                Divider()
+            }
+
+            // Settings Items
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Business,
+                    title = "Business Profile",
+                    subtitle = "Edit your business information",
+                    onClick = onBusinessProfile
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Devices,
+                    title = "Linked Devices",
+                    subtitle = "Manage devices connected to your account",
+                    onClick = onLinkedDevices
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Label,
+                    title = "Labels",
+                    subtitle = "Organize chats with labels",
+                    onClick = { }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Reply,
+                    title = "Quick Replies",
+                    subtitle = "Create message shortcuts",
+                    onClick = { }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Inventory,
+                    title = "Product Catalog",
+                    subtitle = "Manage your products",
+                    onClick = { }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Schedule,
+                    title = "Auto-Reply Messages",
+                    subtitle = "Set up greeting and away messages",
+                    onClick = { }
+                )
+            }
+
+            item {
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Notifications,
+                    title = "Notifications",
+                    subtitle = "Message and call notifications",
+                    onClick = { }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Storage,
+                    title = "Storage and Data",
+                    subtitle = "Network usage, auto-download",
+                    onClick = { }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Help,
+                    title = "Help",
+                    subtitle = "Help center, contact us",
+                    onClick = { }
+                )
+            }
+
+            item {
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Logout,
+                    title = "Logout",
+                    subtitle = "Sign out of your account",
+                    onClick = onLogout,
+                    tint = Color.Red
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    tint: Color = Color(0xFF128C7E)
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                color = if (tint == Color.Red) Color.Red else Color.Unspecified
+            )
+            Text(
+                text = subtitle,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+        }
+    }
+}

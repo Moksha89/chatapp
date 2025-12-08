@@ -31,7 +31,9 @@ data class ChatItem(
 fun ChatListScreen(
     onChatClick: (String) -> Unit,
     onLogout: () -> Unit,
-    onScanQr: () -> Unit = {}
+    onScanQr: () -> Unit = {},
+    onSettings: () -> Unit = {},
+    onNewChat: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -58,15 +60,15 @@ fun ChatListScreen(
                                     IconButton(onClick = onScanQr) {
                                         Icon(Icons.Default.QrCodeScanner, contentDescription = "Link Device", tint = Color.White)
                                     }
-                                    IconButton(onClick = onLogout) {
-                                        Icon(Icons.Default.Logout, contentDescription = "Logout", tint = Color.White)
+                                    IconButton(onClick = onSettings) {
+                                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
                                     }
                                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { },
+                onClick = onNewChat,
                 containerColor = Color(0xFF25D366)
             ) {
                 Icon(Icons.Default.Message, contentDescription = "New Chat", tint = Color.White)

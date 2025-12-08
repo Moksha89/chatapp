@@ -54,15 +54,32 @@ fun QrScannerScreen(
         if (result.contents != null) {
             try {
                 val json = JSONObject(result.contents)
-                val pairingCode = json.optString("pairingCode", "")
-                if (pairingCode.isNotEmpty()) {
+                // Try both 'code' (web format) and 'pairingCode' (legacy format)
+                var pairingCode = json.optString("code", "")
+                if (pairingCode.isEmpty()) {
+                    pairingCode = json.optString("pairingCode", "")
+                }
+                // Verify it's from our app
+                val type = json.optString("type", "")
+                if (type == "chatapp-pairing" && pairingCode.isNotEmpty()) {
+                    scannedCode = pairingCode
+                    onPairingCodeScanned(pairingCode)
+                } else if (pairingCode.isNotEmpty()) {
+                    // Accept if we have a code even without type check (backwards compatibility)
                     scannedCode = pairingCode
                     onPairingCodeScanned(pairingCode)
                 } else {
-                    pairingError = "Invalid QR code: no pairing code found"
+                    pairingError = "Invalid QR code. Open http://173.208.132.8 and click 'Login with QR Code'"
                 }
             } catch (e: Exception) {
-                pairingError = "Invalid QR code format"
+                // If not JSON, check if it's a raw pairing code (8 chars alphanumeric)
+                val raw = result.contents.trim()
+                if (raw.length == 8 && raw.matches(Regex("^[A-Za-z0-9]+$"))) {
+                    scannedCode = raw
+                    onPairingCodeScanned(raw)
+                } else {
+                    pairingError = "Invalid QR code. Make sure you're scanning from http://173.208.132.8"
+                }
             }
         }
     }
@@ -162,7 +179,7 @@ fun QrScannerScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Open WhatsApp Business Web on your computer and scan the QR code to link your device.",
+                    text = "Open http://173.208.132.8 on your computer, click 'Login with QR Code', and scan the QR code to link your device.",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = Color.Gray
@@ -191,7 +208,7 @@ fun QrScannerScreen(
                             scannedCode = null
                             val options = ScanOptions()
                                 .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                .setPrompt("Scan the QR code from WhatsApp Web")
+                                .setPrompt("Scan the QR code from ChatApp Web")
                                 .setBeepEnabled(true)
                                 .setOrientationLocked(true)
                             scanLauncher.launch(options)
