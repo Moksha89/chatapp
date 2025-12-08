@@ -26,10 +26,10 @@ export class VersionController {
     
     return {
       android: {
-        versionCode: 4,
-        versionName: '1.3.0',
+        versionCode: 5,
+        versionName: '1.4.0',
         downloadUrl: `${baseUrl}/version/download/android`,
-        releaseNotes: 'New features: Message search, starring, forwarding, chat export, disappearing messages, privacy settings, block/report users, multi-language support',
+        releaseNotes: 'Phase 3: Android parity - Message reactions, edit/delete messages, privacy settings with read receipts toggle and blocked users management',
         forceUpdate: false,
         minVersionCode: 1,
       },
