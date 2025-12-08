@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,18 +24,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-
-data class MessageItem(
-    val id: String,
-    val content: String,
-    val time: String,
-    val isOwn: Boolean,
-    val status: String = "sent",
-    val reactions: Map<String, List<String>> = emptyMap(),
-    val isEdited: Boolean = false,
-    val isDeleted: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis()
-)
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.chatapp.domain.model.Message
+import com.chatapp.domain.model.MessageStatus
+import java.text.SimpleDateFormat
+import java.util.*
 
 val QUICK_REACTIONS = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
 
@@ -43,56 +37,48 @@ val QUICK_REACTIONS = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
 fun ChatScreen(
     chatId: String,
     onBack: () -> Unit,
-    currentUserId: String = "current-user"
+    currentUserId: String = "current-user",
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    
     var messageText by remember { mutableStateOf("") }
-    var selectedMessage by remember { mutableStateOf<MessageItem?>(null) }
+    var selectedMessage by remember { mutableStateOf<Message?>(null) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var editingContent by remember { mutableStateOf("") }
 
-    val sampleMessages = remember {
-        mutableStateListOf(
-            MessageItem("1", "Hello! How are you?", "10:30 AM", false),
-            MessageItem("2", "I'm doing great, thanks!", "10:31 AM", true, "read", 
-                reactions = mapOf("👍" to listOf("user1"))),
-            MessageItem("3", "That's wonderful to hear!", "10:32 AM", false),
-            MessageItem("4", "Would you like to meet up later?", "10:33 AM", true, "delivered")
-        )
+    // Load messages when screen opens
+    LaunchedEffect(chatId) {
+        viewModel.loadMessages(chatId, currentUserId)
+    }
+
+    // Show error snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
     }
 
     // Message Menu Dialog
     if (showReactionPicker && selectedMessage != null) {
         MessageMenuDialog(
             message = selectedMessage!!,
-            currentUserId = currentUserId,
+            currentUserId = uiState.currentUserId,
             onDismiss = { 
                 showReactionPicker = false 
                 selectedMessage = null
             },
             onReaction = { emoji ->
-                val index = sampleMessages.indexOfFirst { it.id == selectedMessage!!.id }
-                if (index >= 0) {
-                    val currentReactions = sampleMessages[index].reactions.toMutableMap()
-                    val users = currentReactions[emoji]?.toMutableList() ?: mutableListOf()
-                    if (users.contains(currentUserId)) {
-                        users.remove(currentUserId)
-                    } else {
-                        users.add(currentUserId)
-                    }
-                    if (users.isEmpty()) {
-                        currentReactions.remove(emoji)
-                    } else {
-                        currentReactions[emoji] = users
-                    }
-                    sampleMessages[index] = sampleMessages[index].copy(reactions = currentReactions)
-                }
+                viewModel.toggleReaction(selectedMessage!!.id, emoji)
                 showReactionPicker = false
                 selectedMessage = null
             },
             onEdit = {
-                editingContent = selectedMessage!!.content
+                editingContent = selectedMessage!!.content ?: ""
                 showEditDialog = true
                 showReactionPicker = false
             },
@@ -113,13 +99,7 @@ fun ChatScreen(
                 selectedMessage = null
             },
             onSave = {
-                val index = sampleMessages.indexOfFirst { it.id == selectedMessage!!.id }
-                if (index >= 0) {
-                    sampleMessages[index] = sampleMessages[index].copy(
-                        content = editingContent,
-                        isEdited = true
-                    )
-                }
+                viewModel.editMessage(selectedMessage!!.id, editingContent)
                 showEditDialog = false
                 selectedMessage = null
             }
@@ -129,27 +109,18 @@ fun ChatScreen(
     // Delete Dialog
     if (showDeleteDialog && selectedMessage != null) {
         DeleteMessageDialog(
-            isOwn = selectedMessage!!.isOwn,
+            isOwn = selectedMessage!!.senderId == uiState.currentUserId,
             onDismiss = { 
                 showDeleteDialog = false
                 selectedMessage = null
             },
             onDeleteForMe = {
-                val index = sampleMessages.indexOfFirst { it.id == selectedMessage!!.id }
-                if (index >= 0) {
-                    sampleMessages.removeAt(index)
-                }
+                viewModel.deleteMessage(selectedMessage!!.id, deleteForEveryone = false)
                 showDeleteDialog = false
                 selectedMessage = null
             },
             onDeleteForEveryone = {
-                val index = sampleMessages.indexOfFirst { it.id == selectedMessage!!.id }
-                if (index >= 0) {
-                    sampleMessages[index] = sampleMessages[index].copy(
-                        isDeleted = true,
-                        content = "This message was deleted"
-                    )
-                }
+                viewModel.deleteMessage(selectedMessage!!.id, deleteForEveryone = true)
                 showDeleteDialog = false
                 selectedMessage = null
             }
@@ -157,6 +128,7 @@ fun ChatScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -200,43 +172,41 @@ fun ChatScreen(
                 .padding(paddingValues)
                 .background(Color(0xFFECE5DD))
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
-                reverseLayout = false
-            ) {
-                items(sampleMessages) { message ->
-                    MessageBubble(
-                        message = message,
-                        currentUserId = currentUserId,
-                        onLongPress = {
-                            if (!message.isDeleted) {
-                                selectedMessage = message
-                                showReactionPicker = true
-                            }
-                        },
-                        onReactionClick = { emoji ->
-                            // Toggle reaction
-                            val index = sampleMessages.indexOfFirst { it.id == message.id }
-                            if (index >= 0) {
-                                val currentReactions = message.reactions.toMutableMap()
-                                val users = currentReactions[emoji]?.toMutableList() ?: mutableListOf()
-                                if (users.contains(currentUserId)) {
-                                    users.remove(currentUserId)
-                                } else {
-                                    users.add(currentUserId)
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF25D366))
+                }
+            } else {
+                val listState = rememberLazyListState()
+                
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    reverseLayout = false
+                ) {
+                    items(uiState.messages, key = { it.id }) { message ->
+                        MessageBubble(
+                            message = message,
+                            currentUserId = uiState.currentUserId,
+                            onLongPress = {
+                                if (!message.isDeleted) {
+                                    selectedMessage = message
+                                    showReactionPicker = true
                                 }
-                                if (users.isEmpty()) {
-                                    currentReactions.remove(emoji)
-                                } else {
-                                    currentReactions[emoji] = users
-                                }
-                                sampleMessages[index] = message.copy(reactions = currentReactions)
+                            },
+                            onReactionClick = { emoji ->
+                                viewModel.toggleReaction(message.id, emoji)
                             }
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                 }
             }
 
@@ -268,7 +238,12 @@ fun ChatScreen(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     FloatingActionButton(
-                        onClick = { messageText = "" },
+                        onClick = { 
+                            if (messageText.isNotBlank()) {
+                                viewModel.sendMessage(messageText)
+                                messageText = ""
+                            }
+                        },
                         containerColor = Color(0xFF25D366),
                         modifier = Modifier.size(48.dp)
                     ) {
@@ -287,25 +262,29 @@ fun ChatScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageBubble(
-    message: MessageItem,
+    message: Message,
     currentUserId: String,
     onLongPress: () -> Unit,
     onReactionClick: (String) -> Unit
 ) {
+    val isOwn = message.senderId == currentUserId
+    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val timeString = timeFormat.format(Date(message.createdAt))
+    
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (message.isOwn) Arrangement.End else Arrangement.Start
+            horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start
         ) {
             Surface(
                 shape = RoundedCornerShape(
                     topStart = 12.dp,
                     topEnd = 12.dp,
-                    bottomStart = if (message.isOwn) 12.dp else 0.dp,
-                    bottomEnd = if (message.isOwn) 0.dp else 12.dp
+                    bottomStart = if (isOwn) 12.dp else 0.dp,
+                    bottomEnd = if (isOwn) 0.dp else 12.dp
                 ),
                 color = if (message.isDeleted) Color.LightGray.copy(alpha = 0.5f)
-                        else if (message.isOwn) Color(0xFFDCF8C6) else Color.White,
+                        else if (isOwn) Color(0xFFDCF8C6) else Color.White,
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .combinedClickable(
@@ -321,7 +300,7 @@ fun MessageBubble(
                             color = Color.Gray
                         )
                     } else {
-                        Text(text = message.content)
+                        Text(text = message.content ?: "")
                     }
                     Row(
                         modifier = Modifier.align(Alignment.End),
@@ -337,21 +316,21 @@ fun MessageBubble(
                             Spacer(modifier = Modifier.width(4.dp))
                         }
                         Text(
-                            text = message.time,
+                            text = timeString,
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
-                        if (message.isOwn) {
+                        if (isOwn) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = when (message.status) {
-                                    "read" -> Icons.Default.DoneAll
-                                    "delivered" -> Icons.Default.DoneAll
+                                    MessageStatus.READ -> Icons.Default.DoneAll
+                                    MessageStatus.DELIVERED -> Icons.Default.DoneAll
                                     else -> Icons.Default.Done
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = if (message.status == "read") Color(0xFF34B7F1) else Color.Gray
+                                tint = if (message.status == MessageStatus.READ) Color(0xFF34B7F1) else Color.Gray
                             )
                         }
                     }
@@ -365,7 +344,7 @@ fun MessageBubble(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 2.dp),
-                horizontalArrangement = if (message.isOwn) Arrangement.End else Arrangement.Start
+                horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start
             ) {
                 message.reactions.forEach { (emoji, users) ->
                     if (users.isNotEmpty()) {
@@ -399,13 +378,15 @@ fun MessageBubble(
 
 @Composable
 fun MessageMenuDialog(
-    message: MessageItem,
+    message: Message,
     currentUserId: String,
     onDismiss: () -> Unit,
     onReaction: (String) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val isOwn = message.senderId == currentUserId
+    
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
@@ -438,7 +419,7 @@ fun MessageMenuDialog(
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 
-                if (message.isOwn) {
+                if (isOwn) {
                     val canEdit = System.currentTimeMillis() - message.createdAt < 15 * 60 * 1000
                     if (canEdit) {
                         Row(

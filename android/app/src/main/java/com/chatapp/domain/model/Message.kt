@@ -12,7 +12,12 @@ data class Message(
     val createdAt: Long,
     val deliveredAt: Long? = null,
     val readAt: Long? = null,
-    val tempId: String? = null
+    val tempId: String? = null,
+    val replyToMessageId: String? = null,
+    val reactions: Map<String, List<String>> = emptyMap(),
+    val isEdited: Boolean = false,
+    val isDeleted: Boolean = false,
+    val editedAt: Long? = null
 )
 
 enum class MessageType {

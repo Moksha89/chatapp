@@ -11,4 +11,12 @@ interface ChatRepository {
     suspend fun getMessages(chatId: String, limit: Int = 50, before: String? = null): Result<List<Message>>
     suspend fun sendMessage(chatId: String, content: String, tempId: String): Result<Message>
     suspend fun markMessagesRead(chatId: String, messageIds: List<String>): Result<Unit>
+    
+    // Reactions
+    suspend fun addReaction(chatId: String, messageId: String, emoji: String): Result<Map<String, List<String>>>
+    suspend fun removeReaction(chatId: String, messageId: String, emoji: String): Result<Map<String, List<String>>>
+    
+    // Edit/Delete
+    suspend fun editMessage(chatId: String, messageId: String, content: String): Result<Message>
+    suspend fun deleteMessage(chatId: String, messageId: String, deleteForEveryone: Boolean): Result<Unit>
 }

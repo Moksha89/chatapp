@@ -1,11 +1,6 @@
 package com.chatapp.presentation.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,7 +12,6 @@ import com.chatapp.presentation.chat.ChatScreen
 import com.chatapp.presentation.qr.QrScannerScreen
 import com.chatapp.presentation.settings.SettingsScreen
 import com.chatapp.presentation.settings.PrivacySettingsScreen
-import com.chatapp.presentation.settings.BlockedUser
 import com.chatapp.presentation.contacts.NewChatScreen
 import com.chatapp.presentation.contacts.ContactUser
 
@@ -109,17 +103,8 @@ fun AppNavigation() {
         }
 
         composable(Screen.Privacy.route) {
-            var readReceiptsEnabled by remember { mutableStateOf(true) }
-            var blockedUsers by remember { mutableStateOf(listOf<BlockedUser>()) }
-            
             PrivacySettingsScreen(
-                onBack = { navController.popBackStack() },
-                readReceiptsEnabled = readReceiptsEnabled,
-                onReadReceiptsToggle = { enabled -> readReceiptsEnabled = enabled },
-                blockedUsers = blockedUsers,
-                onUnblockUser = { userId -> 
-                    blockedUsers = blockedUsers.filter { it.id != userId }
-                }
+                onBack = { navController.popBackStack() }
             )
         }
 
