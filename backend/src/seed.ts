@@ -111,6 +111,11 @@ async function seed() {
     status: 'read',
     deliveredAt: new Date(),
     readAt: new Date(),
+    mediaUrl: null,
+    mediaType: null,
+    mediaName: null,
+    mediaSize: null,
+    mediaDuration: null,
   });
 
   const message2 = await databaseService.createMessage({
@@ -123,6 +128,11 @@ async function seed() {
     status: 'read',
     deliveredAt: new Date(),
     readAt: new Date(),
+    mediaUrl: null,
+    mediaType: null,
+    mediaName: null,
+    mediaSize: null,
+    mediaDuration: null,
   });
 
   const message3 = await databaseService.createMessage({
@@ -135,6 +145,11 @@ async function seed() {
     status: 'delivered',
     deliveredAt: new Date(),
     readAt: null,
+    mediaUrl: null,
+    mediaType: null,
+    mediaName: null,
+    mediaSize: null,
+    mediaDuration: null,
   });
 
   console.log('Created demo messages:');
