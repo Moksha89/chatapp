@@ -134,4 +134,69 @@ export class ChatsController {
     await this.chatsService.markMessagesRead(id, user.id, body.messageIds);
     return { message: 'Messages marked as read' };
   }
+
+  @Get('search/messages')
+  @ApiOperation({ summary: 'Search messages across all chats' })
+  @ApiResponse({ status: 200, description: 'Search results' })
+  @ApiQuery({ name: 'q', required: true, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async searchMessages(
+    @CurrentUser() user: CurrentUserData,
+    @Query('q') query: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 50;
+    return this.chatsService.searchMessages(user.id, query, parsedLimit);
+  }
+
+  @Get('starred/messages')
+  @ApiOperation({ summary: 'Get all starred messages' })
+  @ApiResponse({ status: 200, description: 'Starred messages retrieved' })
+  async getStarredMessages(@CurrentUser() user: CurrentUserData) {
+    return this.chatsService.getStarredMessages(user.id);
+  }
+
+  @Post(':id/messages/:messageId/star')
+  @ApiOperation({ summary: 'Toggle message star' })
+  @ApiResponse({ status: 200, description: 'Message star toggled' })
+  async toggleMessageStar(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.chatsService.toggleMessageStar(chatId, user.id, messageId);
+  }
+
+  @Post(':id/messages/:messageId/forward')
+  @ApiOperation({ summary: 'Forward message to another chat' })
+  @ApiResponse({ status: 201, description: 'Message forwarded' })
+  async forwardMessage(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') sourceChatId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { targetChatId: string },
+  ) {
+    return this.chatsService.forwardMessage(sourceChatId, user.id, messageId, body.targetChatId);
+  }
+
+  @Get(':id/export')
+  @ApiOperation({ summary: 'Export chat history' })
+  @ApiResponse({ status: 200, description: 'Chat exported' })
+  async exportChat(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+  ) {
+    return this.chatsService.exportChat(id, user.id);
+  }
+
+  @Put(':id/disappearing')
+  @ApiOperation({ summary: 'Set disappearing messages duration' })
+  @ApiResponse({ status: 200, description: 'Disappearing messages setting updated' })
+  async setDisappearingMessages(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+    @Body() body: { duration: number | null },
+  ) {
+    return this.chatsService.setDisappearingMessages(id, user.id, body.duration);
+  }
 }

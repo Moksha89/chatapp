@@ -683,6 +683,124 @@ class ApiService {
       body: JSON.stringify(data),
     });
   }
+
+  // Message Search
+  async searchMessages(query: string, limit = 50) {
+    return this.request<Array<{
+      id: string;
+      chatId: string;
+      senderId: string;
+      content: string;
+      type: string;
+      createdAt: string;
+      isStarred: boolean;
+    }>>(`/chats/search/messages?q=${encodeURIComponent(query)}&limit=${limit}`);
+  }
+
+  // Starred Messages
+  async getStarredMessages() {
+    return this.request<Array<{
+      id: string;
+      chatId: string;
+      senderId: string;
+      content: string;
+      type: string;
+      createdAt: string;
+      isStarred: boolean;
+    }>>('/chats/starred/messages');
+  }
+
+  async toggleMessageStar(chatId: string, messageId: string) {
+    return this.request<{
+      id: string;
+      isStarred: boolean;
+    }>(`/chats/${chatId}/messages/${messageId}/star`, {
+      method: 'POST',
+    });
+  }
+
+  // Forward Message
+  async forwardMessage(sourceChatId: string, messageId: string, targetChatId: string) {
+    return this.request<{
+      id: string;
+      chatId: string;
+      content: string;
+      forwardedFrom: string;
+    }>(`/chats/${sourceChatId}/messages/${messageId}/forward`, {
+      method: 'POST',
+      body: JSON.stringify({ targetChatId }),
+    });
+  }
+
+  // Chat Export
+  async exportChat(chatId: string) {
+    return this.request<{
+      chatId: string;
+      exportedAt: string;
+      messageCount: number;
+      messages: Array<{
+        id: string;
+        senderId: string;
+        content: string;
+        type: string;
+        createdAt: string;
+      }>;
+    }>(`/chats/${chatId}/export`);
+  }
+
+  // Disappearing Messages
+  async setDisappearingMessages(chatId: string, duration: number | null) {
+    return this.request<{
+      id: string;
+      disappearingMessagesDuration: number | null;
+    }>(`/chats/${chatId}/disappearing`, {
+      method: 'PUT',
+      body: JSON.stringify({ duration }),
+    });
+  }
+
+  // Privacy Settings
+  async getPrivacySettings() {
+    return this.request<{
+      readReceiptsEnabled: boolean;
+      language: string;
+    }>('/users/me/privacy');
+  }
+
+  async updatePrivacySettings(settings: { readReceiptsEnabled?: boolean; language?: string }) {
+    return this.request<{
+      readReceiptsEnabled: boolean;
+      language: string;
+    }>('/users/me/privacy', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  // Block/Unblock Users
+  async getBlockedUsers() {
+    return this.request<string[]>('/users/me/blocked');
+  }
+
+  async blockUser(userId: string) {
+    return this.request<{ blocked: string[] }>(`/users/${userId}/block`, {
+      method: 'POST',
+    });
+  }
+
+  async unblockUser(userId: string) {
+    return this.request<{ blocked: string[] }>(`/users/${userId}/unblock`, {
+      method: 'POST',
+    });
+  }
+
+  // Report User
+  async reportUser(userId: string, reason: string, details?: string) {
+    return this.request<{ success: boolean; message: string }>(`/users/${userId}/report`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, details }),
+    });
+  }
 }
 
 export const api = new ApiService();

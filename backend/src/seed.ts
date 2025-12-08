@@ -16,6 +16,9 @@ async function seed() {
     status: 'Hey there! I am using WhatsApp Business Chat',
     profilePhoto: null,
     lastSeen: new Date(),
+    readReceiptsEnabled: true,
+    blockedUsers: null,
+    language: 'en',
   });
 
   const user2 = await databaseService.createUser({
@@ -26,6 +29,9 @@ async function seed() {
     status: 'Available for business inquiries',
     profilePhoto: null,
     lastSeen: new Date(),
+    readReceiptsEnabled: true,
+    blockedUsers: null,
+    language: 'en',
   });
 
   console.log('Created demo users:');
@@ -81,6 +87,7 @@ async function seed() {
     description: null,
     iconUrl: null,
     createdBy: user1.id,
+    disappearingMessagesDuration: null,
   });
 
   await databaseService.createChatParticipant({
@@ -116,6 +123,9 @@ async function seed() {
     mediaName: null,
     mediaSize: null,
     mediaDuration: null,
+    isStarred: false,
+    forwardedFrom: null,
+    expiresAt: null,
   });
 
   const message2 = await databaseService.createMessage({
@@ -133,6 +143,9 @@ async function seed() {
     mediaName: null,
     mediaSize: null,
     mediaDuration: null,
+    isStarred: false,
+    forwardedFrom: null,
+    expiresAt: null,
   });
 
   const message3 = await databaseService.createMessage({
@@ -150,6 +163,9 @@ async function seed() {
     mediaName: null,
     mediaSize: null,
     mediaDuration: null,
+    isStarred: false,
+    forwardedFrom: null,
+    expiresAt: null,
   });
 
   console.log('Created demo messages:');

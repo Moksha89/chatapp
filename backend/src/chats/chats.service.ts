@@ -30,6 +30,7 @@ export class ChatsService {
       description: data.description || null,
       iconUrl: data.iconUrl || null,
       createdBy: userId,
+      disappearingMessagesDuration: null,
     });
 
     await this.databaseService.createChatParticipant({
@@ -232,6 +233,9 @@ export class ChatsService {
       mediaDuration: data.mediaDuration || null,
       deliveredAt: null,
       readAt: null,
+      isStarred: false,
+      forwardedFrom: null,
+      expiresAt: null,
     });
 
     await this.databaseService.updateChat(chatId, { updatedAt: new Date() });
@@ -287,5 +291,118 @@ export class ChatsService {
     return participants
       .filter((p) => p.userId !== userId)
       .map((p) => p.userId);
+  }
+
+  async searchMessages(userId: string, query: string, limit: number): Promise<Message[]> {
+    return this.databaseService.searchMessages(userId, query, limit);
+  }
+
+  async getStarredMessages(userId: string): Promise<Message[]> {
+    return this.databaseService.getStarredMessages(userId);
+  }
+
+  async toggleMessageStar(chatId: string, userId: string, messageId: string): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    const updated = await this.databaseService.toggleMessageStar(messageId);
+    if (!updated) {
+      throw new NotFoundException('Message not found');
+    }
+    return updated;
+  }
+
+  async forwardMessage(
+    sourceChatId: string,
+    userId: string,
+    messageId: string,
+    targetChatId: string,
+  ): Promise<Message> {
+    const sourceParticipant = await this.databaseService.findChatParticipant(sourceChatId, userId);
+    if (!sourceParticipant) {
+      throw new NotFoundException('Source chat not found');
+    }
+
+    const targetParticipant = await this.databaseService.findChatParticipant(targetChatId, userId);
+    if (!targetParticipant) {
+      throw new NotFoundException('Target chat not found');
+    }
+
+    const originalMessage = await this.databaseService.findMessageById(messageId);
+    if (!originalMessage || originalMessage.chatId !== sourceChatId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    const forwardedMessage = await this.databaseService.createMessage({
+      chatId: targetChatId,
+      senderId: userId,
+      senderDeviceId: null,
+      content: originalMessage.content,
+      ciphertext: null,
+      type: originalMessage.type,
+      status: 'sent',
+      mediaUrl: originalMessage.mediaUrl,
+      mediaType: originalMessage.mediaType,
+      mediaName: originalMessage.mediaName,
+      mediaSize: originalMessage.mediaSize,
+      mediaDuration: originalMessage.mediaDuration,
+      deliveredAt: null,
+      readAt: null,
+      isStarred: false,
+      forwardedFrom: originalMessage.id,
+      expiresAt: null,
+    });
+
+    await this.databaseService.updateChat(targetChatId, { updatedAt: new Date() });
+    return forwardedMessage;
+  }
+
+  async exportChat(chatId: string, userId: string): Promise<{ chat: Chat; messages: Message[]; participants: ChatParticipant[] }> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const messages = await this.databaseService.getMessagesForExport(chatId);
+    const participants = await this.databaseService.findChatParticipantsByChatId(chatId);
+
+    return { chat, messages, participants };
+  }
+
+  async setDisappearingMessages(chatId: string, userId: string, duration: number | null): Promise<Chat> {
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    // For group chats, only admins can change this setting
+    if (chat.type === 'group' && participant.role !== 'admin') {
+      throw new ForbiddenException('Only admins can change disappearing messages setting');
+    }
+
+    const updated = await this.databaseService.updateChat(chatId, { 
+      disappearingMessagesDuration: duration 
+    });
+    if (!updated) {
+      throw new NotFoundException('Chat not found');
+    }
+    return updated;
   }
 }

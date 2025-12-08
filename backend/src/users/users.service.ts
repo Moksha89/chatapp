@@ -20,6 +20,9 @@ export class UsersService {
       status: null,
       lastSeen: null,
       passwordHash: data.passwordHash,
+      readReceiptsEnabled: true,
+      blockedUsers: null,
+      language: 'en',
     });
   }
 
@@ -77,6 +80,95 @@ export class UsersService {
       status: user.status,
       lastSeen: user.lastSeen,
       isBusiness: user.isBusiness,
+    };
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return this.databaseService.getAllUsers();
+  }
+
+  async getPrivacySettings(userId: string): Promise<{
+    readReceiptsEnabled: boolean;
+    language: string;
+  }> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return {
+      readReceiptsEnabled: user.readReceiptsEnabled ?? true,
+      language: user.language ?? 'en',
+    };
+  }
+
+  async updatePrivacySettings(
+    userId: string,
+    settings: { readReceiptsEnabled?: boolean; language?: string },
+  ): Promise<{ readReceiptsEnabled: boolean; language: string }> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updateData: Partial<User> = {};
+    if (settings.readReceiptsEnabled !== undefined) {
+      updateData.readReceiptsEnabled = settings.readReceiptsEnabled;
+    }
+    if (settings.language !== undefined) {
+      updateData.language = settings.language;
+    }
+
+    await this.databaseService.updateUser(userId, updateData);
+    return this.getPrivacySettings(userId);
+  }
+
+  async getBlockedUsers(userId: string): Promise<string[]> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user.blockedUsers || [];
+  }
+
+  async blockUser(userId: string, userIdToBlock: string): Promise<{ blocked: string[] }> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const blockedUsers = user.blockedUsers || [];
+    if (!blockedUsers.includes(userIdToBlock)) {
+      blockedUsers.push(userIdToBlock);
+      await this.databaseService.updateUser(userId, { blockedUsers });
+    }
+
+    return { blocked: blockedUsers };
+  }
+
+  async unblockUser(userId: string, userIdToUnblock: string): Promise<{ blocked: string[] }> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const blockedUsers = (user.blockedUsers || []).filter((id) => id !== userIdToUnblock);
+    await this.databaseService.updateUser(userId, { blockedUsers });
+
+    return { blocked: blockedUsers };
+  }
+
+  async reportUser(
+    reporterId: string,
+    reportedUserId: string,
+    reason: string,
+    details?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    // In a real implementation, this would store the report in a database
+    // For now, we just log it and return success
+    console.log(`User ${reporterId} reported user ${reportedUserId} for: ${reason}. Details: ${details || 'N/A'}`);
+    return {
+      success: true,
+      message: 'Report submitted successfully. Our team will review it.',
     };
   }
 }

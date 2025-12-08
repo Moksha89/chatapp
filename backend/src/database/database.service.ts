@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, Like, In } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import {
   UserEntity,
@@ -27,6 +27,9 @@ export interface User {
   status: string | null;
   lastSeen: Date | null;
   passwordHash: string | null;
+  readReceiptsEnabled: boolean;
+  blockedUsers: string[] | null;
+  language: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -90,6 +93,7 @@ export interface Chat {
   description: string | null;
   iconUrl: string | null;
   createdBy: string | null;
+  disappearingMessagesDuration: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -120,6 +124,9 @@ export interface Message {
   createdAt: Date;
   deliveredAt: Date | null;
   readAt: Date | null;
+  isStarred: boolean;
+  forwardedFrom: string | null;
+  expiresAt: Date | null;
 }
 
 export interface Label {
@@ -591,5 +598,63 @@ export class DatabaseService implements OnModuleInit {
       const bTime = b.lastMessage?.createdAt.getTime() || b.createdAt.getTime();
       return bTime - aTime;
     });
+  }
+
+  // Search messages across all chats for a user
+  async searchMessages(userId: string, query: string, limit = 50): Promise<Message[]> {
+    const participations = await this.chatParticipantRepository.find({ where: { userId } });
+    const chatIds = participations.map(p => p.chatId);
+    
+    if (chatIds.length === 0) return [];
+    
+    return this.messageRepository.find({
+      where: {
+        chatId: In(chatIds),
+        content: Like(`%${query}%`),
+      },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    }) as Promise<Message[]>;
+  }
+
+  // Get starred messages for a user
+  async getStarredMessages(userId: string): Promise<Message[]> {
+    const participations = await this.chatParticipantRepository.find({ where: { userId } });
+    const chatIds = participations.map(p => p.chatId);
+    
+    if (chatIds.length === 0) return [];
+    
+    return this.messageRepository.find({
+      where: {
+        chatId: In(chatIds),
+        isStarred: true,
+      },
+      order: { createdAt: 'DESC' },
+    }) as Promise<Message[]>;
+  }
+
+  // Toggle message star
+  async toggleMessageStar(messageId: string): Promise<Message | undefined> {
+    const message = await this.findMessageById(messageId);
+    if (!message) return undefined;
+    
+    await this.messageRepository.update(messageId, { isStarred: !message.isStarred });
+    return this.findMessageById(messageId);
+  }
+
+  // Delete expired messages (for disappearing messages feature)
+  async deleteExpiredMessages(): Promise<number> {
+    const result = await this.messageRepository.delete({
+      expiresAt: LessThan(new Date()),
+    });
+    return result.affected ?? 0;
+  }
+
+  // Get messages for export
+  async getMessagesForExport(chatId: string): Promise<Message[]> {
+    return this.messageRepository.find({
+      where: { chatId },
+      order: { createdAt: 'ASC' },
+    }) as Promise<Message[]>;
   }
 }

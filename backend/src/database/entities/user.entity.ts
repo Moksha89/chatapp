@@ -28,6 +28,15 @@ export class UserEntity {
   @Column({ type: 'timestamp', nullable: true })
   lastSeen: Date | null;
 
+  @Column({ default: true })
+  readReceiptsEnabled: boolean;
+
+  @Column({ type: 'simple-array', nullable: true })
+  blockedUsers: string[] | null;
+
+  @Column({ type: 'varchar', default: 'en' })
+  language: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

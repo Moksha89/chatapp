@@ -23,6 +23,9 @@ export class ChatEntity {
   @Column({ type: 'varchar', nullable: true })
   createdBy: string | null;
 
+  @Column({ type: 'int', nullable: true })
+  disappearingMessagesDuration: number | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

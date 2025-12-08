@@ -48,6 +48,15 @@ export class MessageEntity {
   @Column({ type: 'timestamp', nullable: true })
   readAt: Date | null;
 
+  @Column({ default: false })
+  isStarred: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  forwardedFrom: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  expiresAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

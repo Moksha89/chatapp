@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ChatProvider, useChat } from './context/ChatContext';
 import { CallProvider } from './context/CallContext';
+import { I18nProvider } from './i18n/I18nContext';
 import { LoginPage } from './components/LoginPage';
 import { ChatSidebar } from './components/ChatSidebar';
 import { ChatArea } from './components/ChatArea';
@@ -76,9 +77,11 @@ function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <AuthProvider>
-          <ChatApp />
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <ChatApp />
+          </AuthProvider>
+        </I18nProvider>
       </ToastProvider>
     </ErrorBoundary>
   );
