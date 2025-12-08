@@ -17,6 +17,7 @@ import { BroadcastsModule } from './broadcasts/broadcasts.module';
 import { ProductsModule } from './products/products.module';
 import { AutoRepliesModule } from './auto-replies/auto-replies.module';
 import { HealthModule } from './health/health.module';
+import { VersionModule } from './version/version.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { HealthModule } from './health/health.module';
     ProductsModule,
     AutoRepliesModule,
     HealthModule,
+    VersionModule,
   ],
 })
 export class AppModule {}

@@ -4,8 +4,12 @@ import com.chatapp.data.api.dto.*
 import retrofit2.http.*
 import com.chatapp.data.api.dto.QrPairingRequest
 import com.chatapp.data.api.dto.QrPairingResponse
+import com.chatapp.data.api.dto.VersionCheckResponse
 
 interface ApiService {
+    @GET("version/check")
+    suspend fun checkVersion(): VersionCheckResponse
+
     @POST("auth/send-otp")
     suspend fun sendOtp(@Body request: SendOtpRequest): SendOtpResponse
 
