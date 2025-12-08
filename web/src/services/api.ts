@@ -218,11 +218,16 @@ class ApiService {
     return this.request<{ count: number }>(`/crypto/keys/${deviceId}/prekey-count`);
   }
 
-  async getUserDevices(userId: string) {
-    return this.request<{ devices: Array<{ deviceId: string; identityKey: string | null }> }>(
-      `/crypto/keys/${userId}`
-    );
-  }
+    async getUserDevices(userId: string) {
+      return this.request<{ devices: Array<{ deviceId: string; identityKey: string | null }> }>(
+        `/crypto/keys/${userId}`
+      );
+    }
+
+    async getDevices(userId: string) {
+      const result = await this.getUserDevices(userId);
+      return result.devices || [];
+    }
 
   async updateLabel(id: string, data: { name?: string; color?: string }) {
     return this.request<{ id: string; name: string; color: string }>(`/labels/${id}`, {

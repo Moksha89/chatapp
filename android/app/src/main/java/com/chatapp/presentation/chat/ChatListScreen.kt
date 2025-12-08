@@ -30,7 +30,8 @@ data class ChatItem(
 @Composable
 fun ChatListScreen(
     onChatClick: (String) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onScanQr: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -50,14 +51,17 @@ fun ChatListScreen(
                     containerColor = Color(0xFF128C7E),
                     titleContentColor = Color.White
                 ),
-                actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
-                    }
-                    IconButton(onClick = onLogout) {
-                        Icon(Icons.Default.Logout, contentDescription = "Logout", tint = Color.White)
-                    }
-                }
+                                actions = {
+                                    IconButton(onClick = { }) {
+                                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
+                                    }
+                                    IconButton(onClick = onScanQr) {
+                                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Link Device", tint = Color.White)
+                                    }
+                                    IconButton(onClick = onLogout) {
+                                        Icon(Icons.Default.Logout, contentDescription = "Logout", tint = Color.White)
+                                    }
+                                }
             )
         },
         floatingActionButton = {

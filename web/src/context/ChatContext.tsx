@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { socketService } from '../services/socket';
 import { useAuth } from './AuthContext';
 import { sessionManager } from '../crypto';
+import { offlineQueue } from '../utils/offlineQueue';
 
 interface User {
   id: string;
@@ -14,7 +15,9 @@ interface Message {
   id: string;
   chatId: string;
   senderId: string;
+  senderDeviceId?: string;
   content?: string;
+  ciphertext?: string;
   type: string;
   status: string;
   createdAt: string;
@@ -185,24 +188,79 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [loadMessages]);
 
-  const sendMessage = useCallback((content: string) => {
-    if (!activeChat || !user) return;
+        const sendMessageInternal = useCallback(async (
+        chatId: string,
+        content: string,
+        tempId: string
+      ) => {
+        const chat = chats.find(c => c.id === chatId);
+        if (!chat || !user) return;
 
-    const tempId = `temp-${Date.now()}`;
-    const tempMessage: Message = {
-      id: tempId,
-      chatId: activeChat.id,
-      senderId: user.id,
-      content,
-      type: 'text',
-      status: 'sending',
-      createdAt: new Date().toISOString(),
-      tempId,
-    };
+        const otherParticipant = chat.participants.find(p => p.userId !== user.id);
+        if (!otherParticipant) {
+          console.error('No recipient found');
+          return;
+        }
 
-    setMessages((prev) => [...prev, tempMessage]);
-    socketService.sendMessage(activeChat.id, content, tempId);
-  }, [activeChat, user]);
+        const recipientId = otherParticipant.userId;
+        let messageContent = content;
+        let ciphertext: string | undefined;
+
+        if (e2eeEnabled) {
+          try {
+            const recipientDevices = await api.getDevices(recipientId);
+            if (recipientDevices && recipientDevices.length > 0) {
+              const recipientDevice = recipientDevices[0];
+              const encrypted = await encryptMessageContent(recipientId, recipientDevice.deviceId, content);
+              if (encrypted) {
+                ciphertext = encrypted;
+                messageContent = '[Encrypted message]';
+              }
+            }
+          } catch (error) {
+            console.warn('E2EE encryption failed, sending plaintext:', error);
+          }
+        }
+
+        socketService.emit('message:send', {
+          chatId,
+          content: messageContent,
+          ciphertext,
+          type: 'text',
+          tempId,
+        });
+      }, [chats, user, e2eeEnabled, encryptMessageContent]);
+
+      const sendMessage = useCallback(async (content: string) => {
+        if (!activeChat || !user || !deviceId) return;
+
+        const tempId = `temp-${Date.now()}`;
+        const tempMessage: Message = {
+          id: tempId,
+          chatId: activeChat.id,
+          senderId: user.id,
+          content,
+          type: 'text',
+          status: 'sending',
+          createdAt: new Date().toISOString(),
+          tempId,
+        };
+
+        setMessages((prev) => [...prev, tempMessage]);
+
+        const isOnline = offlineQueue.getOnlineStatus() && socketService.isConnected();
+
+        if (isOnline) {
+          await sendMessageInternal(activeChat.id, content, tempId);
+        } else {
+          offlineQueue.queueMessage(activeChat.id, content, 'text');
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.tempId === tempId ? { ...msg, status: 'queued' } : msg
+            )
+          );
+        }
+      }, [activeChat, user, deviceId, sendMessageInternal]);
 
   const createChat = useCallback(async (userId: string): Promise<Chat> => {
     const newChat = await api.createChat({ type: 'direct', participantId: userId });
@@ -211,36 +269,60 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return createdChat || (newChat as Chat);
   }, [refreshChats, chats]);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      refreshChats();
-    }
-  }, [isAuthenticated, refreshChats]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const handleNewMessage = (data: unknown) => {
-      const { message, chatId } = data as { message: Message; chatId: string };
-      
-      if (activeChat?.id === chatId) {
-        setMessages((prev) => {
-          const exists = prev.some((m) => m.id === message.id);
-          if (exists) return prev;
-          return [...prev, message];
-        });
-        
-        socketService.markDelivered(message.id);
+    useEffect(() => {
+      if (isAuthenticated) {
+        refreshChats();
       }
+    }, [isAuthenticated, refreshChats]);
 
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.id === chatId
-            ? { ...chat, lastMessage: message, unreadCount: chat.unreadCount + 1 }
-            : chat
-        )
-      );
-    };
+    useEffect(() => {
+      offlineQueue.setMessageProcessor(async (payload: unknown) => {
+        const { chatId, content, messageType } = payload as { chatId: string; content: string; messageType: string };
+        const tempId = `queued-${Date.now()}`;
+        await sendMessageInternal(chatId, content, tempId);
+      });
+    }, [sendMessageInternal]);
+
+    useEffect(() => {
+      if (!isAuthenticated) return;
+
+        const handleNewMessage = async (data: unknown) => {
+          const { message, chatId } = data as { message: Message; chatId: string };
+      
+          let decryptedMessage = { ...message };
+      
+          if (message.ciphertext && message.senderDeviceId) {
+            try {
+              const plaintext = await sessionManager.decryptMessage(
+                message.senderId,
+                message.senderDeviceId,
+                message.ciphertext
+              );
+              decryptedMessage.content = plaintext;
+            } catch (error) {
+              console.warn('Failed to decrypt message:', error);
+              decryptedMessage.content = '[Unable to decrypt message]';
+            }
+          }
+      
+          if (activeChat?.id === chatId) {
+            setMessages((prev) => {
+              const exists = prev.some((m) => m.id === decryptedMessage.id);
+              if (exists) return prev;
+              return [...prev, decryptedMessage];
+            });
+        
+            socketService.markDelivered(decryptedMessage.id);
+          }
+
+          setChats((prev) =>
+            prev.map((chat) =>
+              chat.id === chatId
+                ? { ...chat, lastMessage: decryptedMessage, unreadCount: chat.unreadCount + 1 }
+                : chat
+            )
+          );
+        };
 
     const handleMessageSent = (data: unknown) => {
       const { tempId, messageId, timestamp } = data as { tempId: string; messageId: string; timestamp: string };

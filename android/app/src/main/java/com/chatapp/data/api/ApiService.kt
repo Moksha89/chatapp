@@ -2,6 +2,8 @@ package com.chatapp.data.api
 
 import com.chatapp.data.api.dto.*
 import retrofit2.http.*
+import com.chatapp.data.api.dto.QrPairingRequest
+import com.chatapp.data.api.dto.QrPairingResponse
 
 interface ApiService {
     @POST("auth/send-otp")
@@ -49,4 +51,7 @@ interface ApiService {
 
     @POST("users/search")
     suspend fun searchUsers(@Body request: SearchUsersRequest): List<UserResponse>
+
+    @POST("auth/qr/confirm")
+    suspend fun confirmQrPairing(@Body request: QrPairingRequest): QrPairingResponse
 }

@@ -147,8 +147,16 @@ class OfflineQueue {
   private async processAction(action: QueuedAction): Promise<void> {
     switch (action.type) {
       case 'message':
+        if (this.messageProcessor) {
+          await this.messageProcessor(action.payload);
+        } else {
+          throw new Error('No message processor set');
+        }
         break;
       case 'read_receipt':
+        if (this.readReceiptProcessor) {
+          await this.readReceiptProcessor(action.payload);
+        }
         break;
       case 'typing':
         break;
@@ -159,7 +167,12 @@ class OfflineQueue {
     this.messageProcessor = processor;
   }
 
+  setReadReceiptProcessor(processor: (payload: unknown) => Promise<void>) {
+    this.readReceiptProcessor = processor;
+  }
+
   private messageProcessor?: (payload: unknown) => Promise<void>;
+  private readReceiptProcessor?: (payload: unknown) => Promise<void>;
 }
 
 export const offlineQueue = new OfflineQueue();

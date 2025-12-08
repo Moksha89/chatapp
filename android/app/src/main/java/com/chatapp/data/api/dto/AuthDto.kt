@@ -41,3 +41,12 @@ data class UserDto(
     @SerializedName("phoneNumber") val phoneNumber: String,
     @SerializedName("displayName") val displayName: String
 )
+
+data class QrPairingRequest(
+    @SerializedName("pairingCode") val pairingCode: String
+)
+
+data class QrPairingResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("message") val message: String
+)

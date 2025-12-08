@@ -1,6 +1,7 @@
 package com.chatapp.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -9,6 +10,7 @@ import androidx.navigation.navArgument
 import com.chatapp.presentation.auth.LoginScreen
 import com.chatapp.presentation.chat.ChatListScreen
 import com.chatapp.presentation.chat.ChatScreen
+import com.chatapp.presentation.qr.QrScannerScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -16,6 +18,7 @@ sealed class Screen(val route: String) {
     object Chat : Screen("chat/{chatId}") {
         fun createRoute(chatId: String) = "chat/$chatId"
     }
+    object QrScanner : Screen("qr_scanner")
 }
 
 @Composable
@@ -45,6 +48,9 @@ fun AppNavigation() {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.ChatList.route) { inclusive = true }
                     }
+                },
+                onScanQr = {
+                    navController.navigate(Screen.QrScanner.route)
                 }
             )
         }
@@ -57,6 +63,16 @@ fun AppNavigation() {
             ChatScreen(
                 chatId = chatId,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.QrScanner.route) {
+            QrScannerScreen(
+                onBack = { navController.popBackStack() },
+                onPairingCodeScanned = { },
+                onConfirmPairing = { pairingCode ->
+                    Result.success(true)
+                }
             )
         }
     }

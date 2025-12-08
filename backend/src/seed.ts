@@ -11,6 +11,8 @@ async function seed() {
     passwordHash: 'demo-hash-1',
     isBusiness: false,
     status: 'Hey there! I am using WhatsApp Business Chat',
+    profilePhoto: null,
+    lastSeen: new Date(),
   });
 
   const user2 = databaseService.createUser({
@@ -19,6 +21,8 @@ async function seed() {
     passwordHash: 'demo-hash-2',
     isBusiness: true,
     status: 'Available for business inquiries',
+    profilePhoto: null,
+    lastSeen: new Date(),
   });
 
   console.log('Created demo users:');
@@ -31,6 +35,11 @@ async function seed() {
     deviceName: 'Alice Phone',
     deviceType: 'android',
     isPrimary: true,
+    lastSeen: new Date(),
+    identityPublicKey: null,
+    signedPrekeyPublic: null,
+    signedPrekeySignature: null,
+    isActive: true,
   });
 
   const device2 = databaseService.createDevice({
@@ -39,6 +48,11 @@ async function seed() {
     deviceName: 'Bob Phone',
     deviceType: 'android',
     isPrimary: true,
+    lastSeen: new Date(),
+    identityPublicKey: null,
+    signedPrekeyPublic: null,
+    signedPrekeySignature: null,
+    isActive: true,
   });
 
   console.log('Created demo devices:');
@@ -60,18 +74,23 @@ async function seed() {
 
   const chat = databaseService.createChat({
     type: 'direct',
+    name: null,
   });
 
   databaseService.createChatParticipant({
     chatId: chat.id,
     userId: user1.id,
     role: 'member',
+    joinedAt: new Date(),
+    lastReadAt: new Date(),
   });
 
   databaseService.createChatParticipant({
     chatId: chat.id,
     userId: user2.id,
     role: 'member',
+    joinedAt: new Date(),
+    lastReadAt: new Date(),
   });
 
   console.log(`Created demo chat between Alice and Bob - ID: ${chat.id}`);
@@ -81,8 +100,11 @@ async function seed() {
     senderId: user1.id,
     senderDeviceId: device1.deviceId,
     content: 'Hi Bob! How is your business doing?',
+    ciphertext: null,
     type: 'text',
     status: 'read',
+    deliveredAt: new Date(),
+    readAt: new Date(),
   });
 
   const message2 = databaseService.createMessage({
@@ -90,8 +112,11 @@ async function seed() {
     senderId: user2.id,
     senderDeviceId: device2.deviceId,
     content: 'Hey Alice! Business is great, thanks for asking!',
+    ciphertext: null,
     type: 'text',
     status: 'read',
+    deliveredAt: new Date(),
+    readAt: new Date(),
   });
 
   const message3 = databaseService.createMessage({
@@ -99,8 +124,11 @@ async function seed() {
     senderId: user1.id,
     senderDeviceId: device1.deviceId,
     content: 'That\'s wonderful to hear! Let me know if you need any help.',
+    ciphertext: null,
     type: 'text',
     status: 'delivered',
+    deliveredAt: new Date(),
+    readAt: null,
   });
 
   console.log('Created demo messages:');

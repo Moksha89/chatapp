@@ -1,5 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_FILE = path.join(DATA_DIR, 'database.json');
 
 export interface User {
   id: string;
@@ -142,7 +147,7 @@ export interface WebSession {
 }
 
 @Injectable()
-export class DatabaseService {
+export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private users: Map<string, User> = new Map();
   private devices: Map<string, Device> = new Map();
   private oneTimePrekeys: Map<string, OneTimePrekey> = new Map();
@@ -157,20 +162,138 @@ export class DatabaseService {
   private refreshTokens: Map<string, RefreshToken> = new Map();
   private webSessions: Map<string, WebSession> = new Map();
 
+  private saveTimeout: NodeJS.Timeout | null = null;
+  private readonly SAVE_DEBOUNCE_MS = 1000;
+
+  onModuleInit() {
+    this.loadFromDisk();
+  }
+
+  onModuleDestroy() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    this.saveToDiskSync();
+  }
+
+  private loadFromDisk() {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+
+      if (fs.existsSync(DATA_FILE)) {
+        const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+        
+        const parseDate = (obj: Record<string, unknown>) => {
+          for (const key of Object.keys(obj)) {
+            if (typeof obj[key] === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(obj[key] as string)) {
+              obj[key] = new Date(obj[key] as string);
+            }
+          }
+          return obj;
+        };
+
+        if (data.users) {
+          data.users.forEach((u: User) => this.users.set(u.id, parseDate(u as unknown as Record<string, unknown>) as unknown as User));
+        }
+        if (data.devices) {
+          data.devices.forEach((d: Device) => this.devices.set(d.id, parseDate(d as unknown as Record<string, unknown>) as unknown as Device));
+        }
+        if (data.oneTimePrekeys) {
+          data.oneTimePrekeys.forEach((p: OneTimePrekey) => this.oneTimePrekeys.set(p.id, parseDate(p as unknown as Record<string, unknown>) as unknown as OneTimePrekey));
+        }
+        if (data.businessProfiles) {
+          data.businessProfiles.forEach((p: BusinessProfile) => this.businessProfiles.set(p.id, parseDate(p as unknown as Record<string, unknown>) as unknown as BusinessProfile));
+        }
+        if (data.contacts) {
+          data.contacts.forEach((c: Contact) => this.contacts.set(c.id, parseDate(c as unknown as Record<string, unknown>) as unknown as Contact));
+        }
+        if (data.chats) {
+          data.chats.forEach((c: Chat) => this.chats.set(c.id, parseDate(c as unknown as Record<string, unknown>) as unknown as Chat));
+        }
+        if (data.chatParticipants) {
+          data.chatParticipants.forEach((p: ChatParticipant) => this.chatParticipants.set(p.id, parseDate(p as unknown as Record<string, unknown>) as unknown as ChatParticipant));
+        }
+        if (data.messages) {
+          data.messages.forEach((m: Message) => this.messages.set(m.id, parseDate(m as unknown as Record<string, unknown>) as unknown as Message));
+        }
+        if (data.labels) {
+          data.labels.forEach((l: Label) => this.labels.set(l.id, parseDate(l as unknown as Record<string, unknown>) as unknown as Label));
+        }
+        if (data.chatLabels) {
+          data.chatLabels.forEach((cl: ChatLabel) => this.chatLabels.set(cl.id, parseDate(cl as unknown as Record<string, unknown>) as unknown as ChatLabel));
+        }
+        if (data.quickReplies) {
+          data.quickReplies.forEach((qr: QuickReply) => this.quickReplies.set(qr.id, parseDate(qr as unknown as Record<string, unknown>) as unknown as QuickReply));
+        }
+        if (data.refreshTokens) {
+          data.refreshTokens.forEach((t: RefreshToken) => this.refreshTokens.set(t.id, parseDate(t as unknown as Record<string, unknown>) as unknown as RefreshToken));
+        }
+        if (data.webSessions) {
+          data.webSessions.forEach((s: WebSession) => this.webSessions.set(s.id, parseDate(s as unknown as Record<string, unknown>) as unknown as WebSession));
+        }
+
+        console.log('Database loaded from disk');
+      }
+    } catch (error) {
+      console.error('Failed to load database from disk:', error);
+    }
+  }
+
+  private scheduleSave() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    this.saveTimeout = setTimeout(() => {
+      this.saveToDiskSync();
+    }, this.SAVE_DEBOUNCE_MS);
+  }
+
+  private saveToDiskSync() {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+
+      const data = {
+        users: Array.from(this.users.values()),
+        devices: Array.from(this.devices.values()),
+        oneTimePrekeys: Array.from(this.oneTimePrekeys.values()),
+        businessProfiles: Array.from(this.businessProfiles.values()),
+        contacts: Array.from(this.contacts.values()),
+        chats: Array.from(this.chats.values()),
+        chatParticipants: Array.from(this.chatParticipants.values()),
+        messages: Array.from(this.messages.values()),
+        labels: Array.from(this.labels.values()),
+        chatLabels: Array.from(this.chatLabels.values()),
+        quickReplies: Array.from(this.quickReplies.values()),
+        refreshTokens: Array.from(this.refreshTokens.values()),
+        webSessions: Array.from(this.webSessions.values()),
+      };
+
+      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+      console.log('Database saved to disk');
+    } catch (error) {
+      console.error('Failed to save database to disk:', error);
+    }
+  }
+
   generateId(): string {
     return uuidv4();
   }
 
-  createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): User {
-    const user: User = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.users.set(user.id, user);
-    return user;
-  }
+    createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): User {
+      const user: User = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.users.set(user.id, user);
+      this.scheduleSave();
+      return user;
+    }
 
   findUserById(id: string): User | undefined {
     return this.users.get(id);
@@ -182,28 +305,30 @@ export class DatabaseService {
     );
   }
 
-  updateUser(id: string, data: Partial<User>): User | undefined {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    const updated = { ...user, ...data, updatedAt: new Date() };
-    this.users.set(id, updated);
-    return updated;
-  }
+    updateUser(id: string, data: Partial<User>): User | undefined {
+      const user = this.users.get(id);
+      if (!user) return undefined;
+      const updated = { ...user, ...data, updatedAt: new Date() };
+      this.users.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
   getAllUsers(): User[] {
     return Array.from(this.users.values());
   }
 
-  createDevice(data: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Device {
-    const device: Device = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.devices.set(device.id, device);
-    return device;
-  }
+    createDevice(data: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Device {
+      const device: Device = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.devices.set(device.id, device);
+      this.scheduleSave();
+      return device;
+    }
 
   findDeviceById(id: string): Device | undefined {
     return this.devices.get(id);
@@ -219,27 +344,31 @@ export class DatabaseService {
     );
   }
 
-  updateDevice(id: string, data: Partial<Device>): Device | undefined {
-    const device = this.devices.get(id);
-    if (!device) return undefined;
-    const updated = { ...device, ...data, updatedAt: new Date() };
-    this.devices.set(id, updated);
-    return updated;
-  }
+    updateDevice(id: string, data: Partial<Device>): Device | undefined {
+      const device = this.devices.get(id);
+      if (!device) return undefined;
+      const updated = { ...device, ...data, updatedAt: new Date() };
+      this.devices.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  deleteDevice(id: string): boolean {
-    return this.devices.delete(id);
-  }
+    deleteDevice(id: string): boolean {
+      const result = this.devices.delete(id);
+      if (result) this.scheduleSave();
+      return result;
+    }
 
-  createOneTimePrekey(data: Omit<OneTimePrekey, 'id' | 'createdAt'>): OneTimePrekey {
-    const prekey: OneTimePrekey = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-    };
-    this.oneTimePrekeys.set(prekey.id, prekey);
-    return prekey;
-  }
+    createOneTimePrekey(data: Omit<OneTimePrekey, 'id' | 'createdAt'>): OneTimePrekey {
+      const prekey: OneTimePrekey = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+      };
+      this.oneTimePrekeys.set(prekey.id, prekey);
+      this.scheduleSave();
+      return prekey;
+    }
 
   findUnusedPrekeyByDeviceId(deviceId: string): OneTimePrekey | undefined {
     return Array.from(this.oneTimePrekeys.values()).find(
@@ -247,13 +376,14 @@ export class DatabaseService {
     );
   }
 
-  markPrekeyAsUsed(id: string): void {
-    const prekey = this.oneTimePrekeys.get(id);
-    if (prekey) {
-      prekey.isUsed = true;
-      this.oneTimePrekeys.set(id, prekey);
+    markPrekeyAsUsed(id: string): void {
+      const prekey = this.oneTimePrekeys.get(id);
+      if (prekey) {
+        prekey.isUsed = true;
+        this.oneTimePrekeys.set(id, prekey);
+        this.scheduleSave();
+      }
     }
-  }
 
   countUnusedPrekeysByDeviceId(deviceId: string): number {
     return Array.from(this.oneTimePrekeys.values()).filter(
@@ -261,16 +391,17 @@ export class DatabaseService {
     ).length;
   }
 
-  createBusinessProfile(data: Omit<BusinessProfile, 'id' | 'createdAt' | 'updatedAt'>): BusinessProfile {
-    const profile: BusinessProfile = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.businessProfiles.set(profile.id, profile);
-    return profile;
-  }
+    createBusinessProfile(data: Omit<BusinessProfile, 'id' | 'createdAt' | 'updatedAt'>): BusinessProfile {
+      const profile: BusinessProfile = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.businessProfiles.set(profile.id, profile);
+      this.scheduleSave();
+      return profile;
+    }
 
   findBusinessProfileByUserId(userId: string): BusinessProfile | undefined {
     return Array.from(this.businessProfiles.values()).find(
@@ -278,24 +409,26 @@ export class DatabaseService {
     );
   }
 
-  updateBusinessProfile(id: string, data: Partial<BusinessProfile>): BusinessProfile | undefined {
-    const profile = this.businessProfiles.get(id);
-    if (!profile) return undefined;
-    const updated = { ...profile, ...data, updatedAt: new Date() };
-    this.businessProfiles.set(id, updated);
-    return updated;
-  }
+    updateBusinessProfile(id: string, data: Partial<BusinessProfile>): BusinessProfile | undefined {
+      const profile = this.businessProfiles.get(id);
+      if (!profile) return undefined;
+      const updated = { ...profile, ...data, updatedAt: new Date() };
+      this.businessProfiles.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  createContact(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Contact {
-    const contact: Contact = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.contacts.set(contact.id, contact);
-    return contact;
-  }
+    createContact(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Contact {
+      const contact: Contact = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.contacts.set(contact.id, contact);
+      this.scheduleSave();
+      return contact;
+    }
 
   findContactById(id: string): Contact | undefined {
     return this.contacts.get(id);
@@ -307,28 +440,32 @@ export class DatabaseService {
     );
   }
 
-  updateContact(id: string, data: Partial<Contact>): Contact | undefined {
-    const contact = this.contacts.get(id);
-    if (!contact) return undefined;
-    const updated = { ...contact, ...data, updatedAt: new Date() };
-    this.contacts.set(id, updated);
-    return updated;
-  }
+    updateContact(id: string, data: Partial<Contact>): Contact | undefined {
+      const contact = this.contacts.get(id);
+      if (!contact) return undefined;
+      const updated = { ...contact, ...data, updatedAt: new Date() };
+      this.contacts.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  deleteContact(id: string): boolean {
-    return this.contacts.delete(id);
-  }
+    deleteContact(id: string): boolean {
+      const result = this.contacts.delete(id);
+      if (result) this.scheduleSave();
+      return result;
+    }
 
-  createChat(data: Omit<Chat, 'id' | 'createdAt' | 'updatedAt'>): Chat {
-    const chat: Chat = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.chats.set(chat.id, chat);
-    return chat;
-  }
+    createChat(data: Omit<Chat, 'id' | 'createdAt' | 'updatedAt'>): Chat {
+      const chat: Chat = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.chats.set(chat.id, chat);
+      this.scheduleSave();
+      return chat;
+    }
 
   findChatById(id: string): Chat | undefined {
     return this.chats.get(id);
@@ -350,22 +487,24 @@ export class DatabaseService {
     return undefined;
   }
 
-  updateChat(id: string, data: Partial<Chat>): Chat | undefined {
-    const chat = this.chats.get(id);
-    if (!chat) return undefined;
-    const updated = { ...chat, ...data, updatedAt: new Date() };
-    this.chats.set(id, updated);
-    return updated;
-  }
+    updateChat(id: string, data: Partial<Chat>): Chat | undefined {
+      const chat = this.chats.get(id);
+      if (!chat) return undefined;
+      const updated = { ...chat, ...data, updatedAt: new Date() };
+      this.chats.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  createChatParticipant(data: Omit<ChatParticipant, 'id'>): ChatParticipant {
-    const participant: ChatParticipant = {
-      ...data,
-      id: this.generateId(),
-    };
-    this.chatParticipants.set(participant.id, participant);
-    return participant;
-  }
+    createChatParticipant(data: Omit<ChatParticipant, 'id'>): ChatParticipant {
+      const participant: ChatParticipant = {
+        ...data,
+        id: this.generateId(),
+      };
+      this.chatParticipants.set(participant.id, participant);
+      this.scheduleSave();
+      return participant;
+    }
 
   findChatParticipantsByUserId(userId: string): ChatParticipant[] {
     return Array.from(this.chatParticipants.values()).filter(
@@ -385,23 +524,25 @@ export class DatabaseService {
     );
   }
 
-  updateChatParticipant(id: string, data: Partial<ChatParticipant>): ChatParticipant | undefined {
-    const participant = this.chatParticipants.get(id);
-    if (!participant) return undefined;
-    const updated = { ...participant, ...data };
-    this.chatParticipants.set(id, updated);
-    return updated;
-  }
+    updateChatParticipant(id: string, data: Partial<ChatParticipant>): ChatParticipant | undefined {
+      const participant = this.chatParticipants.get(id);
+      if (!participant) return undefined;
+      const updated = { ...participant, ...data };
+      this.chatParticipants.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  createMessage(data: Omit<Message, 'id' | 'createdAt'>): Message {
-    const message: Message = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-    };
-    this.messages.set(message.id, message);
-    return message;
-  }
+    createMessage(data: Omit<Message, 'id' | 'createdAt'>): Message {
+      const message: Message = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+      };
+      this.messages.set(message.id, message);
+      this.scheduleSave();
+      return message;
+    }
 
   findMessageById(id: string): Message | undefined {
     return this.messages.get(id);
@@ -420,24 +561,26 @@ export class DatabaseService {
       .slice(0, limit);
   }
 
-  updateMessage(id: string, data: Partial<Message>): Message | undefined {
-    const message = this.messages.get(id);
-    if (!message) return undefined;
-    const updated = { ...message, ...data };
-    this.messages.set(id, updated);
-    return updated;
-  }
+    updateMessage(id: string, data: Partial<Message>): Message | undefined {
+      const message = this.messages.get(id);
+      if (!message) return undefined;
+      const updated = { ...message, ...data };
+      this.messages.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  createLabel(data: Omit<Label, 'id' | 'createdAt' | 'updatedAt'>): Label {
-    const label: Label = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.labels.set(label.id, label);
-    return label;
-  }
+    createLabel(data: Omit<Label, 'id' | 'createdAt' | 'updatedAt'>): Label {
+      const label: Label = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.labels.set(label.id, label);
+      this.scheduleSave();
+      return label;
+    }
 
   findLabelById(id: string): Label | undefined {
     return this.labels.get(id);
@@ -447,30 +590,34 @@ export class DatabaseService {
     return Array.from(this.labels.values()).filter((l) => l.userId === userId);
   }
 
-  updateLabel(id: string, data: Partial<Label>): Label | undefined {
-    const label = this.labels.get(id);
-    if (!label) return undefined;
-    const updated = { ...label, ...data, updatedAt: new Date() };
-    this.labels.set(id, updated);
-    return updated;
-  }
+    updateLabel(id: string, data: Partial<Label>): Label | undefined {
+      const label = this.labels.get(id);
+      if (!label) return undefined;
+      const updated = { ...label, ...data, updatedAt: new Date() };
+      this.labels.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  deleteLabel(id: string): boolean {
-    Array.from(this.chatLabels.values())
-      .filter((cl) => cl.labelId === id)
-      .forEach((cl) => this.chatLabels.delete(cl.id));
-    return this.labels.delete(id);
-  }
+    deleteLabel(id: string): boolean {
+      Array.from(this.chatLabels.values())
+        .filter((cl) => cl.labelId === id)
+        .forEach((cl) => this.chatLabels.delete(cl.id));
+      const result = this.labels.delete(id);
+      if (result) this.scheduleSave();
+      return result;
+    }
 
-  createChatLabel(data: Omit<ChatLabel, 'id' | 'createdAt'>): ChatLabel {
-    const chatLabel: ChatLabel = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-    };
-    this.chatLabels.set(chatLabel.id, chatLabel);
-    return chatLabel;
-  }
+    createChatLabel(data: Omit<ChatLabel, 'id' | 'createdAt'>): ChatLabel {
+      const chatLabel: ChatLabel = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+      };
+      this.chatLabels.set(chatLabel.id, chatLabel);
+      this.scheduleSave();
+      return chatLabel;
+    }
 
   findChatLabelsByChatId(chatId: string): ChatLabel[] {
     return Array.from(this.chatLabels.values()).filter(
@@ -484,26 +631,29 @@ export class DatabaseService {
       .map((cl) => cl.chatId);
   }
 
-  deleteChatLabel(chatId: string, labelId: string): boolean {
-    const chatLabel = Array.from(this.chatLabels.values()).find(
-      (cl) => cl.chatId === chatId && cl.labelId === labelId,
-    );
-    if (chatLabel) {
-      return this.chatLabels.delete(chatLabel.id);
+    deleteChatLabel(chatId: string, labelId: string): boolean {
+      const chatLabel = Array.from(this.chatLabels.values()).find(
+        (cl) => cl.chatId === chatId && cl.labelId === labelId,
+      );
+      if (chatLabel) {
+        const result = this.chatLabels.delete(chatLabel.id);
+        if (result) this.scheduleSave();
+        return result;
+      }
+      return false;
     }
-    return false;
-  }
 
-  createQuickReply(data: Omit<QuickReply, 'id' | 'createdAt' | 'updatedAt'>): QuickReply {
-    const quickReply: QuickReply = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.quickReplies.set(quickReply.id, quickReply);
-    return quickReply;
-  }
+    createQuickReply(data: Omit<QuickReply, 'id' | 'createdAt' | 'updatedAt'>): QuickReply {
+      const quickReply: QuickReply = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.quickReplies.set(quickReply.id, quickReply);
+      this.scheduleSave();
+      return quickReply;
+    }
 
   findQuickReplyById(id: string): QuickReply | undefined {
     return this.quickReplies.get(id);
@@ -515,27 +665,31 @@ export class DatabaseService {
     );
   }
 
-  updateQuickReply(id: string, data: Partial<QuickReply>): QuickReply | undefined {
-    const quickReply = this.quickReplies.get(id);
-    if (!quickReply) return undefined;
-    const updated = { ...quickReply, ...data, updatedAt: new Date() };
-    this.quickReplies.set(id, updated);
-    return updated;
-  }
+    updateQuickReply(id: string, data: Partial<QuickReply>): QuickReply | undefined {
+      const quickReply = this.quickReplies.get(id);
+      if (!quickReply) return undefined;
+      const updated = { ...quickReply, ...data, updatedAt: new Date() };
+      this.quickReplies.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  deleteQuickReply(id: string): boolean {
-    return this.quickReplies.delete(id);
-  }
+    deleteQuickReply(id: string): boolean {
+      const result = this.quickReplies.delete(id);
+      if (result) this.scheduleSave();
+      return result;
+    }
 
-  createRefreshToken(data: Omit<RefreshToken, 'id' | 'createdAt'>): RefreshToken {
-    const token: RefreshToken = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-    };
-    this.refreshTokens.set(token.id, token);
-    return token;
-  }
+    createRefreshToken(data: Omit<RefreshToken, 'id' | 'createdAt'>): RefreshToken {
+      const token: RefreshToken = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+      };
+      this.refreshTokens.set(token.id, token);
+      this.scheduleSave();
+      return token;
+    }
 
   findRefreshTokenByHash(tokenHash: string): RefreshToken | undefined {
     return Array.from(this.refreshTokens.values()).find(
@@ -543,25 +697,29 @@ export class DatabaseService {
     );
   }
 
-  deleteRefreshToken(id: string): boolean {
-    return this.refreshTokens.delete(id);
-  }
+    deleteRefreshToken(id: string): boolean {
+      const result = this.refreshTokens.delete(id);
+      if (result) this.scheduleSave();
+      return result;
+    }
 
-  deleteRefreshTokensByUserId(userId: string): void {
-    Array.from(this.refreshTokens.values())
-      .filter((t) => t.userId === userId)
-      .forEach((t) => this.refreshTokens.delete(t.id));
-  }
+    deleteRefreshTokensByUserId(userId: string): void {
+      const tokens = Array.from(this.refreshTokens.values())
+        .filter((t) => t.userId === userId);
+      tokens.forEach((t) => this.refreshTokens.delete(t.id));
+      if (tokens.length > 0) this.scheduleSave();
+    }
 
-  createWebSession(data: Omit<WebSession, 'id' | 'createdAt'>): WebSession {
-    const session: WebSession = {
-      ...data,
-      id: this.generateId(),
-      createdAt: new Date(),
-    };
-    this.webSessions.set(session.id, session);
-    return session;
-  }
+    createWebSession(data: Omit<WebSession, 'id' | 'createdAt'>): WebSession {
+      const session: WebSession = {
+        ...data,
+        id: this.generateId(),
+        createdAt: new Date(),
+      };
+      this.webSessions.set(session.id, session);
+      this.scheduleSave();
+      return session;
+    }
 
   findWebSessionByPairingCode(pairingCode: string): WebSession | undefined {
     return Array.from(this.webSessions.values()).find(
@@ -569,17 +727,20 @@ export class DatabaseService {
     );
   }
 
-  updateWebSession(id: string, data: Partial<WebSession>): WebSession | undefined {
-    const session = this.webSessions.get(id);
-    if (!session) return undefined;
-    const updated = { ...session, ...data };
-    this.webSessions.set(id, updated);
-    return updated;
-  }
+    updateWebSession(id: string, data: Partial<WebSession>): WebSession | undefined {
+      const session = this.webSessions.get(id);
+      if (!session) return undefined;
+      const updated = { ...session, ...data };
+      this.webSessions.set(id, updated);
+      this.scheduleSave();
+      return updated;
+    }
 
-  deleteWebSession(id: string): boolean {
-    return this.webSessions.delete(id);
-  }
+    deleteWebSession(id: string): boolean {
+      const result = this.webSessions.delete(id);
+      if (result) this.scheduleSave();
+      return result;
+    }
 
   getChatsForUser(userId: string): Array<Chat & { participants: ChatParticipant[]; lastMessage?: Message; labels: Label[] }> {
     const userParticipations = this.findChatParticipantsByUserId(userId);
