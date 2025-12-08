@@ -1,11 +1,13 @@
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
+import { CallProvider } from './context/CallContext';
 import { LoginPage } from './components/LoginPage';
 import { ChatSidebar } from './components/ChatSidebar';
 import { ChatArea } from './components/ChatArea';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionStatus } from './components/ConnectionStatus';
+import { CallDialog } from './components/CallDialog';
 
 function ChatApp() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -27,11 +29,14 @@ function ChatApp() {
 
     return (
       <ChatProvider>
-        <ConnectionStatus />
-        <div className="h-screen flex bg-gray-100">
-          <ChatSidebar />
-          <ChatArea />
-        </div>
+        <CallProvider>
+          <ConnectionStatus />
+          <CallDialog />
+          <div className="h-screen flex bg-gray-100">
+            <ChatSidebar />
+            <ChatArea />
+          </div>
+        </CallProvider>
       </ChatProvider>
     );
 }

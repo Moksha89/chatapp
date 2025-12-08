@@ -62,9 +62,13 @@ class SocketService {
     this.listeners.get(event)?.delete(callback);
   }
 
-  emit(event: string, data: unknown) {
+  emit(event: string, data: unknown, callback?: (response: unknown) => void) {
     if (this.socket?.connected) {
-      this.socket.emit(event, data);
+      if (callback) {
+        this.socket.emit(event, data, callback);
+      } else {
+        this.socket.emit(event, data);
+      }
     }
   }
 

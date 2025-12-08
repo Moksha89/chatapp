@@ -1,16 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
+import { useCall } from '../context/CallContext';
 import { socketService } from '../services/socket';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Send, Check, CheckCheck, Clock, MessageCircle } from 'lucide-react';
+import { Send, Check, CheckCheck, Clock, MessageCircle, Phone, Video } from 'lucide-react';
 
 export function ChatArea() {
   const { user } = useAuth();
   const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers } = useChat();
+  const { initiateCall, callState } = useCall();
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -76,6 +78,26 @@ export function ChatArea() {
     return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const getOtherParticipantId = () => {
+    if (!activeChat) return null;
+    const otherParticipant = activeChat.participants.find((p) => p.userId !== user?.id);
+    return otherParticipant?.userId || null;
+  };
+
+  const handleVoiceCall = () => {
+    const targetUserId = getOtherParticipantId();
+    if (targetUserId && callState === 'idle') {
+      initiateCall(targetUserId, getChatName(), 'audio');
+    }
+  };
+
+  const handleVideoCall = () => {
+    const targetUserId = getOtherParticipantId();
+    if (targetUserId && callState === 'idle') {
+      initiateCall(targetUserId, getChatName(), 'video');
+    }
+  };
+
   const formatMessageTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], {
       hour: '2-digit',
@@ -123,11 +145,33 @@ export function ChatArea() {
             {getChatInitials()}
           </AvatarFallback>
         </Avatar>
-        <div>
+        <div className="flex-1">
           <h3 className="font-medium">{getChatName()}</h3>
           {isOtherTyping && (
             <p className="text-xs text-green-600">typing...</p>
           )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleVoiceCall}
+            disabled={callState !== 'idle'}
+            title="Voice Call"
+            className="text-gray-600 hover:text-green-600"
+          >
+            <Phone className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleVideoCall}
+            disabled={callState !== 'idle'}
+            title="Video Call"
+            className="text-gray-600 hover:text-green-600"
+          >
+            <Video className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 

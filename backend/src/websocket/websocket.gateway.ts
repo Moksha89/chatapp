@@ -259,4 +259,101 @@ export class WebsocketGateway
       lastSeen: isOnline ? null : new Date(),
     });
   }
+
+  // WebRTC Signaling for Voice/Video Calls
+  @SubscribeMessage('call:initiate')
+  async handleCallInitiate(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { targetUserId: string; callType: 'audio' | 'video'; offer: RTCSessionDescriptionInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const caller = await this.usersService.findById(client.userId);
+
+    // Send call offer to target user
+    this.websocketService.emitToUser(data.targetUserId, 'call:incoming', {
+      callId,
+      callerId: client.userId,
+      callerName: caller?.displayName || 'Unknown',
+      callType: data.callType,
+      offer: data.offer,
+    });
+
+    console.log(`Call initiated: ${callId} from ${client.userId} to ${data.targetUserId}`);
+    return { success: true, callId };
+  }
+
+  @SubscribeMessage('call:answer')
+  async handleCallAnswer(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string; answer: RTCSessionDescriptionInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    // Send answer back to caller
+    this.websocketService.emitToUser(data.targetUserId, 'call:answered', {
+      callId: data.callId,
+      answer: data.answer,
+    });
+
+    console.log(`Call answered: ${data.callId}`);
+    return { success: true };
+  }
+
+  @SubscribeMessage('call:reject')
+  async handleCallReject(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string; reason?: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    this.websocketService.emitToUser(data.targetUserId, 'call:rejected', {
+      callId: data.callId,
+      reason: data.reason || 'Call rejected',
+    });
+
+    console.log(`Call rejected: ${data.callId}`);
+    return { success: true };
+  }
+
+  @SubscribeMessage('call:end')
+  async handleCallEnd(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    this.websocketService.emitToUser(data.targetUserId, 'call:ended', {
+      callId: data.callId,
+    });
+
+    console.log(`Call ended: ${data.callId}`);
+    return { success: true };
+  }
+
+  @SubscribeMessage('call:ice-candidate')
+  async handleIceCandidate(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string; candidate: RTCIceCandidateInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    this.websocketService.emitToUser(data.targetUserId, 'call:ice-candidate', {
+      callId: data.callId,
+      candidate: data.candidate,
+    });
+
+    return { success: true };
+  }
 }
