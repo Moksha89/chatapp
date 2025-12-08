@@ -164,17 +164,20 @@ export class WebsocketGateway
     }
 
     try {
-      await this.chatsService.markMessagesRead(data.chatId, client.userId, data.messageIds);
+      const { shouldEmitReadReceipts } = await this.chatsService.markMessagesRead(data.chatId, client.userId, data.messageIds);
       
-      const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
-      
-      for (const participantId of participants) {
-        this.websocketService.emitToUser(participantId, 'message:read', {
-          chatId: data.chatId,
-          messageIds: data.messageIds,
-          readAt: new Date(),
-          readBy: client.userId,
-        });
+      // Only emit read receipts if the reader has them enabled in privacy settings
+      if (shouldEmitReadReceipts) {
+        const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+        
+        for (const participantId of participants) {
+          this.websocketService.emitToUser(participantId, 'message:read', {
+            chatId: data.chatId,
+            messageIds: data.messageIds,
+            readAt: new Date(),
+            readBy: client.userId,
+          });
+        }
       }
 
       return { success: true };
@@ -270,6 +273,12 @@ export class WebsocketGateway
       return { error: 'Not authenticated' };
     }
 
+    // Check if caller is blocked by target user
+    const isBlocked = await this.chatsService.isUserBlocked(data.targetUserId, client.userId);
+    if (isBlocked) {
+      return { error: 'Cannot call this user' };
+    }
+
     const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const caller = await this.usersService.findById(client.userId);
 
@@ -355,5 +364,135 @@ export class WebsocketGateway
     });
 
     return { success: true };
+  }
+
+  // Message Reactions
+  @SubscribeMessage('message:reaction:add')
+  async handleAddReaction(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { chatId: string; messageId: string; emoji: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      const message = await this.chatsService.addReaction(data.chatId, client.userId, data.messageId, data.emoji);
+      
+      const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+      
+      for (const participantId of participants) {
+        this.websocketService.emitToUser(participantId, 'message:reaction:updated', {
+          chatId: data.chatId,
+          messageId: data.messageId,
+          reactions: message.reactions,
+          userId: client.userId,
+          emoji: data.emoji,
+          action: 'add',
+        });
+      }
+
+      return { success: true, reactions: message.reactions };
+    } catch (error) {
+      console.error('Add reaction error:', error);
+      return { error: 'Failed to add reaction' };
+    }
+  }
+
+  @SubscribeMessage('message:reaction:remove')
+  async handleRemoveReaction(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { chatId: string; messageId: string; emoji: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      const message = await this.chatsService.removeReaction(data.chatId, client.userId, data.messageId, data.emoji);
+      
+      const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+      
+      for (const participantId of participants) {
+        this.websocketService.emitToUser(participantId, 'message:reaction:updated', {
+          chatId: data.chatId,
+          messageId: data.messageId,
+          reactions: message.reactions,
+          userId: client.userId,
+          emoji: data.emoji,
+          action: 'remove',
+        });
+      }
+
+      return { success: true, reactions: message.reactions };
+    } catch (error) {
+      console.error('Remove reaction error:', error);
+      return { error: 'Failed to remove reaction' };
+    }
+  }
+
+  // Edit Message
+  @SubscribeMessage('message:edit')
+  async handleEditMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { chatId: string; messageId: string; content: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      const message = await this.chatsService.editMessage(data.chatId, client.userId, data.messageId, data.content);
+      
+      const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+      
+      for (const participantId of participants) {
+        this.websocketService.emitToUser(participantId, 'message:edited', {
+          chatId: data.chatId,
+          messageId: data.messageId,
+          content: message.content,
+          isEdited: true,
+          editedAt: message.editedAt,
+        });
+      }
+
+      return { success: true, message };
+    } catch (error) {
+      console.error('Edit message error:', error);
+      return { error: error.message || 'Failed to edit message' };
+    }
+  }
+
+  // Delete Message
+  @SubscribeMessage('message:delete')
+  async handleDeleteMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { chatId: string; messageId: string; deleteForEveryone: boolean },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      const message = await this.chatsService.deleteMessage(data.chatId, client.userId, data.messageId, data.deleteForEveryone);
+      
+      if (data.deleteForEveryone) {
+        const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+        
+        for (const participantId of participants) {
+          this.websocketService.emitToUser(participantId, 'message:deleted', {
+            chatId: data.chatId,
+            messageId: data.messageId,
+            isDeleted: true,
+            content: message.content,
+          });
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Delete message error:', error);
+      return { error: error.message || 'Failed to delete message' };
+    }
   }
 }

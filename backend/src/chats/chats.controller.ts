@@ -199,4 +199,67 @@ export class ChatsController {
   ) {
     return this.chatsService.setDisappearingMessages(id, user.id, body.duration);
   }
+
+  // Message Reactions
+  @Post(':id/messages/:messageId/reactions')
+  @ApiOperation({ summary: 'Add reaction to message' })
+  @ApiResponse({ status: 201, description: 'Reaction added' })
+  async addReaction(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { emoji: string },
+  ) {
+    return this.chatsService.addReaction(chatId, user.id, messageId, body.emoji);
+  }
+
+  @Delete(':id/messages/:messageId/reactions')
+  @ApiOperation({ summary: 'Remove reaction from message' })
+  @ApiResponse({ status: 200, description: 'Reaction removed' })
+  async removeReaction(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { emoji: string },
+  ) {
+    return this.chatsService.removeReaction(chatId, user.id, messageId, body.emoji);
+  }
+
+  // Edit Message
+  @Put(':id/messages/:messageId')
+  @ApiOperation({ summary: 'Edit message content' })
+  @ApiResponse({ status: 200, description: 'Message edited' })
+  async editMessage(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { content: string },
+  ) {
+    return this.chatsService.editMessage(chatId, user.id, messageId, body.content);
+  }
+
+  // Delete Message
+  @Delete(':id/messages/:messageId')
+  @ApiOperation({ summary: 'Delete message' })
+  @ApiResponse({ status: 200, description: 'Message deleted' })
+  async deleteMessage(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { deleteForEveryone?: boolean },
+  ) {
+    return this.chatsService.deleteMessage(chatId, user.id, messageId, body.deleteForEveryone || false);
+  }
+
+  // Get single message (for reply preview)
+  @Get(':id/messages/:messageId')
+  @ApiOperation({ summary: 'Get single message' })
+  @ApiResponse({ status: 200, description: 'Message retrieved' })
+  async getMessage(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.chatsService.getMessageById(chatId, user.id, messageId);
+  }
 }

@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ import { StatusManager } from './StatusManager';
 import { BroadcastManager } from './BroadcastManager';
 import { ProductCatalog } from './ProductCatalog';
 import { AutoReplySettings } from './AutoReplySettings';
+import { PrivacySettings } from './PrivacySettings';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
@@ -38,6 +39,7 @@ export function ChatSidebar() {
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [showProducts, setShowProducts] = useState(false);
   const [showAutoReply, setShowAutoReply] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const filteredChats = chats.filter((chat) => {
     const chatName = chat.name || chat.participants.find((p) => p.userId !== user?.id)?.user?.displayName || '';
@@ -124,6 +126,11 @@ export function ChatSidebar() {
             <DropdownMenuItem onClick={() => setShowAutoReply(true)}>
               <Clock className="mr-2 h-4 w-4" />
               Auto-Reply Messages
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowPrivacy(true)}>
+              <Shield className="mr-2 h-4 w-4" />
+              Privacy Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="text-red-600">
@@ -228,6 +235,7 @@ export function ChatSidebar() {
       <BroadcastManager isOpen={showBroadcast} onClose={() => setShowBroadcast(false)} />
       <ProductCatalog isOpen={showProducts} onClose={() => setShowProducts(false)} />
       <AutoReplySettings isOpen={showAutoReply} onClose={() => setShowAutoReply(false)} />
+      <PrivacySettings isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
     </div>
   );
 }

@@ -54,6 +54,21 @@ export class MessageEntity {
   @Column({ type: 'varchar', nullable: true })
   forwardedFrom: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  replyToMessageId: string | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  reactions: { [emoji: string]: string[] } | null;
+
+  @Column({ type: 'boolean', default: false })
+  isEdited: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  isDeleted: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  editedAt: Date | null;
+
   @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 

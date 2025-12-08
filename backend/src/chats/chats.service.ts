@@ -1,11 +1,49 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { DatabaseService, Chat, Message, ChatParticipant } from '../database/database.service';
+import { DatabaseService, Chat, Message, ChatParticipant, User } from '../database/database.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 
 @Injectable()
 export class ChatsService {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  /**
+   * Check if a user has blocked another user
+   */
+  async isUserBlocked(userId: string, potentiallyBlockedUserId: string): Promise<boolean> {
+    const user = await this.databaseService.findUserById(userId);
+    if (!user || !user.blockedUsers) return false;
+    return user.blockedUsers.includes(potentiallyBlockedUserId);
+  }
+
+  /**
+   * Check if the sender is blocked by any recipient in the chat
+   * Returns the list of recipients who have blocked the sender
+   */
+  async getBlockingRecipients(chatId: string, senderId: string): Promise<string[]> {
+    const participants = await this.databaseService.findChatParticipantsByChatId(chatId);
+    const blockingRecipients: string[] = [];
+    
+    for (const participant of participants) {
+      if (participant.userId !== senderId) {
+        const isBlocked = await this.isUserBlocked(participant.userId, senderId);
+        if (isBlocked) {
+          blockingRecipients.push(participant.userId);
+        }
+      }
+    }
+    
+    return blockingRecipients;
+  }
+
+  /**
+   * Get user's read receipts setting
+   */
+  async getUserReadReceiptsEnabled(userId: string): Promise<boolean> {
+    const user = await this.databaseService.findUserById(userId);
+    if (!user) return true; // Default to enabled
+    return user.readReceiptsEnabled ?? true;
+  }
 
   async createChat(userId: string, data: CreateChatDto): Promise<Chat & { participants: ChatParticipant[] }> {
     if (data.type === 'direct') {
@@ -212,10 +250,22 @@ export class ChatsService {
     senderId: string,
     senderDeviceId: string | undefined,
     data: SendMessageDto,
-  ): Promise<Message> {
+  ): Promise<Message & { blockedByRecipients?: string[] }> {
     const participant = await this.databaseService.findChatParticipant(chatId, senderId);
     if (!participant) {
       throw new NotFoundException('Chat not found');
+    }
+
+    // Check if sender is blocked by any recipient (for direct chats)
+    const chat = await this.databaseService.findChatById(chatId);
+    let blockedByRecipients: string[] = [];
+    
+    if (chat && chat.type === 'direct') {
+      blockedByRecipients = await this.getBlockingRecipients(chatId, senderId);
+      // For direct chats, if the only recipient has blocked the sender, reject the message
+      if (blockedByRecipients.length > 0) {
+        throw new ForbiddenException('You cannot send messages to this user');
+      }
     }
 
     const message = await this.databaseService.createMessage({
@@ -235,12 +285,19 @@ export class ChatsService {
       readAt: null,
       isStarred: false,
       forwardedFrom: null,
+      replyToMessageId: data.replyToMessageId || null,
+      reactions: null,
+      isEdited: false,
+      isDeleted: false,
+      editedAt: null,
       expiresAt: null,
     });
 
     await this.databaseService.updateChat(chatId, { updatedAt: new Date() });
 
-    return message;
+    // For group chats, return the list of recipients who blocked the sender
+    // so the WebSocket handler can skip sending to them
+    return { ...message, blockedByRecipients };
   }
 
   async markMessageDelivered(messageId: string): Promise<Message> {
@@ -261,11 +318,15 @@ export class ChatsService {
     return updated;
   }
 
-  async markMessagesRead(chatId: string, userId: string, messageIds: string[]): Promise<void> {
+  async markMessagesRead(chatId: string, userId: string, messageIds: string[]): Promise<{ shouldEmitReadReceipts: boolean }> {
     const participant = await this.databaseService.findChatParticipant(chatId, userId);
     if (!participant) {
       throw new NotFoundException('Chat not found');
     }
+
+    // Check if the reader has read receipts enabled
+    // If disabled, we still mark messages as read locally but don't emit to sender
+    const readReceiptsEnabled = await this.getUserReadReceiptsEnabled(userId);
 
     for (const messageId of messageIds) {
       const message = await this.databaseService.findMessageById(messageId);
@@ -280,6 +341,8 @@ export class ChatsService {
     await this.databaseService.updateChatParticipant(participant.id, {
       lastReadAt: new Date(),
     });
+
+    return { shouldEmitReadReceipts: readReceiptsEnabled };
   }
 
   async getChatParticipants(chatId: string): Promise<ChatParticipant[]> {
@@ -357,6 +420,11 @@ export class ChatsService {
       readAt: null,
       isStarred: false,
       forwardedFrom: originalMessage.id,
+      replyToMessageId: null,
+      reactions: null,
+      isEdited: false,
+      isDeleted: false,
+      editedAt: null,
       expiresAt: null,
     });
 
@@ -404,5 +472,146 @@ export class ChatsService {
       throw new NotFoundException('Chat not found');
     }
     return updated;
+  }
+
+  // Message Reactions
+  async addReaction(chatId: string, userId: string, messageId: string, emoji: string): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    const reactions = message.reactions || {};
+    if (!reactions[emoji]) {
+      reactions[emoji] = [];
+    }
+    if (!reactions[emoji].includes(userId)) {
+      reactions[emoji].push(userId);
+    }
+
+    const updated = await this.databaseService.updateMessage(messageId, { reactions });
+    if (!updated) {
+      throw new NotFoundException('Message not found');
+    }
+    return updated;
+  }
+
+  async removeReaction(chatId: string, userId: string, messageId: string, emoji: string): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    const reactions = message.reactions || {};
+    if (reactions[emoji]) {
+      reactions[emoji] = reactions[emoji].filter((id: string) => id !== userId);
+      if (reactions[emoji].length === 0) {
+        delete reactions[emoji];
+      }
+    }
+
+    const updated = await this.databaseService.updateMessage(messageId, { 
+      reactions: Object.keys(reactions).length > 0 ? reactions : null 
+    });
+    if (!updated) {
+      throw new NotFoundException('Message not found');
+    }
+    return updated;
+  }
+
+  // Edit Message
+  async editMessage(chatId: string, userId: string, messageId: string, newContent: string): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Only the sender can edit their own message
+    if (message.senderId !== userId) {
+      throw new ForbiddenException('You can only edit your own messages');
+    }
+
+    // Check if message is within edit window (15 minutes)
+    const editWindowMs = 15 * 60 * 1000;
+    const messageAge = Date.now() - new Date(message.createdAt).getTime();
+    if (messageAge > editWindowMs) {
+      throw new ForbiddenException('Message can only be edited within 15 minutes of sending');
+    }
+
+    const updated = await this.databaseService.updateMessage(messageId, {
+      content: newContent,
+      isEdited: true,
+      editedAt: new Date(),
+    });
+    if (!updated) {
+      throw new NotFoundException('Message not found');
+    }
+    return updated;
+  }
+
+  // Delete Message
+  async deleteMessage(chatId: string, userId: string, messageId: string, deleteForEveryone: boolean): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Only the sender can delete for everyone
+    if (deleteForEveryone && message.senderId !== userId) {
+      throw new ForbiddenException('You can only delete your own messages for everyone');
+    }
+
+    // Check if message is within delete window (1 hour) for delete for everyone
+    if (deleteForEveryone) {
+      const deleteWindowMs = 60 * 60 * 1000;
+      const messageAge = Date.now() - new Date(message.createdAt).getTime();
+      if (messageAge > deleteWindowMs) {
+        throw new ForbiddenException('Message can only be deleted for everyone within 1 hour of sending');
+      }
+    }
+
+    const updated = await this.databaseService.updateMessage(messageId, {
+      isDeleted: true,
+      content: deleteForEveryone ? 'This message was deleted' : message.content,
+    });
+    if (!updated) {
+      throw new NotFoundException('Message not found');
+    }
+    return updated;
+  }
+
+  // Get message by ID (for reply preview)
+  async getMessageById(chatId: string, userId: string, messageId: string): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    return message;
   }
 }

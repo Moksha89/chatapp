@@ -46,4 +46,9 @@ export class SendMessageDto {
   @IsString()
   @IsOptional()
   tempId?: string;
+
+  @ApiPropertyOptional({ description: 'ID of message being replied to' })
+  @IsString()
+  @IsOptional()
+  replyToMessageId?: string;
 }

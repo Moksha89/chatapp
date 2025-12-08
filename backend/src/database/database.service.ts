@@ -126,6 +126,11 @@ export interface Message {
   readAt: Date | null;
   isStarred: boolean;
   forwardedFrom: string | null;
+  replyToMessageId: string | null;
+  reactions: { [emoji: string]: string[] } | null;
+  isEdited: boolean;
+  isDeleted: boolean;
+  editedAt: Date | null;
   expiresAt: Date | null;
 }
 
