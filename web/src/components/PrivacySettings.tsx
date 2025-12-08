@@ -3,6 +3,7 @@ import { X, Shield, UserX, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
 import { Button } from './ui/button';
 import { useI18n } from '../i18n/I18nContext';
+import { Language } from '../i18n/translations';
 
 interface PrivacySettingsProps {
   isOpen: boolean;
@@ -15,7 +16,7 @@ interface BlockedUser {
 }
 
 export function PrivacySettings({ isOpen, onClose }: PrivacySettingsProps) {
-  const { language, setLanguage, availableLanguages } = useI18n();
+  const { language, setLanguage, languages } = useI18n();
   const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(true);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,7 +90,7 @@ export function PrivacySettings({ isOpen, onClose }: PrivacySettingsProps) {
     }
   };
 
-  const handleLanguageChange = async (newLanguage: string) => {
+  const handleLanguageChange = async (newLanguage: Language) => {
     try {
       await api.updatePrivacySettings({ language: newLanguage });
       setLanguage(newLanguage);
@@ -158,12 +159,12 @@ export function PrivacySettings({ isOpen, onClose }: PrivacySettingsProps) {
                 <h3 className="font-medium mb-2">Language</h3>
                 <select
                   value={language}
-                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  onChange={(e) => handleLanguageChange(e.target.value as Language)}
                   className="w-full p-2 border rounded-md"
                 >
-                  {availableLanguages.map(lang => (
-                    <option key={lang.code} value={lang.code}>
-                      {lang.name}
+                  {(Object.entries(languages) as [Language, string][]).map(([code, name]) => (
+                    <option key={code} value={code}>
+                      {name}
                     </option>
                   ))}
                 </select>
