@@ -11,7 +11,7 @@ import {
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { Plus, Trash2, Edit2, Package, DollarSign, Tag, Link, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Edit2, Package, Eye, EyeOff } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -46,7 +46,7 @@ const CATEGORIES = [
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD'];
 
 export function ProductCatalog({ isOpen, onClose }: ProductCatalogProps) {
-  const { user } = useAuth();
+  useAuth(); // Ensure user is authenticated
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);

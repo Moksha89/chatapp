@@ -265,7 +265,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       name,
       participantIds,
       description,
-    } as any);
+    } as { type: 'direct' | 'group'; participantId?: string; name?: string; participantIds?: string[]; description?: string });
     await refreshChats();
     const createdChat = chats.find((c) => c.id === newChat.id);
     return createdChat || (newChat as Chat);

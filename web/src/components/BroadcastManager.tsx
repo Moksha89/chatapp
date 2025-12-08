@@ -143,10 +143,6 @@ export function BroadcastManager({ isOpen, onClose }: BroadcastManagerProps) {
     }
   };
 
-  const getUserName = (userId: string) => {
-    const foundUser = allUsers.find(u => u.id === userId);
-    return foundUser?.displayName || 'Unknown';
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

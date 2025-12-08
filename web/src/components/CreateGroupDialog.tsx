@@ -13,7 +13,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Checkbox } from './ui/checkbox';
-import { Users, Check } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 interface User {
   id: string;

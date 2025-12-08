@@ -8,9 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
-import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Avatar, AvatarFallback } from './ui/avatar';
 import { Textarea } from './ui/textarea';
 import { Plus, Eye, Trash2, Clock } from 'lucide-react';
 

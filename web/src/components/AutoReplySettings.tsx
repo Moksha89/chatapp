@@ -37,7 +37,7 @@ const AUTO_REPLY_TYPES = [
 ];
 
 export function AutoReplySettings({ isOpen, onClose }: AutoReplySettingsProps) {
-  const { user } = useAuth();
+  useAuth(); // Ensure user is authenticated
   const [autoReplies, setAutoReplies] = useState<AutoReply[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -152,7 +152,7 @@ export function AutoReplySettings({ isOpen, onClose }: AutoReplySettingsProps) {
               <select
                 className="w-full h-10 px-3 border rounded-md mt-1"
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as 'greeting' | 'away' | 'quick_reply' })}
               >
                 {AUTO_REPLY_TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
