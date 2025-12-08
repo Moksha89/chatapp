@@ -13,7 +13,14 @@ export function sanitizeHtml(input: string): string {
 export function sanitizeInput(input: string): string {
   return input
     .trim()
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    .split('')
+    .filter(char => {
+      const code = char.charCodeAt(0);
+      if (code === 0x09 || code === 0x0A || code === 0x0D) return true;
+      if (code < 0x20 || code === 0x7F) return false;
+      return true;
+    })
+    .join('');
 }
 
 export function isValidPhoneNumber(phone: string): boolean {

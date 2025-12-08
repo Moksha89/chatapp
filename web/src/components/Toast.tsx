@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info, Wifi, WifiOff } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, AlertTriangle, Info, WifiOff } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 

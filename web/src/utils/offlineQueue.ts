@@ -1,12 +1,3 @@
-interface QueuedMessage {
-  id: string;
-  chatId: string;
-  content: string;
-  type: 'text' | 'image' | 'file';
-  timestamp: number;
-  retryCount: number;
-}
-
 interface QueuedAction {
   id: string;
   type: 'message' | 'read_receipt' | 'typing';
@@ -128,7 +119,8 @@ class OfflineQueue {
         await this.processAction(action);
         this.queue.shift();
         this.saveToStorage();
-      } catch (error) {
+      } catch (err) {
+        console.error('Failed to process action:', action.id, err);
         action.retryCount++;
         
         if (action.retryCount >= MAX_RETRIES) {

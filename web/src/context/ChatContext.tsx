@@ -119,29 +119,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [ensureSession]);
 
-  const decryptMessageContent = useCallback(async (
-    senderId: string,
-    senderDeviceId: string,
-    ciphertext: string,
-    senderIdentityKey?: string,
-    ephemeralKey?: string,
-    usedOneTimePreKeyId?: number
-  ): Promise<string | null> => {
-    try {
-      const plaintext = await sessionManager.decryptMessage(
-        senderId,
-        senderDeviceId,
-        ciphertext,
-        senderIdentityKey,
-        ephemeralKey,
-        usedOneTimePreKeyId
-      );
-      return plaintext;
-    } catch (error) {
-      console.error('Failed to decrypt message:', error);
-      return null;
-    }
-  }, []);
 
   const refreshChats = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -289,7 +266,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
       offlineQueue.setMessageProcessor(async (payload: unknown) => {
-        const { chatId, content, messageType } = payload as { chatId: string; content: string; messageType: string };
+        const { chatId, content } = payload as { chatId: string; content: string; messageType: string };
         const tempId = `queued-${Date.now()}`;
         await sendMessageInternal(chatId, content, tempId);
       });
@@ -301,7 +278,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const handleNewMessage = async (data: unknown) => {
           const { message, chatId } = data as { message: Message; chatId: string };
       
-          let decryptedMessage = { ...message };
+          const decryptedMessage = { ...message };
       
           if (message.ciphertext && message.senderDeviceId) {
             try {

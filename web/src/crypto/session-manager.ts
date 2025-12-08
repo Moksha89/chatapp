@@ -7,7 +7,6 @@ import {
 } from './keys';
 import { x3dhInitiator, x3dhResponder } from './x3dh';
 import {
-  RatchetState,
   initializeRatchetAsInitiator,
   initializeRatchetAsResponder,
   ratchetEncrypt,
@@ -133,7 +132,7 @@ class SessionManager {
     deviceId: string,
     plaintext: string
   ): Promise<OutgoingMessage> {
-    let session = cryptoStore.getSession(recipientId, deviceId);
+    const session = cryptoStore.getSession(recipientId, deviceId);
 
     if (!session) {
       throw new Error('No session exists for this recipient. Fetch their key bundle first.');
