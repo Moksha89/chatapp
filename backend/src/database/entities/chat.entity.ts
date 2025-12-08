@@ -11,7 +11,7 @@ export class ChatEntity {
   @Column()
   type: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   name: string | null;
 
   @CreateDateColumn()

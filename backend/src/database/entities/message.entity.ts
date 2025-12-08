@@ -12,7 +12,7 @@ export class MessageEntity {
   @Column()
   senderId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   senderDeviceId: string | null;
 
   @Column({ type: 'text' })

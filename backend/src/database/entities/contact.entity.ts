@@ -8,7 +8,7 @@ export class ContactEntity {
   @Column()
   ownerId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   contactUserId: string | null;
 
   @Column()
@@ -17,7 +17,7 @@ export class ContactEntity {
   @Column()
   phoneNumber: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   email: string | null;
 
   @Column({ type: 'text', nullable: true })

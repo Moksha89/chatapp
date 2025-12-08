@@ -8,7 +8,7 @@ export class RefreshTokenEntity {
   @Column()
   userId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   deviceId: string | null;
 
   @Column()

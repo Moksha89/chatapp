@@ -8,10 +8,10 @@ export class WebSessionEntity {
   @Column()
   pairingCode: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   userId: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   deviceId: string | null;
 
   @Column()

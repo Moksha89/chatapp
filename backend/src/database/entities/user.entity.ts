@@ -16,13 +16,13 @@ export class UserEntity {
   @Column({ nullable: true, type: 'text' })
   profilePhoto: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   passwordHash: string | null;
 
   @Column({ default: false })
   isBusiness: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   status: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
