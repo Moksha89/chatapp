@@ -18,7 +18,7 @@ import { DevicesModule } from '../devices/devices.module';
     }),
     forwardRef(() => ChatsModule),
     UsersModule,
-    DevicesModule,
+    forwardRef(() => DevicesModule),
   ],
   providers: [WebsocketGateway, WebsocketService],
   exports: [WebsocketService],
