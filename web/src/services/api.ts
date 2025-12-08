@@ -223,6 +223,136 @@ class ApiService {
       `/crypto/keys/${userId}`
     );
   }
+
+  async updateLabel(id: string, data: { name?: string; color?: string }) {
+    return this.request<{ id: string; name: string; color: string }>(`/labels/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteLabel(id: string) {
+    return this.request<{ message: string }>(`/labels/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async assignLabelsToChat(chatId: string, labelIds: string[]) {
+    return this.request<Array<{ chatId: string; labelId: string }>>(`/labels/chats/${chatId}`, {
+      method: 'POST',
+      body: JSON.stringify({ labelIds }),
+    });
+  }
+
+  async removeLabelFromChat(chatId: string, labelId: string) {
+    return this.request<{ message: string }>(`/labels/chats/${chatId}/${labelId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getChatsByLabel(labelId: string) {
+    return this.request<string[]>(`/labels/${labelId}/chats`);
+  }
+
+  async updateQuickReply(id: string, data: { shortcode?: string; message?: string }) {
+    return this.request<{ id: string; shortcode: string; message: string }>(`/quick-replies/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteQuickReply(id: string) {
+    return this.request<{ message: string }>(`/quick-replies/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async searchQuickReplies(prefix: string) {
+    return this.request<Array<{ id: string; shortcode: string; message: string }>>(
+      `/quick-replies?search=${encodeURIComponent(prefix)}`
+    );
+  }
+
+  async getBusinessProfile() {
+    return this.request<{
+      id: string;
+      businessName: string;
+      description?: string;
+      category?: string;
+      address?: string;
+      businessHours?: string;
+      email?: string;
+      website?: string;
+    } | null>('/business/profile');
+  }
+
+  async updateBusinessProfile(data: {
+    businessName?: string;
+    description?: string;
+    category?: string;
+    address?: string;
+    businessHours?: string;
+    email?: string;
+    website?: string;
+  }) {
+    return this.request<{
+      id: string;
+      businessName: string;
+      description?: string;
+      category?: string;
+      address?: string;
+      businessHours?: string;
+      email?: string;
+      website?: string;
+    }>('/business/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getContacts() {
+    return this.request<Array<{
+      id: string;
+      name: string;
+      phoneNumber: string;
+      email?: string;
+      notes?: string;
+      lastContactDate?: string;
+    }>>('/contacts');
+  }
+
+  async createContact(data: { name: string; phoneNumber: string; email?: string; notes?: string }) {
+    return this.request<{
+      id: string;
+      name: string;
+      phoneNumber: string;
+      email?: string;
+      notes?: string;
+    }>('/contacts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateContact(id: string, data: { name?: string; email?: string; notes?: string; lastContactDate?: string }) {
+    return this.request<{
+      id: string;
+      name: string;
+      phoneNumber: string;
+      email?: string;
+      notes?: string;
+      lastContactDate?: string;
+    }>(`/contacts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteContact(id: string) {
+    return this.request<{ message: string }>(`/contacts/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiService();
