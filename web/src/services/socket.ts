@@ -36,12 +36,16 @@ class SocketService {
     });
   }
 
-  disconnect() {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
+    disconnect() {
+      if (this.socket) {
+        this.socket.disconnect();
+        this.socket = null;
+      }
     }
-  }
+
+    isConnected(): boolean {
+      return this.socket?.connected ?? false;
+    }
 
   on(event: string, callback: (data: unknown) => void) {
     if (!this.listeners.has(event)) {
