@@ -17,6 +17,11 @@ export class TwilioOtpProvider implements OtpProvider {
     this.initPromise = this.initializeTwilio();
   }
 
+  private normalizePhoneNumber(phone: string): string {
+    const digits = phone.replace(/[^\d+]/g, '');
+    return digits.startsWith('+') ? digits : `+${digits}`;
+  }
+
   private async initializeTwilio(): Promise<void> {
     const accountSid = this.configService.get<string>('TWILIO_ACCOUNT_SID');
     const authToken = this.configService.get<string>('TWILIO_AUTH_TOKEN');
@@ -37,10 +42,12 @@ export class TwilioOtpProvider implements OtpProvider {
   async sendOtp(phoneNumber: string): Promise<OtpSendResult> {
     await this.initPromise;
     
+    const normalizedPhone = this.normalizePhoneNumber(phoneNumber);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    this.otpStore.set(phoneNumber, { otp, expiresAt });
+    this.otpStore.set(normalizedPhone, { otp, expiresAt });
+    this.logger.log(`OTP stored for ${normalizedPhone}`);
 
     if (!this.twilioClient) {
       this.logger.warn(`Twilio not configured - OTP for ${phoneNumber}: ${otp}`);
@@ -77,22 +84,27 @@ export class TwilioOtpProvider implements OtpProvider {
   }
 
   async verifyOtp(phoneNumber: string, otp: string): Promise<OtpVerifyResult> {
-    const stored = this.otpStore.get(phoneNumber);
+    const normalizedPhone = this.normalizePhoneNumber(phoneNumber);
+    this.logger.log(`Verifying OTP for ${normalizedPhone}`);
+    const stored = this.otpStore.get(normalizedPhone);
 
     if (!stored) {
+      this.logger.warn(`No OTP found for ${normalizedPhone}`);
       return { success: false, message: 'OTP not found or expired' };
     }
 
     if (new Date() > stored.expiresAt) {
-      this.otpStore.delete(phoneNumber);
+      this.otpStore.delete(normalizedPhone);
       return { success: false, message: 'OTP expired' };
     }
 
     if (stored.otp !== otp) {
+      this.logger.warn(`OTP mismatch for ${normalizedPhone}: expected ${stored.otp}, got ${otp}`);
       return { success: false, message: 'Invalid OTP' };
     }
 
-    this.otpStore.delete(phoneNumber);
+    this.otpStore.delete(normalizedPhone);
+    this.logger.log(`OTP verified successfully for ${normalizedPhone}`);
     return { success: true, message: 'OTP verified successfully' };
   }
 }
