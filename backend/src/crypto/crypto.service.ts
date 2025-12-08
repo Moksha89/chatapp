@@ -37,7 +37,7 @@ export class CryptoService {
 
     if (data.oneTimePrekeys && data.oneTimePrekeys.length > 0) {
       for (const otpk of data.oneTimePrekeys) {
-        this.databaseService.createOneTimePrekey({
+        await this.databaseService.createOneTimePrekey({
           deviceId: device.id,
           keyId: otpk.keyId,
           publicKey: otpk.publicKey,
@@ -71,7 +71,7 @@ export class CryptoService {
       return null;
     }
 
-    const oneTimePrekey = this.databaseService.findUnusedPrekeyByDeviceId(targetDevice.id);
+    const oneTimePrekey = await this.databaseService.findUnusedPrekeyByDeviceId(targetDevice.id);
 
     const bundle: KeyBundle = {
       identityKey: targetDevice.identityPublicKey,
@@ -87,7 +87,7 @@ export class CryptoService {
         keyId: oneTimePrekey.keyId,
         publicKey: oneTimePrekey.publicKey,
       };
-      this.databaseService.markPrekeyAsUsed(oneTimePrekey.id);
+      await this.databaseService.markPrekeyAsUsed(oneTimePrekey.id);
     }
 
     return bundle;
@@ -99,7 +99,7 @@ export class CryptoService {
       throw new NotFoundException('Device not found');
     }
 
-    const count = this.databaseService.countUnusedPrekeysByDeviceId(device.id);
+    const count = await this.databaseService.countUnusedPrekeysByDeviceId(device.id);
     return { count };
   }
 }

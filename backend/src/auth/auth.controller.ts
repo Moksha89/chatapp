@@ -3,33 +3,41 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto, SendOtpDto } from './dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RateLimitGuard, RateLimit } from '../common/guards/rate-limit.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
+@UseGuards(RateLimitGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('send-otp')
   @HttpCode(HttpStatus.OK)
+  @RateLimit({ windowMs: 60000, maxRequests: 5 })
   @ApiOperation({ summary: 'Send OTP to phone number' })
   @ApiResponse({ status: 200, description: 'OTP sent successfully' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async sendOtp(@Body() sendOtpDto: SendOtpDto) {
     return this.authService.sendOtp(sendOtpDto.phoneNumber);
   }
 
   @Post('register')
+  @RateLimit({ windowMs: 60000, maxRequests: 10 })
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Invalid OTP or user already exists' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @RateLimit({ windowMs: 60000, maxRequests: 10 })
   @ApiOperation({ summary: 'Login with phone number and OTP' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }

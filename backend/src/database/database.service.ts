@@ -1,10 +1,22 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, LessThan } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import * as fs from 'fs';
-import * as path from 'path';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DATA_FILE = path.join(DATA_DIR, 'database.json');
+import {
+  UserEntity,
+  DeviceEntity,
+  ChatEntity,
+  ChatParticipantEntity,
+  MessageEntity,
+  LabelEntity,
+  ChatLabelEntity,
+  BusinessProfileEntity,
+  ContactEntity,
+  QuickReplyEntity,
+  OneTimePrekeyEntity,
+  RefreshTokenEntity,
+  WebSessionEntity,
+} from './entities';
 
 export interface User {
   id: string;
@@ -14,7 +26,7 @@ export interface User {
   isBusiness: boolean;
   status: string | null;
   lastSeen: Date | null;
-  passwordHash: string;
+  passwordHash: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,7 +36,7 @@ export interface Device {
   userId: string;
   deviceId: string;
   deviceName: string;
-  deviceType: 'android' | 'web' | 'ios';
+  deviceType: string;
   identityPublicKey: string | null;
   signedPrekeyPublic: string | null;
   signedPrekeySignature: string | null;
@@ -73,7 +85,7 @@ export interface Contact {
 
 export interface Chat {
   id: string;
-  type: 'direct' | 'group';
+  type: string;
   name: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -83,7 +95,7 @@ export interface ChatParticipant {
   id: string;
   chatId: string;
   userId: string;
-  role: 'admin' | 'member';
+  role: string;
   joinedAt: Date;
   lastReadAt: Date | null;
 }
@@ -95,8 +107,8 @@ export interface Message {
   senderDeviceId: string | null;
   content: string;
   ciphertext: string | null;
-  type: 'text' | 'image' | 'file' | 'audio';
-  status: 'sent' | 'delivered' | 'read';
+  type: string;
+  status: string;
   createdAt: Date;
   deliveredAt: Date | null;
   readAt: Date | null;
@@ -141,631 +153,430 @@ export interface WebSession {
   pairingCode: string;
   userId: string | null;
   deviceId: string | null;
-  status: 'pending' | 'paired' | 'expired';
+  status: string;
   expiresAt: Date;
   createdAt: Date;
 }
 
 @Injectable()
-export class DatabaseService implements OnModuleInit, OnModuleDestroy {
-  private users: Map<string, User> = new Map();
-  private devices: Map<string, Device> = new Map();
-  private oneTimePrekeys: Map<string, OneTimePrekey> = new Map();
-  private businessProfiles: Map<string, BusinessProfile> = new Map();
-  private contacts: Map<string, Contact> = new Map();
-  private chats: Map<string, Chat> = new Map();
-  private chatParticipants: Map<string, ChatParticipant> = new Map();
-  private messages: Map<string, Message> = new Map();
-  private labels: Map<string, Label> = new Map();
-  private chatLabels: Map<string, ChatLabel> = new Map();
-  private quickReplies: Map<string, QuickReply> = new Map();
-  private refreshTokens: Map<string, RefreshToken> = new Map();
-  private webSessions: Map<string, WebSession> = new Map();
+export class DatabaseService implements OnModuleInit {
+  constructor(
+    @InjectRepository(UserEntity)
+    private userRepository: Repository<UserEntity>,
+    @InjectRepository(DeviceEntity)
+    private deviceRepository: Repository<DeviceEntity>,
+    @InjectRepository(ChatEntity)
+    private chatRepository: Repository<ChatEntity>,
+    @InjectRepository(ChatParticipantEntity)
+    private chatParticipantRepository: Repository<ChatParticipantEntity>,
+    @InjectRepository(MessageEntity)
+    private messageRepository: Repository<MessageEntity>,
+    @InjectRepository(LabelEntity)
+    private labelRepository: Repository<LabelEntity>,
+    @InjectRepository(ChatLabelEntity)
+    private chatLabelRepository: Repository<ChatLabelEntity>,
+    @InjectRepository(BusinessProfileEntity)
+    private businessProfileRepository: Repository<BusinessProfileEntity>,
+    @InjectRepository(ContactEntity)
+    private contactRepository: Repository<ContactEntity>,
+    @InjectRepository(QuickReplyEntity)
+    private quickReplyRepository: Repository<QuickReplyEntity>,
+    @InjectRepository(OneTimePrekeyEntity)
+    private oneTimePrekeyRepository: Repository<OneTimePrekeyEntity>,
+    @InjectRepository(RefreshTokenEntity)
+    private refreshTokenRepository: Repository<RefreshTokenEntity>,
+    @InjectRepository(WebSessionEntity)
+    private webSessionRepository: Repository<WebSessionEntity>,
+  ) {}
 
-  private saveTimeout: NodeJS.Timeout | null = null;
-  private readonly SAVE_DEBOUNCE_MS = 1000;
-
-  onModuleInit() {
-    this.loadFromDisk();
-  }
-
-  onModuleDestroy() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-    this.saveToDiskSync();
-  }
-
-  private loadFromDisk() {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-
-      if (fs.existsSync(DATA_FILE)) {
-        const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-        
-        const parseDate = (obj: Record<string, unknown>) => {
-          for (const key of Object.keys(obj)) {
-            if (typeof obj[key] === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(obj[key] as string)) {
-              obj[key] = new Date(obj[key] as string);
-            }
-          }
-          return obj;
-        };
-
-        if (data.users) {
-          data.users.forEach((u: User) => this.users.set(u.id, parseDate(u as unknown as Record<string, unknown>) as unknown as User));
-        }
-        if (data.devices) {
-          data.devices.forEach((d: Device) => this.devices.set(d.id, parseDate(d as unknown as Record<string, unknown>) as unknown as Device));
-        }
-        if (data.oneTimePrekeys) {
-          data.oneTimePrekeys.forEach((p: OneTimePrekey) => this.oneTimePrekeys.set(p.id, parseDate(p as unknown as Record<string, unknown>) as unknown as OneTimePrekey));
-        }
-        if (data.businessProfiles) {
-          data.businessProfiles.forEach((p: BusinessProfile) => this.businessProfiles.set(p.id, parseDate(p as unknown as Record<string, unknown>) as unknown as BusinessProfile));
-        }
-        if (data.contacts) {
-          data.contacts.forEach((c: Contact) => this.contacts.set(c.id, parseDate(c as unknown as Record<string, unknown>) as unknown as Contact));
-        }
-        if (data.chats) {
-          data.chats.forEach((c: Chat) => this.chats.set(c.id, parseDate(c as unknown as Record<string, unknown>) as unknown as Chat));
-        }
-        if (data.chatParticipants) {
-          data.chatParticipants.forEach((p: ChatParticipant) => this.chatParticipants.set(p.id, parseDate(p as unknown as Record<string, unknown>) as unknown as ChatParticipant));
-        }
-        if (data.messages) {
-          data.messages.forEach((m: Message) => this.messages.set(m.id, parseDate(m as unknown as Record<string, unknown>) as unknown as Message));
-        }
-        if (data.labels) {
-          data.labels.forEach((l: Label) => this.labels.set(l.id, parseDate(l as unknown as Record<string, unknown>) as unknown as Label));
-        }
-        if (data.chatLabels) {
-          data.chatLabels.forEach((cl: ChatLabel) => this.chatLabels.set(cl.id, parseDate(cl as unknown as Record<string, unknown>) as unknown as ChatLabel));
-        }
-        if (data.quickReplies) {
-          data.quickReplies.forEach((qr: QuickReply) => this.quickReplies.set(qr.id, parseDate(qr as unknown as Record<string, unknown>) as unknown as QuickReply));
-        }
-        if (data.refreshTokens) {
-          data.refreshTokens.forEach((t: RefreshToken) => this.refreshTokens.set(t.id, parseDate(t as unknown as Record<string, unknown>) as unknown as RefreshToken));
-        }
-        if (data.webSessions) {
-          data.webSessions.forEach((s: WebSession) => this.webSessions.set(s.id, parseDate(s as unknown as Record<string, unknown>) as unknown as WebSession));
-        }
-
-        console.log('Database loaded from disk');
-      }
-    } catch (error) {
-      console.error('Failed to load database from disk:', error);
-    }
-  }
-
-  private scheduleSave() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-    this.saveTimeout = setTimeout(() => {
-      this.saveToDiskSync();
-    }, this.SAVE_DEBOUNCE_MS);
-  }
-
-  private saveToDiskSync() {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-
-      const data = {
-        users: Array.from(this.users.values()),
-        devices: Array.from(this.devices.values()),
-        oneTimePrekeys: Array.from(this.oneTimePrekeys.values()),
-        businessProfiles: Array.from(this.businessProfiles.values()),
-        contacts: Array.from(this.contacts.values()),
-        chats: Array.from(this.chats.values()),
-        chatParticipants: Array.from(this.chatParticipants.values()),
-        messages: Array.from(this.messages.values()),
-        labels: Array.from(this.labels.values()),
-        chatLabels: Array.from(this.chatLabels.values()),
-        quickReplies: Array.from(this.quickReplies.values()),
-        refreshTokens: Array.from(this.refreshTokens.values()),
-        webSessions: Array.from(this.webSessions.values()),
-      };
-
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-      console.log('Database saved to disk');
-    } catch (error) {
-      console.error('Failed to save database to disk:', error);
-    }
+  async onModuleInit() {
+    console.log('DatabaseService initialized with TypeORM');
   }
 
   generateId(): string {
     return uuidv4();
   }
 
-    createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): User {
-      const user: User = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.users.set(user.id, user);
-      this.scheduleSave();
-      return user;
-    }
-
-  findUserById(id: string): User | undefined {
-    return this.users.get(id);
+  async createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+    const user = this.userRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.userRepository.save(user) as Promise<User>;
   }
 
-  findUserByPhone(phoneNumber: string): User | undefined {
-    return Array.from(this.users.values()).find(
-      (u) => u.phoneNumber === phoneNumber,
-    );
+  async findUserById(id: string): Promise<User | undefined> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    return user || undefined;
   }
 
-    updateUser(id: string, data: Partial<User>): User | undefined {
-      const user = this.users.get(id);
-      if (!user) return undefined;
-      const updated = { ...user, ...data, updatedAt: new Date() };
-      this.users.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-  getAllUsers(): User[] {
-    return Array.from(this.users.values());
+  async findUserByPhone(phoneNumber: string): Promise<User | undefined> {
+    const user = await this.userRepository.findOne({ where: { phoneNumber } });
+    return user || undefined;
   }
 
-    createDevice(data: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Device {
-      const device: Device = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.devices.set(device.id, device);
-      this.scheduleSave();
-      return device;
-    }
-
-  findDeviceById(id: string): Device | undefined {
-    return this.devices.get(id);
+  async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
+    await this.userRepository.update(id, data);
+    return this.findUserById(id);
   }
 
-  findDevicesByUserId(userId: string): Device[] {
-    return Array.from(this.devices.values()).filter((d) => d.userId === userId);
+  async getAllUsers(): Promise<User[]> {
+    return this.userRepository.find() as Promise<User[]>;
   }
 
-  findDeviceByUserAndDeviceId(userId: string, deviceId: string): Device | undefined {
-    return Array.from(this.devices.values()).find(
-      (d) => d.userId === userId && d.deviceId === deviceId,
-    );
+  async createDevice(data: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Promise<Device> {
+    const device = this.deviceRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.deviceRepository.save(device) as Promise<Device>;
   }
 
-    updateDevice(id: string, data: Partial<Device>): Device | undefined {
-      const device = this.devices.get(id);
-      if (!device) return undefined;
-      const updated = { ...device, ...data, updatedAt: new Date() };
-      this.devices.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-    deleteDevice(id: string): boolean {
-      const result = this.devices.delete(id);
-      if (result) this.scheduleSave();
-      return result;
-    }
-
-    createOneTimePrekey(data: Omit<OneTimePrekey, 'id' | 'createdAt'>): OneTimePrekey {
-      const prekey: OneTimePrekey = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-      };
-      this.oneTimePrekeys.set(prekey.id, prekey);
-      this.scheduleSave();
-      return prekey;
-    }
-
-  findUnusedPrekeyByDeviceId(deviceId: string): OneTimePrekey | undefined {
-    return Array.from(this.oneTimePrekeys.values()).find(
-      (p) => p.deviceId === deviceId && !p.isUsed,
-    );
+  async findDeviceById(id: string): Promise<Device | undefined> {
+    const device = await this.deviceRepository.findOne({ where: { id } });
+    return device || undefined;
   }
 
-    markPrekeyAsUsed(id: string): void {
-      const prekey = this.oneTimePrekeys.get(id);
-      if (prekey) {
-        prekey.isUsed = true;
-        this.oneTimePrekeys.set(id, prekey);
-        this.scheduleSave();
-      }
-    }
-
-  countUnusedPrekeysByDeviceId(deviceId: string): number {
-    return Array.from(this.oneTimePrekeys.values()).filter(
-      (p) => p.deviceId === deviceId && !p.isUsed,
-    ).length;
+  async findDevicesByUserId(userId: string): Promise<Device[]> {
+    return this.deviceRepository.find({ where: { userId } }) as Promise<Device[]>;
   }
 
-    createBusinessProfile(data: Omit<BusinessProfile, 'id' | 'createdAt' | 'updatedAt'>): BusinessProfile {
-      const profile: BusinessProfile = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.businessProfiles.set(profile.id, profile);
-      this.scheduleSave();
-      return profile;
-    }
-
-  findBusinessProfileByUserId(userId: string): BusinessProfile | undefined {
-    return Array.from(this.businessProfiles.values()).find(
-      (p) => p.userId === userId,
-    );
+  async findDeviceByUserAndDeviceId(userId: string, deviceId: string): Promise<Device | undefined> {
+    const device = await this.deviceRepository.findOne({ where: { userId, deviceId } });
+    return device || undefined;
   }
 
-    updateBusinessProfile(id: string, data: Partial<BusinessProfile>): BusinessProfile | undefined {
-      const profile = this.businessProfiles.get(id);
-      if (!profile) return undefined;
-      const updated = { ...profile, ...data, updatedAt: new Date() };
-      this.businessProfiles.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-    createContact(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Contact {
-      const contact: Contact = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.contacts.set(contact.id, contact);
-      this.scheduleSave();
-      return contact;
-    }
-
-  findContactById(id: string): Contact | undefined {
-    return this.contacts.get(id);
+  async updateDevice(id: string, data: Partial<Device>): Promise<Device | undefined> {
+    await this.deviceRepository.update(id, data);
+    return this.findDeviceById(id);
   }
 
-  findContactsByOwnerId(ownerId: string): Contact[] {
-    return Array.from(this.contacts.values()).filter(
-      (c) => c.ownerId === ownerId,
-    );
+  async deleteDevice(id: string): Promise<boolean> {
+    const result = await this.deviceRepository.delete(id);
+    return (result.affected ?? 0) > 0;
   }
 
-    updateContact(id: string, data: Partial<Contact>): Contact | undefined {
-      const contact = this.contacts.get(id);
-      if (!contact) return undefined;
-      const updated = { ...contact, ...data, updatedAt: new Date() };
-      this.contacts.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-    deleteContact(id: string): boolean {
-      const result = this.contacts.delete(id);
-      if (result) this.scheduleSave();
-      return result;
-    }
-
-    createChat(data: Omit<Chat, 'id' | 'createdAt' | 'updatedAt'>): Chat {
-      const chat: Chat = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.chats.set(chat.id, chat);
-      this.scheduleSave();
-      return chat;
-    }
-
-  findChatById(id: string): Chat | undefined {
-    return this.chats.get(id);
+  async createOneTimePrekey(data: Omit<OneTimePrekey, 'id' | 'createdAt'>): Promise<OneTimePrekey> {
+    const prekey = this.oneTimePrekeyRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.oneTimePrekeyRepository.save(prekey) as Promise<OneTimePrekey>;
   }
 
-  findDirectChatBetweenUsers(userId1: string, userId2: string): Chat | undefined {
-    const participants = Array.from(this.chatParticipants.values());
-    const chats = Array.from(this.chats.values()).filter((c) => c.type === 'direct');
+  async findUnusedPrekeyByDeviceId(deviceId: string): Promise<OneTimePrekey | undefined> {
+    const prekey = await this.oneTimePrekeyRepository.findOne({
+      where: { deviceId, isUsed: false },
+    });
+    return prekey || undefined;
+  }
+
+  async markPrekeyAsUsed(id: string): Promise<void> {
+    await this.oneTimePrekeyRepository.update(id, { isUsed: true });
+  }
+
+  async countUnusedPrekeysByDeviceId(deviceId: string): Promise<number> {
+    return this.oneTimePrekeyRepository.count({
+      where: { deviceId, isUsed: false },
+    });
+  }
+
+  async createBusinessProfile(data: Omit<BusinessProfile, 'id' | 'createdAt' | 'updatedAt'>): Promise<BusinessProfile> {
+    const profile = this.businessProfileRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.businessProfileRepository.save(profile) as Promise<BusinessProfile>;
+  }
+
+  async findBusinessProfileByUserId(userId: string): Promise<BusinessProfile | undefined> {
+    const profile = await this.businessProfileRepository.findOne({ where: { userId } });
+    return profile || undefined;
+  }
+
+  async updateBusinessProfile(id: string, data: Partial<BusinessProfile>): Promise<BusinessProfile | undefined> {
+    await this.businessProfileRepository.update(id, data);
+    const profile = await this.businessProfileRepository.findOne({ where: { id } });
+    return profile || undefined;
+  }
+
+  async createContact(data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contact> {
+    const contact = this.contactRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.contactRepository.save(contact) as Promise<Contact>;
+  }
+
+  async findContactById(id: string): Promise<Contact | undefined> {
+    const contact = await this.contactRepository.findOne({ where: { id } });
+    return contact || undefined;
+  }
+
+  async findContactsByOwnerId(ownerId: string): Promise<Contact[]> {
+    return this.contactRepository.find({ where: { ownerId } }) as Promise<Contact[]>;
+  }
+
+  async updateContact(id: string, data: Partial<Contact>): Promise<Contact | undefined> {
+    await this.contactRepository.update(id, data);
+    return this.findContactById(id);
+  }
+
+  async deleteContact(id: string): Promise<boolean> {
+    const result = await this.contactRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  async createChat(data: Omit<Chat, 'id' | 'createdAt' | 'updatedAt'>): Promise<Chat> {
+    const chat = this.chatRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.chatRepository.save(chat) as Promise<Chat>;
+  }
+
+  async findChatById(id: string): Promise<Chat | undefined> {
+    const chat = await this.chatRepository.findOne({ where: { id } });
+    return chat || undefined;
+  }
+
+  async findDirectChatBetweenUsers(userId1: string, userId2: string): Promise<Chat | undefined> {
+    const chats = await this.chatRepository.find({ where: { type: 'direct' } });
     
     for (const chat of chats) {
-      const chatParticipants = participants.filter((p) => p.chatId === chat.id);
-      if (chatParticipants.length === 2) {
-        const userIds = chatParticipants.map((p) => p.userId);
+      const participants = await this.chatParticipantRepository.find({
+        where: { chatId: chat.id },
+      });
+      if (participants.length === 2) {
+        const userIds = participants.map((p) => p.userId);
         if (userIds.includes(userId1) && userIds.includes(userId2)) {
-          return chat;
+          return chat as Chat;
         }
       }
     }
     return undefined;
   }
 
-    updateChat(id: string, data: Partial<Chat>): Chat | undefined {
-      const chat = this.chats.get(id);
-      if (!chat) return undefined;
-      const updated = { ...chat, ...data, updatedAt: new Date() };
-      this.chats.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-    createChatParticipant(data: Omit<ChatParticipant, 'id'>): ChatParticipant {
-      const participant: ChatParticipant = {
-        ...data,
-        id: this.generateId(),
-      };
-      this.chatParticipants.set(participant.id, participant);
-      this.scheduleSave();
-      return participant;
-    }
-
-  findChatParticipantsByUserId(userId: string): ChatParticipant[] {
-    return Array.from(this.chatParticipants.values()).filter(
-      (p) => p.userId === userId,
-    );
+  async updateChat(id: string, data: Partial<Chat>): Promise<Chat | undefined> {
+    await this.chatRepository.update(id, data);
+    return this.findChatById(id);
   }
 
-  findChatParticipantsByChatId(chatId: string): ChatParticipant[] {
-    return Array.from(this.chatParticipants.values()).filter(
-      (p) => p.chatId === chatId,
-    );
+  async createChatParticipant(data: Omit<ChatParticipant, 'id'>): Promise<ChatParticipant> {
+    const participant = this.chatParticipantRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.chatParticipantRepository.save(participant) as Promise<ChatParticipant>;
   }
 
-  findChatParticipant(chatId: string, userId: string): ChatParticipant | undefined {
-    return Array.from(this.chatParticipants.values()).find(
-      (p) => p.chatId === chatId && p.userId === userId,
-    );
+  async findChatParticipantsByUserId(userId: string): Promise<ChatParticipant[]> {
+    return this.chatParticipantRepository.find({ where: { userId } }) as Promise<ChatParticipant[]>;
   }
 
-    updateChatParticipant(id: string, data: Partial<ChatParticipant>): ChatParticipant | undefined {
-      const participant = this.chatParticipants.get(id);
-      if (!participant) return undefined;
-      const updated = { ...participant, ...data };
-      this.chatParticipants.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-    createMessage(data: Omit<Message, 'id' | 'createdAt'>): Message {
-      const message: Message = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-      };
-      this.messages.set(message.id, message);
-      this.scheduleSave();
-      return message;
-    }
-
-  findMessageById(id: string): Message | undefined {
-    return this.messages.get(id);
+  async findChatParticipantsByChatId(chatId: string): Promise<ChatParticipant[]> {
+    return this.chatParticipantRepository.find({ where: { chatId } }) as Promise<ChatParticipant[]>;
   }
 
-  findMessagesByChatId(chatId: string, limit = 50, before?: Date): Message[] {
-    let msgs = Array.from(this.messages.values())
-      .filter((m) => m.chatId === chatId);
-    
+  async findChatParticipant(chatId: string, userId: string): Promise<ChatParticipant | undefined> {
+    const participant = await this.chatParticipantRepository.findOne({
+      where: { chatId, userId },
+    });
+    return participant || undefined;
+  }
+
+  async updateChatParticipant(id: string, data: Partial<ChatParticipant>): Promise<ChatParticipant | undefined> {
+    await this.chatParticipantRepository.update(id, data);
+    const participant = await this.chatParticipantRepository.findOne({ where: { id } });
+    return participant || undefined;
+  }
+
+  async createMessage(data: Omit<Message, 'id' | 'createdAt'>): Promise<Message> {
+    const message = this.messageRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.messageRepository.save(message) as Promise<Message>;
+  }
+
+  async findMessageById(id: string): Promise<Message | undefined> {
+    const message = await this.messageRepository.findOne({ where: { id } });
+    return message || undefined;
+  }
+
+  async findMessagesByChatId(chatId: string, limit = 50, before?: Date): Promise<Message[]> {
+    const whereClause: Record<string, unknown> = { chatId };
     if (before) {
-      msgs = msgs.filter((m) => m.createdAt < before);
+      whereClause.createdAt = LessThan(before);
     }
     
-    return msgs
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
+    return this.messageRepository.find({
+      where: whereClause,
+      order: { createdAt: 'DESC' },
+      take: limit,
+    }) as Promise<Message[]>;
   }
 
-    updateMessage(id: string, data: Partial<Message>): Message | undefined {
-      const message = this.messages.get(id);
-      if (!message) return undefined;
-      const updated = { ...message, ...data };
-      this.messages.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-    createLabel(data: Omit<Label, 'id' | 'createdAt' | 'updatedAt'>): Label {
-      const label: Label = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.labels.set(label.id, label);
-      this.scheduleSave();
-      return label;
-    }
-
-  findLabelById(id: string): Label | undefined {
-    return this.labels.get(id);
+  async updateMessage(id: string, data: Partial<Message>): Promise<Message | undefined> {
+    await this.messageRepository.update(id, data);
+    return this.findMessageById(id);
   }
 
-  findLabelsByUserId(userId: string): Label[] {
-    return Array.from(this.labels.values()).filter((l) => l.userId === userId);
+  async createLabel(data: Omit<Label, 'id' | 'createdAt' | 'updatedAt'>): Promise<Label> {
+    const label = this.labelRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.labelRepository.save(label) as Promise<Label>;
   }
 
-    updateLabel(id: string, data: Partial<Label>): Label | undefined {
-      const label = this.labels.get(id);
-      if (!label) return undefined;
-      const updated = { ...label, ...data, updatedAt: new Date() };
-      this.labels.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-    deleteLabel(id: string): boolean {
-      Array.from(this.chatLabels.values())
-        .filter((cl) => cl.labelId === id)
-        .forEach((cl) => this.chatLabels.delete(cl.id));
-      const result = this.labels.delete(id);
-      if (result) this.scheduleSave();
-      return result;
-    }
-
-    createChatLabel(data: Omit<ChatLabel, 'id' | 'createdAt'>): ChatLabel {
-      const chatLabel: ChatLabel = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-      };
-      this.chatLabels.set(chatLabel.id, chatLabel);
-      this.scheduleSave();
-      return chatLabel;
-    }
-
-  findChatLabelsByChatId(chatId: string): ChatLabel[] {
-    return Array.from(this.chatLabels.values()).filter(
-      (cl) => cl.chatId === chatId,
-    );
+  async findLabelById(id: string): Promise<Label | undefined> {
+    const label = await this.labelRepository.findOne({ where: { id } });
+    return label || undefined;
   }
 
-  findChatsByLabelId(labelId: string): string[] {
-    return Array.from(this.chatLabels.values())
-      .filter((cl) => cl.labelId === labelId)
-      .map((cl) => cl.chatId);
+  async findLabelsByUserId(userId: string): Promise<Label[]> {
+    return this.labelRepository.find({ where: { userId } }) as Promise<Label[]>;
   }
 
-    deleteChatLabel(chatId: string, labelId: string): boolean {
-      const chatLabel = Array.from(this.chatLabels.values()).find(
-        (cl) => cl.chatId === chatId && cl.labelId === labelId,
-      );
-      if (chatLabel) {
-        const result = this.chatLabels.delete(chatLabel.id);
-        if (result) this.scheduleSave();
-        return result;
-      }
-      return false;
-    }
-
-    createQuickReply(data: Omit<QuickReply, 'id' | 'createdAt' | 'updatedAt'>): QuickReply {
-      const quickReply: QuickReply = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      this.quickReplies.set(quickReply.id, quickReply);
-      this.scheduleSave();
-      return quickReply;
-    }
-
-  findQuickReplyById(id: string): QuickReply | undefined {
-    return this.quickReplies.get(id);
+  async updateLabel(id: string, data: Partial<Label>): Promise<Label | undefined> {
+    await this.labelRepository.update(id, data);
+    return this.findLabelById(id);
   }
 
-  findQuickRepliesByUserId(userId: string): QuickReply[] {
-    return Array.from(this.quickReplies.values()).filter(
-      (qr) => qr.userId === userId,
-    );
+  async deleteLabel(id: string): Promise<boolean> {
+    await this.chatLabelRepository.delete({ labelId: id });
+    const result = await this.labelRepository.delete(id);
+    return (result.affected ?? 0) > 0;
   }
 
-    updateQuickReply(id: string, data: Partial<QuickReply>): QuickReply | undefined {
-      const quickReply = this.quickReplies.get(id);
-      if (!quickReply) return undefined;
-      const updated = { ...quickReply, ...data, updatedAt: new Date() };
-      this.quickReplies.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
-
-    deleteQuickReply(id: string): boolean {
-      const result = this.quickReplies.delete(id);
-      if (result) this.scheduleSave();
-      return result;
-    }
-
-    createRefreshToken(data: Omit<RefreshToken, 'id' | 'createdAt'>): RefreshToken {
-      const token: RefreshToken = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-      };
-      this.refreshTokens.set(token.id, token);
-      this.scheduleSave();
-      return token;
-    }
-
-  findRefreshTokenByHash(tokenHash: string): RefreshToken | undefined {
-    return Array.from(this.refreshTokens.values()).find(
-      (t) => t.tokenHash === tokenHash,
-    );
+  async createChatLabel(data: Omit<ChatLabel, 'id' | 'createdAt'>): Promise<ChatLabel> {
+    const chatLabel = this.chatLabelRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.chatLabelRepository.save(chatLabel) as Promise<ChatLabel>;
   }
 
-    deleteRefreshToken(id: string): boolean {
-      const result = this.refreshTokens.delete(id);
-      if (result) this.scheduleSave();
-      return result;
-    }
-
-    deleteRefreshTokensByUserId(userId: string): void {
-      const tokens = Array.from(this.refreshTokens.values())
-        .filter((t) => t.userId === userId);
-      tokens.forEach((t) => this.refreshTokens.delete(t.id));
-      if (tokens.length > 0) this.scheduleSave();
-    }
-
-    createWebSession(data: Omit<WebSession, 'id' | 'createdAt'>): WebSession {
-      const session: WebSession = {
-        ...data,
-        id: this.generateId(),
-        createdAt: new Date(),
-      };
-      this.webSessions.set(session.id, session);
-      this.scheduleSave();
-      return session;
-    }
-
-  findWebSessionByPairingCode(pairingCode: string): WebSession | undefined {
-    return Array.from(this.webSessions.values()).find(
-      (s) => s.pairingCode === pairingCode,
-    );
+  async findChatLabelsByChatId(chatId: string): Promise<ChatLabel[]> {
+    return this.chatLabelRepository.find({ where: { chatId } }) as Promise<ChatLabel[]>;
   }
 
-    updateWebSession(id: string, data: Partial<WebSession>): WebSession | undefined {
-      const session = this.webSessions.get(id);
-      if (!session) return undefined;
-      const updated = { ...session, ...data };
-      this.webSessions.set(id, updated);
-      this.scheduleSave();
-      return updated;
-    }
+  async findChatsByLabelId(labelId: string): Promise<string[]> {
+    const chatLabels = await this.chatLabelRepository.find({ where: { labelId } });
+    return chatLabels.map((cl) => cl.chatId);
+  }
 
-    deleteWebSession(id: string): boolean {
-      const result = this.webSessions.delete(id);
-      if (result) this.scheduleSave();
-      return result;
-    }
+  async deleteChatLabel(chatId: string, labelId: string): Promise<boolean> {
+    const result = await this.chatLabelRepository.delete({ chatId, labelId });
+    return (result.affected ?? 0) > 0;
+  }
 
-  getChatsForUser(userId: string): Array<Chat & { participants: ChatParticipant[]; lastMessage?: Message; labels: Label[] }> {
-    const userParticipations = this.findChatParticipantsByUserId(userId);
+  async createQuickReply(data: Omit<QuickReply, 'id' | 'createdAt' | 'updatedAt'>): Promise<QuickReply> {
+    const quickReply = this.quickReplyRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.quickReplyRepository.save(quickReply) as Promise<QuickReply>;
+  }
+
+  async findQuickReplyById(id: string): Promise<QuickReply | undefined> {
+    const quickReply = await this.quickReplyRepository.findOne({ where: { id } });
+    return quickReply || undefined;
+  }
+
+  async findQuickRepliesByUserId(userId: string): Promise<QuickReply[]> {
+    return this.quickReplyRepository.find({ where: { userId } }) as Promise<QuickReply[]>;
+  }
+
+  async updateQuickReply(id: string, data: Partial<QuickReply>): Promise<QuickReply | undefined> {
+    await this.quickReplyRepository.update(id, data);
+    return this.findQuickReplyById(id);
+  }
+
+  async deleteQuickReply(id: string): Promise<boolean> {
+    const result = await this.quickReplyRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  async createRefreshToken(data: Omit<RefreshToken, 'id' | 'createdAt'>): Promise<RefreshToken> {
+    const token = this.refreshTokenRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.refreshTokenRepository.save(token) as Promise<RefreshToken>;
+  }
+
+  async findRefreshTokenByHash(tokenHash: string): Promise<RefreshToken | undefined> {
+    const token = await this.refreshTokenRepository.findOne({ where: { tokenHash } });
+    return token || undefined;
+  }
+
+  async deleteRefreshToken(id: string): Promise<boolean> {
+    const result = await this.refreshTokenRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  async deleteRefreshTokensByUserId(userId: string): Promise<void> {
+    await this.refreshTokenRepository.delete({ userId });
+  }
+
+  async createWebSession(data: Omit<WebSession, 'id' | 'createdAt'>): Promise<WebSession> {
+    const session = this.webSessionRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.webSessionRepository.save(session) as Promise<WebSession>;
+  }
+
+  async findWebSessionByPairingCode(pairingCode: string): Promise<WebSession | undefined> {
+    const session = await this.webSessionRepository.findOne({ where: { pairingCode } });
+    return session || undefined;
+  }
+
+  async updateWebSession(id: string, data: Partial<WebSession>): Promise<WebSession | undefined> {
+    await this.webSessionRepository.update(id, data);
+    const session = await this.webSessionRepository.findOne({ where: { id } });
+    return session || undefined;
+  }
+
+  async deleteWebSession(id: string): Promise<boolean> {
+    const result = await this.webSessionRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  async getChatsForUser(userId: string): Promise<Array<Chat & { participants: ChatParticipant[]; lastMessage?: Message; labels: Label[] }>> {
+    const userParticipations = await this.findChatParticipantsByUserId(userId);
     const chatIds = userParticipations.map((p) => p.chatId);
     
-    return chatIds.map((chatId) => {
-      const chat = this.findChatById(chatId);
-      if (!chat) return null;
+    const results: Array<Chat & { participants: ChatParticipant[]; lastMessage?: Message; labels: Label[] }> = [];
+    
+    for (const chatId of chatIds) {
+      const chat = await this.findChatById(chatId);
+      if (!chat) continue;
       
-      const participants = this.findChatParticipantsByChatId(chatId);
-      const messages = this.findMessagesByChatId(chatId, 1);
-      const chatLabelIds = this.findChatLabelsByChatId(chatId).map((cl) => cl.labelId);
-      const labels = chatLabelIds.map((id) => this.findLabelById(id)).filter((l): l is Label => l !== undefined);
+      const participants = await this.findChatParticipantsByChatId(chatId);
+      const messages = await this.findMessagesByChatId(chatId, 1);
+      const chatLabelIds = (await this.findChatLabelsByChatId(chatId)).map((cl) => cl.labelId);
+      const labels: Label[] = [];
       
-      return {
+      for (const labelId of chatLabelIds) {
+        const label = await this.findLabelById(labelId);
+        if (label) labels.push(label);
+      }
+      
+      results.push({
         ...chat,
         participants,
         lastMessage: messages[0],
         labels,
-      };
-    }).filter((c): c is NonNullable<typeof c> => c !== null)
-      .sort((a, b) => {
-        const aTime = a.lastMessage?.createdAt.getTime() || a.createdAt.getTime();
-        const bTime = b.lastMessage?.createdAt.getTime() || b.createdAt.getTime();
-        return bTime - aTime;
       });
+    }
+    
+    return results.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt.getTime() || a.createdAt.getTime();
+      const bTime = b.lastMessage?.createdAt.getTime() || b.createdAt.getTime();
+      return bTime - aTime;
+    });
   }
 }

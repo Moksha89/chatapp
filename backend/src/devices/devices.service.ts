@@ -44,7 +44,7 @@ export class DevicesService {
       throw new NotFoundException('Device not found');
     }
 
-    const updated = this.databaseService.updateDevice(id, data);
+    const updated = await this.databaseService.updateDevice(id, data);
     if (!updated) {
       throw new NotFoundException('Device not found');
     }
@@ -58,7 +58,7 @@ export class DevicesService {
       throw new NotFoundException('Device not found');
     }
 
-    this.databaseService.deleteDevice(id);
+    await this.databaseService.deleteDevice(id);
   }
 
   async updateKeys(

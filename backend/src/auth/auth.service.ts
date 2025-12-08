@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -8,6 +8,7 @@ import { DatabaseService } from '../database/database.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { OTP_PROVIDER, OtpProvider } from '../otp/otp-provider.interface';
 
 export interface JwtPayload {
   sub: string;
@@ -33,7 +34,6 @@ export interface QrPairingSession {
 
 @Injectable()
 export class AuthService {
-  private otpStore: Map<string, { otp: string; expiresAt: Date }> = new Map();
   private qrPairingSessions: Map<string, QrPairingSession> = new Map();
 
   constructor(
@@ -42,40 +42,20 @@ export class AuthService {
     private readonly databaseService: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @Inject(OTP_PROVIDER) private readonly otpProvider: OtpProvider,
   ) {}
 
   async sendOtp(phoneNumber: string): Promise<{ message: string; otp?: string }> {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-
-    this.otpStore.set(phoneNumber, { otp, expiresAt });
-
-    console.log(`[MOCK SMS] OTP for ${phoneNumber}: ${otp}`);
-
+    const result = await this.otpProvider.sendOtp(phoneNumber);
     return {
-      message: 'OTP sent successfully',
-      otp: this.configService.get('NODE_ENV') === 'development' ? otp : undefined,
+      message: result.message,
+      otp: result.otp,
     };
   }
 
   async verifyOtp(phoneNumber: string, otp: string): Promise<boolean> {
-    const stored = this.otpStore.get(phoneNumber);
-    
-    if (!stored) {
-      return false;
-    }
-
-    if (new Date() > stored.expiresAt) {
-      this.otpStore.delete(phoneNumber);
-      return false;
-    }
-
-    if (stored.otp !== otp) {
-      return false;
-    }
-
-    this.otpStore.delete(phoneNumber);
-    return true;
+    const result = await this.otpProvider.verifyOtp(phoneNumber, otp);
+    return result.success;
   }
 
   async register(registerDto: RegisterDto): Promise<AuthTokens & { user: { id: string; phoneNumber: string; displayName: string } }> {
@@ -185,7 +165,7 @@ export class AuthService {
       }
     }
     
-    this.databaseService.deleteRefreshTokensByUserId(userId);
+    await this.databaseService.deleteRefreshTokensByUserId(userId);
   }
 
     async validateUser(phoneNumber: string): Promise<{ id: string; phoneNumber: string } | null> {
@@ -316,7 +296,7 @@ export class AuthService {
     });
 
     const tokenHash = await bcrypt.hash(refreshToken, 10);
-    this.databaseService.createRefreshToken({
+    await this.databaseService.createRefreshToken({
       userId,
       deviceId: deviceId || null,
       tokenHash,

@@ -37,7 +37,7 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const updated = this.databaseService.updateUser(id, {
+    const updated = await this.databaseService.updateUser(id, {
       displayName: updateUserDto.displayName,
       profilePhoto: updateUserDto.profilePhoto,
       status: updateUserDto.status,
@@ -51,11 +51,11 @@ export class UsersService {
   }
 
   async updateLastSeen(id: string): Promise<void> {
-    this.databaseService.updateUser(id, { lastSeen: new Date() });
+    await this.databaseService.updateUser(id, { lastSeen: new Date() });
   }
 
   async searchByPhone(phoneNumber: string): Promise<User[]> {
-    const users = this.databaseService.getAllUsers();
+    const users = await this.databaseService.getAllUsers();
     return users.filter((u) => u.phoneNumber.includes(phoneNumber));
   }
 

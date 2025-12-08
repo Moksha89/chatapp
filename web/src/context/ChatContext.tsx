@@ -207,19 +207,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         let ciphertext: string | undefined;
 
         if (e2eeEnabled) {
-          try {
-            const recipientDevices = await api.getDevices(recipientId);
-            if (recipientDevices && recipientDevices.length > 0) {
-              const recipientDevice = recipientDevices[0];
-              const encrypted = await encryptMessageContent(recipientId, recipientDevice.deviceId, content);
-              if (encrypted) {
-                ciphertext = encrypted;
-                messageContent = '[Encrypted message]';
-              }
-            }
-          } catch (error) {
-            console.warn('E2EE encryption failed, sending plaintext:', error);
+          const recipientDevices = await api.getDevices(recipientId);
+          if (!recipientDevices || recipientDevices.length === 0) {
+            throw new Error('E2EE_NO_RECIPIENT_DEVICE: Cannot send encrypted message - recipient has no registered devices');
           }
+          
+          const recipientDevice = recipientDevices[0];
+          const encrypted = await encryptMessageContent(recipientId, recipientDevice.deviceId, content);
+          if (!encrypted) {
+            throw new Error('E2EE_ENCRYPTION_FAILED: Failed to encrypt message - cannot send in plaintext');
+          }
+          
+          ciphertext = encrypted;
+          messageContent = '[Encrypted message]';
         }
 
         socketService.emit('message:send', {
@@ -251,7 +251,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const isOnline = offlineQueue.getOnlineStatus() && socketService.isConnected();
 
         if (isOnline) {
-          await sendMessageInternal(activeChat.id, content, tempId);
+          try {
+            await sendMessageInternal(activeChat.id, content, tempId);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('Failed to send message:', errorMessage);
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.tempId === tempId 
+                  ? { ...msg, status: 'failed', content: `[Failed: ${errorMessage}]` } 
+                  : msg
+              )
+            );
+          }
         } else {
           offlineQueue.queueMessage(activeChat.id, content, 'text');
           setMessages((prev) =>

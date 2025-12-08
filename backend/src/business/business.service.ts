@@ -7,7 +7,7 @@ export class BusinessService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async getProfile(userId: string): Promise<BusinessProfile | null> {
-    const profile = this.databaseService.findBusinessProfileByUserId(userId);
+    const profile = await this.databaseService.findBusinessProfileByUserId(userId);
     return profile || null;
   }
 
@@ -15,10 +15,10 @@ export class BusinessService {
     userId: string,
     data: UpdateBusinessProfileDto,
   ): Promise<BusinessProfile> {
-    const existing = this.databaseService.findBusinessProfileByUserId(userId);
+    const existing = await this.databaseService.findBusinessProfileByUserId(userId);
 
     if (existing) {
-      const updated = this.databaseService.updateBusinessProfile(existing.id, {
+      const updated = await this.databaseService.updateBusinessProfile(existing.id, {
         businessName: data.businessName,
         description: data.description,
         category: data.category,

@@ -180,12 +180,78 @@ VITE_API_URL=http://localhost:3000
 VITE_SOCKET_URL=http://localhost:3000
 ```
 
-## Future Phases
+## Production Deployment
 
-- **Phase 2**: End-to-end encryption (Signal Protocol)
-- **Phase 3**: Business features (labels, quick replies, CRM)
-- **Phase 4**: QR-based web login, multi-device sync
-- **Phase 5**: Polish, offline support, push notifications
+### Docker Deployment
+
+The application includes Docker support for production deployment.
+
+#### Quick Start with Docker Compose
+
+```bash
+# Start all services (PostgreSQL, Redis, Backend, Web)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+The application will be available at:
+- Web client: http://localhost:80
+- Backend API: http://localhost:3000
+
+#### Environment Variables for Production
+
+Create a `.env` file in the root directory:
+
+```env
+# Required for production
+JWT_SECRET=your-secure-jwt-secret-min-32-chars
+JWT_REFRESH_SECRET=your-secure-refresh-secret-min-32-chars
+
+# OTP Provider (mock or twilio)
+OTP_PROVIDER=mock
+DEV_OTP=123456
+
+# For Twilio SMS (production)
+# OTP_PROVIDER=twilio
+# TWILIO_ACCOUNT_SID=your-account-sid
+# TWILIO_AUTH_TOKEN=your-auth-token
+# TWILIO_PHONE_NUMBER=+1234567890
+```
+
+#### Building Individual Images
+
+```bash
+# Build backend
+cd backend && docker build -t chatapp-backend .
+
+# Build web client
+cd web && docker build -t chatapp-web .
+```
+
+### Database
+
+The application uses TypeORM with support for:
+- **PostgreSQL** (production): Set `DATABASE_URL` environment variable
+- **SQLite** (development): Automatic fallback when `DATABASE_URL` is not set
+
+### Security Features
+
+- Rate limiting on authentication endpoints (5 OTP requests/minute, 10 login attempts/minute)
+- E2EE with no plaintext fallback (encryption failures are user-visible errors)
+- JWT-based authentication with refresh tokens
+- Configurable OTP provider (mock for development, Twilio for production)
+
+## CI/CD
+
+The project includes GitHub Actions CI pipeline that runs on every push and PR:
+- Backend lint and build
+- Web client lint and build
+- Docker image build verification
 
 ## Documentation
 

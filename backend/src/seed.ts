@@ -1,11 +1,14 @@
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
 import { DatabaseService } from './database/database.service';
 
-const databaseService = new DatabaseService();
-
 async function seed() {
+  const app = await NestFactory.createApplicationContext(AppModule);
+  const databaseService = app.get(DatabaseService);
+
   console.log('Seeding database with demo users...');
 
-  const user1 = databaseService.createUser({
+  const user1 = await databaseService.createUser({
     phoneNumber: '+1234567890',
     displayName: 'Alice Demo',
     passwordHash: 'demo-hash-1',
@@ -15,7 +18,7 @@ async function seed() {
     lastSeen: new Date(),
   });
 
-  const user2 = databaseService.createUser({
+  const user2 = await databaseService.createUser({
     phoneNumber: '+0987654321',
     displayName: 'Bob Business',
     passwordHash: 'demo-hash-2',
@@ -29,7 +32,7 @@ async function seed() {
   console.log(`  - Alice Demo (${user1.phoneNumber}) - ID: ${user1.id}`);
   console.log(`  - Bob Business (${user2.phoneNumber}) - ID: ${user2.id}`);
 
-  const device1 = databaseService.createDevice({
+  const device1 = await databaseService.createDevice({
     userId: user1.id,
     deviceId: 'alice-device-1',
     deviceName: 'Alice Phone',
@@ -42,7 +45,7 @@ async function seed() {
     isActive: true,
   });
 
-  const device2 = databaseService.createDevice({
+  const device2 = await databaseService.createDevice({
     userId: user2.id,
     deviceId: 'bob-device-1',
     deviceName: 'Bob Phone',
@@ -59,7 +62,7 @@ async function seed() {
   console.log(`  - Alice Phone - ID: ${device1.id}`);
   console.log(`  - Bob Phone - ID: ${device2.id}`);
 
-  databaseService.createBusinessProfile({
+  await databaseService.createBusinessProfile({
     userId: user2.id,
     businessName: 'Bob\'s Business',
     description: 'A demo business for testing',
@@ -72,12 +75,12 @@ async function seed() {
 
   console.log('Created business profile for Bob Business');
 
-  const chat = databaseService.createChat({
+  const chat = await databaseService.createChat({
     type: 'direct',
     name: null,
   });
 
-  databaseService.createChatParticipant({
+  await databaseService.createChatParticipant({
     chatId: chat.id,
     userId: user1.id,
     role: 'member',
@@ -85,7 +88,7 @@ async function seed() {
     lastReadAt: new Date(),
   });
 
-  databaseService.createChatParticipant({
+  await databaseService.createChatParticipant({
     chatId: chat.id,
     userId: user2.id,
     role: 'member',
@@ -95,7 +98,7 @@ async function seed() {
 
   console.log(`Created demo chat between Alice and Bob - ID: ${chat.id}`);
 
-  const message1 = databaseService.createMessage({
+  const message1 = await databaseService.createMessage({
     chatId: chat.id,
     senderId: user1.id,
     senderDeviceId: device1.deviceId,
@@ -107,7 +110,7 @@ async function seed() {
     readAt: new Date(),
   });
 
-  const message2 = databaseService.createMessage({
+  const message2 = await databaseService.createMessage({
     chatId: chat.id,
     senderId: user2.id,
     senderDeviceId: device2.deviceId,
@@ -119,7 +122,7 @@ async function seed() {
     readAt: new Date(),
   });
 
-  const message3 = databaseService.createMessage({
+  const message3 = await databaseService.createMessage({
     chatId: chat.id,
     senderId: user1.id,
     senderDeviceId: device1.deviceId,
@@ -136,13 +139,13 @@ async function seed() {
   console.log(`  - Message 2: ${message2.id}`);
   console.log(`  - Message 3: ${message3.id}`);
 
-  const label1 = databaseService.createLabel({
+  const label1 = await databaseService.createLabel({
     userId: user2.id,
     name: 'VIP Customer',
     color: '#FFD700',
   });
 
-  const label2 = databaseService.createLabel({
+  const label2 = await databaseService.createLabel({
     userId: user2.id,
     name: 'New Lead',
     color: '#00FF00',
@@ -152,20 +155,20 @@ async function seed() {
   console.log(`  - VIP Customer: ${label1.id}`);
   console.log(`  - New Lead: ${label2.id}`);
 
-  databaseService.createChatLabel({
+  await databaseService.createChatLabel({
     chatId: chat.id,
     labelId: label1.id,
   });
 
   console.log('Assigned VIP Customer label to demo chat');
 
-  databaseService.createQuickReply({
+  await databaseService.createQuickReply({
     userId: user2.id,
     shortcode: '/greet',
     message: 'Hello! Thank you for contacting Bob\'s Business. How can I help you today?',
   });
 
-  databaseService.createQuickReply({
+  await databaseService.createQuickReply({
     userId: user2.id,
     shortcode: '/thanks',
     message: 'Thank you for your business! We appreciate your support.',
@@ -185,6 +188,8 @@ async function seed() {
   console.log('');
   console.log('To login, use the /auth/send-otp endpoint with the phone number,');
   console.log('then use the OTP shown in the console to login via /auth/login.');
+
+  await app.close();
 }
 
 seed().catch(console.error);

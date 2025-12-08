@@ -13,23 +13,23 @@ export class ChatsService {
         throw new BadRequestException('participantId is required for direct chats');
       }
 
-      const existingChat = this.databaseService.findDirectChatBetweenUsers(
+      const existingChat = await this.databaseService.findDirectChatBetweenUsers(
         userId,
         data.participantId,
       );
 
       if (existingChat) {
-        const participants = this.databaseService.findChatParticipantsByChatId(existingChat.id);
+        const participants = await this.databaseService.findChatParticipantsByChatId(existingChat.id);
         return { ...existingChat, participants };
       }
     }
 
-    const chat = this.databaseService.createChat({
+    const chat = await this.databaseService.createChat({
       type: data.type,
       name: data.name || null,
     });
 
-    this.databaseService.createChatParticipant({
+    await this.databaseService.createChatParticipant({
       chatId: chat.id,
       userId,
       role: 'admin',
@@ -38,7 +38,7 @@ export class ChatsService {
     });
 
     if (data.participantId) {
-      this.databaseService.createChatParticipant({
+      await this.databaseService.createChatParticipant({
         chatId: chat.id,
         userId: data.participantId,
         role: 'member',
@@ -47,7 +47,7 @@ export class ChatsService {
       });
     }
 
-    const participants = this.databaseService.findChatParticipantsByChatId(chat.id);
+    const participants = await this.databaseService.findChatParticipantsByChatId(chat.id);
     return { ...chat, participants };
   }
 
@@ -56,17 +56,17 @@ export class ChatsService {
   }
 
   async getChatById(chatId: string, userId: string): Promise<Chat & { participants: ChatParticipant[] }> {
-    const chat = this.databaseService.findChatById(chatId);
+    const chat = await this.databaseService.findChatById(chatId);
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }
 
-    const participant = this.databaseService.findChatParticipant(chatId, userId);
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
     if (!participant) {
       throw new NotFoundException('Chat not found');
     }
 
-    const participants = this.databaseService.findChatParticipantsByChatId(chatId);
+    const participants = await this.databaseService.findChatParticipantsByChatId(chatId);
     return { ...chat, participants };
   }
 
@@ -76,7 +76,7 @@ export class ChatsService {
     limit = 50,
     before?: string,
   ): Promise<Message[]> {
-    const participant = this.databaseService.findChatParticipant(chatId, userId);
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
     if (!participant) {
       throw new NotFoundException('Chat not found');
     }
@@ -95,12 +95,12 @@ export class ChatsService {
     senderDeviceId: string | undefined,
     data: SendMessageDto,
   ): Promise<Message> {
-    const participant = this.databaseService.findChatParticipant(chatId, senderId);
+    const participant = await this.databaseService.findChatParticipant(chatId, senderId);
     if (!participant) {
       throw new NotFoundException('Chat not found');
     }
 
-    const message = this.databaseService.createMessage({
+    const message = await this.databaseService.createMessage({
       chatId,
       senderId,
       senderDeviceId: senderDeviceId || null,
@@ -112,18 +112,18 @@ export class ChatsService {
       readAt: null,
     });
 
-    this.databaseService.updateChat(chatId, { updatedAt: new Date() });
+    await this.databaseService.updateChat(chatId, { updatedAt: new Date() });
 
     return message;
   }
 
   async markMessageDelivered(messageId: string): Promise<Message> {
-    const message = this.databaseService.findMessageById(messageId);
+    const message = await this.databaseService.findMessageById(messageId);
     if (!message) {
       throw new NotFoundException('Message not found');
     }
 
-    const updated = this.databaseService.updateMessage(messageId, {
+    const updated = await this.databaseService.updateMessage(messageId, {
       status: 'delivered',
       deliveredAt: new Date(),
     });
@@ -136,22 +136,22 @@ export class ChatsService {
   }
 
   async markMessagesRead(chatId: string, userId: string, messageIds: string[]): Promise<void> {
-    const participant = this.databaseService.findChatParticipant(chatId, userId);
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
     if (!participant) {
       throw new NotFoundException('Chat not found');
     }
 
     for (const messageId of messageIds) {
-      const message = this.databaseService.findMessageById(messageId);
+      const message = await this.databaseService.findMessageById(messageId);
       if (message && message.chatId === chatId && message.senderId !== userId) {
-        this.databaseService.updateMessage(messageId, {
+        await this.databaseService.updateMessage(messageId, {
           status: 'read',
           readAt: new Date(),
         });
       }
     }
 
-    this.databaseService.updateChatParticipant(participant.id, {
+    await this.databaseService.updateChatParticipant(participant.id, {
       lastReadAt: new Date(),
     });
   }

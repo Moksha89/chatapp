@@ -52,7 +52,7 @@ export class QuickRepliesService {
       }
     }
 
-    const updated = this.databaseService.updateQuickReply(id, {
+    const updated = await this.databaseService.updateQuickReply(id, {
       shortcode: data.shortcode,
       message: data.message,
     });
@@ -73,7 +73,7 @@ export class QuickRepliesService {
       throw new ForbiddenException('Not authorized to delete this quick reply');
     }
 
-    this.databaseService.deleteQuickReply(id);
+    await this.databaseService.deleteQuickReply(id);
   }
 
   async searchByPrefix(userId: string, prefix: string): Promise<QuickReply[]> {

@@ -32,7 +32,7 @@ export class LabelsService {
       throw new ForbiddenException('Not authorized to update this label');
     }
 
-    const updated = this.databaseService.updateLabel(id, {
+    const updated = await this.databaseService.updateLabel(id, {
       name: data.name,
       color: data.color,
     });
@@ -53,7 +53,7 @@ export class LabelsService {
       throw new ForbiddenException('Not authorized to delete this label');
     }
 
-    this.databaseService.deleteLabel(id);
+    await this.databaseService.deleteLabel(id);
   }
 
   async assignLabelToChat(chatId: string, labelId: string, userId: string): Promise<ChatLabel> {
@@ -62,7 +62,7 @@ export class LabelsService {
       throw new NotFoundException('Label not found');
     }
 
-    const existingLabels = this.databaseService.findChatLabelsByChatId(chatId);
+    const existingLabels = await this.databaseService.findChatLabelsByChatId(chatId);
     const alreadyAssigned = existingLabels.find((cl) => cl.labelId === labelId);
     if (alreadyAssigned) {
       return alreadyAssigned;
@@ -80,11 +80,11 @@ export class LabelsService {
       throw new NotFoundException('Label not found');
     }
 
-    this.databaseService.deleteChatLabel(chatId, labelId);
+    await this.databaseService.deleteChatLabel(chatId, labelId);
   }
 
   async getChatLabels(chatId: string): Promise<Label[]> {
-    const chatLabels = this.databaseService.findChatLabelsByChatId(chatId);
+    const chatLabels = await this.databaseService.findChatLabelsByChatId(chatId);
     const labels: Label[] = [];
 
     for (const cl of chatLabels) {

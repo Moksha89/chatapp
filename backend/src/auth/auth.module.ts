@@ -8,6 +8,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
 import { DevicesModule } from '../devices/devices.module';
+import { OtpModule } from '../otp/otp.module';
+import { RateLimitGuard } from '../common/guards/rate-limit.guard';
 
 @Module({
   imports: [
@@ -24,9 +26,10 @@ import { DevicesModule } from '../devices/devices.module';
     }),
     UsersModule,
     DevicesModule,
+    OtpModule.forRoot(),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
+  providers: [AuthService, JwtStrategy, LocalStrategy, RateLimitGuard],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

@@ -8,7 +8,7 @@ export class ContactsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async create(ownerId: string, data: CreateContactDto): Promise<Contact> {
-    const contactUser = this.databaseService.findUserByPhone(data.phoneNumber);
+    const contactUser = await this.databaseService.findUserByPhone(data.phoneNumber);
 
     return this.databaseService.createContact({
       ownerId,
@@ -35,7 +35,7 @@ export class ContactsService {
       throw new NotFoundException('Contact not found');
     }
 
-    const updated = this.databaseService.updateContact(id, {
+    const updated = await this.databaseService.updateContact(id, {
       name: data.name,
       email: data.email,
       notes: data.notes,
@@ -55,7 +55,7 @@ export class ContactsService {
       throw new NotFoundException('Contact not found');
     }
 
-    this.databaseService.deleteContact(id);
+    await this.databaseService.deleteContact(id);
   }
 
   async syncContacts(
