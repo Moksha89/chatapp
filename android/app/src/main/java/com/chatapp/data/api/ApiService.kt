@@ -58,4 +58,48 @@ interface ApiService {
 
     @POST("auth/qr/confirm")
     suspend fun confirmQrPairing(@Body request: QrPairingRequest): QrPairingResponse
+
+    // Message Reactions
+    @POST("chats/{chatId}/messages/{messageId}/reactions")
+    suspend fun addReaction(
+        @Path("chatId") chatId: String,
+        @Path("messageId") messageId: String,
+        @Body request: AddReactionRequest
+    ): ReactionResponse
+
+    @HTTP(method = "DELETE", path = "chats/{chatId}/messages/{messageId}/reactions", hasBody = true)
+    suspend fun removeReaction(
+        @Path("chatId") chatId: String,
+        @Path("messageId") messageId: String,
+        @Body request: AddReactionRequest
+    ): ReactionResponse
+
+    // Edit Message
+    @PUT("chats/{chatId}/messages/{messageId}")
+    suspend fun editMessage(
+        @Path("chatId") chatId: String,
+        @Path("messageId") messageId: String,
+        @Body request: EditMessageRequest
+    ): EditMessageResponse
+
+    // Delete Message
+    @DELETE("chats/{chatId}/messages/{messageId}")
+    suspend fun deleteMessage(
+        @Path("chatId") chatId: String,
+        @Path("messageId") messageId: String,
+        @Query("deleteForEveryone") deleteForEveryone: Boolean
+    ): DeleteMessageResponse
+
+    // Privacy Settings
+    @GET("users/me/privacy")
+    suspend fun getPrivacySettings(): PrivacySettingsResponse
+
+    @PATCH("users/me/privacy")
+    suspend fun updatePrivacySettings(@Body request: UpdatePrivacySettingsRequest): PrivacySettingsResponse
+
+    @POST("users/me/block")
+    suspend fun blockUser(@Body request: BlockUserRequest)
+
+    @HTTP(method = "DELETE", path = "users/me/block", hasBody = true)
+    suspend fun unblockUser(@Body request: BlockUserRequest)
 }

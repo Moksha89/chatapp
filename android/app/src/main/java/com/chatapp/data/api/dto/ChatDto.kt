@@ -44,7 +44,12 @@ data class MessageResponse(
     @SerializedName("content") val content: String? = null,
     @SerializedName("type") val type: String,
     @SerializedName("status") val status: String,
-    @SerializedName("createdAt") val createdAt: String
+    @SerializedName("createdAt") val createdAt: String,
+    @SerializedName("replyToMessageId") val replyToMessageId: String? = null,
+    @SerializedName("reactions") val reactions: Map<String, List<String>>? = null,
+    @SerializedName("isEdited") val isEdited: Boolean = false,
+    @SerializedName("isDeleted") val isDeleted: Boolean = false,
+    @SerializedName("editedAt") val editedAt: String? = null
 )
 
 data class SendMessageRequest(
@@ -59,4 +64,46 @@ data class MarkReadRequest(
 
 data class SearchUsersRequest(
     @SerializedName("phoneNumber") val phoneNumber: String
+)
+
+// Reaction DTOs
+data class AddReactionRequest(
+    @SerializedName("emoji") val emoji: String
+)
+
+data class ReactionResponse(
+    @SerializedName("id") val id: String,
+    @SerializedName("reactions") val reactions: Map<String, List<String>>
+)
+
+// Edit Message DTOs
+data class EditMessageRequest(
+    @SerializedName("content") val content: String
+)
+
+data class EditMessageResponse(
+    @SerializedName("id") val id: String,
+    @SerializedName("content") val content: String,
+    @SerializedName("isEdited") val isEdited: Boolean,
+    @SerializedName("editedAt") val editedAt: String
+)
+
+// Delete Message Response
+data class DeleteMessageResponse(
+    @SerializedName("id") val id: String,
+    @SerializedName("isDeleted") val isDeleted: Boolean
+)
+
+// Privacy Settings DTOs
+data class PrivacySettingsResponse(
+    @SerializedName("readReceiptsEnabled") val readReceiptsEnabled: Boolean,
+    @SerializedName("blockedUsers") val blockedUsers: List<String>
+)
+
+data class UpdatePrivacySettingsRequest(
+    @SerializedName("readReceiptsEnabled") val readReceiptsEnabled: Boolean? = null
+)
+
+data class BlockUserRequest(
+    @SerializedName("userId") val userId: String
 )

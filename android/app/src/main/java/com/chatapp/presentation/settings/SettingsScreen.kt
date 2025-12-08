@@ -23,6 +23,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onBusinessProfile: () -> Unit,
     onLinkedDevices: () -> Unit,
+    onPrivacy: () -> Unit,
     onLogout: () -> Unit,
     userName: String = "User",
     phoneNumber: String = ""
@@ -113,6 +114,15 @@ fun SettingsScreen(
                     title = "Linked Devices",
                     subtitle = "Manage devices connected to your account",
                     onClick = onLinkedDevices
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Lock,
+                    title = "Privacy",
+                    subtitle = "Read receipts, blocked contacts",
+                    onClick = onPrivacy
                 )
             }
 
