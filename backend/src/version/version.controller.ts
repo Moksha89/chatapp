@@ -1,5 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Res, StreamableFile } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Response } from 'express';
+import { createReadStream, existsSync } from 'fs';
+import { join } from 'path';
 
 interface AppVersion {
   android: {
@@ -35,11 +38,22 @@ export class VersionController {
 
   @Get('download/android')
   @ApiOperation({ summary: 'Download Android APK' })
-  @ApiResponse({ status: 302, description: 'Redirects to APK download' })
-  downloadAndroid(): { message: string; instructions: string } {
-    return {
-      message: 'APK download endpoint',
-      instructions: 'The APK file should be hosted on a file server. Configure APP_APK_URL environment variable to point to the actual APK file.',
-    };
+  @ApiResponse({ status: 200, description: 'Returns the APK file' })
+  @ApiResponse({ status: 404, description: 'APK file not found' })
+  downloadAndroid(@Res({ passthrough: true }) res: Response): StreamableFile | { error: string } {
+    const apkPath = process.env.APK_FILE_PATH || '/app/chatapp-release.apk';
+    
+    if (!existsSync(apkPath)) {
+      res.status(404);
+      return { error: 'APK file not found. Please contact administrator.' };
+    }
+    
+    const file = createReadStream(apkPath);
+    res.set({
+      'Content-Type': 'application/vnd.android.package-archive',
+      'Content-Disposition': 'attachment; filename="chatapp.apk"',
+    });
+    
+    return new StreamableFile(file);
   }
 }
