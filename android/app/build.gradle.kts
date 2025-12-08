@@ -13,8 +13,8 @@ android {
         applicationId = "com.chatapp"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -22,9 +22,19 @@ android {
         buildConfigField("String", "SOCKET_URL", "\"http://173.208.132.8:3000\"")
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../release-key.jks")
+            storePassword = "chatapp123"
+            keyAlias = "chatapp"
+            keyPassword = "chatapp123"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
