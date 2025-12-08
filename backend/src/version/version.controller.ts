@@ -26,10 +26,10 @@ export class VersionController {
     
     return {
       android: {
-        versionCode: 5,
-        versionName: '1.4.0',
+        versionCode: 6,
+        versionName: '1.5.0',
         downloadUrl: `${baseUrl}/version/download/android`,
-        releaseNotes: 'Phase 3: Android parity - Message reactions, edit/delete messages, privacy settings with read receipts toggle and blocked users management',
+        releaseNotes: 'Phase 3 API Integration: Real backend integration for chat messages, reactions, edit/delete, and privacy settings',
         forceUpdate: false,
         minVersionCode: 1,
       },
