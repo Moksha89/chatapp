@@ -801,6 +801,62 @@ class ApiService {
       body: JSON.stringify({ reason, details }),
     });
   }
+
+  // Message Reactions
+  async addReaction(chatId: string, messageId: string, emoji: string) {
+    return this.request<{
+      id: string;
+      reactions: { [emoji: string]: string[] };
+    }>(`/chats/${chatId}/messages/${messageId}/reactions`, {
+      method: 'POST',
+      body: JSON.stringify({ emoji }),
+    });
+  }
+
+  async removeReaction(chatId: string, messageId: string, emoji: string) {
+    return this.request<{
+      id: string;
+      reactions: { [emoji: string]: string[] };
+    }>(`/chats/${chatId}/messages/${messageId}/reactions`, {
+      method: 'DELETE',
+      body: JSON.stringify({ emoji }),
+    });
+  }
+
+  // Edit Message
+  async editMessage(chatId: string, messageId: string, content: string) {
+    return this.request<{
+      id: string;
+      content: string;
+      isEdited: boolean;
+      editedAt: string;
+    }>(`/chats/${chatId}/messages/${messageId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  // Delete Message
+  async deleteMessage(chatId: string, messageId: string, deleteForEveryone: boolean) {
+    return this.request<{
+      id: string;
+      isDeleted: boolean;
+    }>(`/chats/${chatId}/messages/${messageId}?deleteForEveryone=${deleteForEveryone}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Get single message (for reply preview)
+  async getMessage(chatId: string, messageId: string) {
+    return this.request<{
+      id: string;
+      chatId: string;
+      senderId: string;
+      content: string;
+      type: string;
+      createdAt: string;
+    }>(`/chats/${chatId}/messages/${messageId}`);
+  }
 }
 
 export const api = new ApiService();

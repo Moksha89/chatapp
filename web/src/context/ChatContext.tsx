@@ -22,6 +22,11 @@ interface Message {
   status: string;
   createdAt: string;
   tempId?: string;
+  replyToMessageId?: string;
+  reactions?: { [emoji: string]: string[] };
+  isEdited?: boolean;
+  isDeleted?: boolean;
+  editedAt?: string;
 }
 
 interface Chat {
@@ -46,12 +51,16 @@ interface ChatContextType {
   typingUsers: Map<string, Set<string>>;
   e2eeEnabled: boolean;
   selectChat: (chat: Chat | null) => void;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: string, replyToMessageId?: string) => void;
   createChat: (userId: string) => Promise<Chat>;
   createGroupChat: (name: string, participantIds: string[], description?: string) => Promise<Chat>;
   refreshChats: () => Promise<void>;
   loadMoreMessages: () => Promise<void>;
   initializeE2EE: () => Promise<void>;
+  addReaction: (messageId: string, emoji: string) => Promise<void>;
+  removeReaction: (messageId: string, emoji: string) => Promise<void>;
+  editMessage: (messageId: string, content: string) => Promise<void>;
+  deleteMessage: (messageId: string, deleteForEveryone: boolean) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -271,6 +280,73 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return createdChat || (newChat as Chat);
   }, [refreshChats, chats]);
 
+  // Message Reactions
+  const addReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!activeChat) return;
+    try {
+      const result = await api.addReaction(activeChat.id, messageId, emoji);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, reactions: result.reactions } : msg
+        )
+      );
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
+  }, [activeChat]);
+
+  const removeReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!activeChat) return;
+    try {
+      const result = await api.removeReaction(activeChat.id, messageId, emoji);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, reactions: result.reactions } : msg
+        )
+      );
+    } catch (error) {
+      console.error('Failed to remove reaction:', error);
+    }
+  }, [activeChat]);
+
+  // Edit Message
+  const editMessage = useCallback(async (messageId: string, content: string) => {
+    if (!activeChat) return;
+    try {
+      const result = await api.editMessage(activeChat.id, messageId, content);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, content: result.content, isEdited: result.isEdited, editedAt: result.editedAt }
+            : msg
+        )
+      );
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+      throw error;
+    }
+  }, [activeChat]);
+
+  // Delete Message
+  const deleteMessage = useCallback(async (messageId: string, deleteForEveryone: boolean) => {
+    if (!activeChat) return;
+    try {
+      const result = await api.deleteMessage(activeChat.id, messageId, deleteForEveryone);
+      if (deleteForEveryone) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, isDeleted: result.isDeleted, content: 'This message was deleted' } : msg
+          )
+        );
+      } else {
+        setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+      }
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      throw error;
+    }
+  }, [activeChat]);
+
     useEffect(() => {
       if (isAuthenticated) {
         refreshChats();
@@ -370,11 +446,59 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       });
     };
 
+    // Real-time reaction updates from other users
+    const handleReactionUpdated = (data: unknown) => {
+      const { chatId, messageId, reactions } = data as { 
+        chatId: string; 
+        messageId: string; 
+        reactions: { [emoji: string]: string[] };
+      };
+      if (activeChat?.id === chatId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, reactions } : msg
+          )
+        );
+      }
+    };
+
+    // Real-time edit updates from other users
+    const handleMessageEdited = (data: unknown) => {
+      const { chatId, messageId, content, editedAt } = data as { 
+        chatId: string; 
+        messageId: string; 
+        content: string;
+        editedAt: string;
+      };
+      if (activeChat?.id === chatId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, content, isEdited: true, editedAt } : msg
+          )
+        );
+      }
+    };
+
+    // Real-time delete updates from other users
+    const handleMessageDeleted = (data: unknown) => {
+      const { chatId, messageId } = data as { chatId: string; messageId: string };
+      if (activeChat?.id === chatId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, isDeleted: true, content: 'This message was deleted' } : msg
+          )
+        );
+      }
+    };
+
     const unsubNewMessage = socketService.on('message:new', handleNewMessage);
     const unsubMessageSent = socketService.on('message:sent', handleMessageSent);
     const unsubMessageDelivered = socketService.on('message:delivered', handleMessageDelivered);
     const unsubMessageRead = socketService.on('message:read', handleMessageRead);
     const unsubTyping = socketService.on('typing:indicator', handleTypingIndicator);
+    const unsubReactionUpdated = socketService.on('message:reaction:updated', handleReactionUpdated);
+    const unsubMessageEdited = socketService.on('message:edited', handleMessageEdited);
+    const unsubMessageDeleted = socketService.on('message:deleted', handleMessageDeleted);
 
     return () => {
       unsubNewMessage();
@@ -382,6 +506,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unsubMessageDelivered();
       unsubMessageRead();
       unsubTyping();
+      unsubReactionUpdated();
+      unsubMessageEdited();
+      unsubMessageDeleted();
     };
   }, [isAuthenticated, activeChat]);
 
@@ -402,6 +529,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         refreshChats,
         loadMoreMessages,
         initializeE2EE,
+        addReaction,
+        removeReaction,
+        editMessage,
+        deleteMessage,
       }}
     >
       {children}

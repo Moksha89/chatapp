@@ -7,6 +7,7 @@ import { api } from '../services/api';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
+import { MessageContextMenu, MessageReactions, EditMessageDialog } from './MessageContextMenu';
 import { 
   Send, 
   Check, 
@@ -38,7 +39,7 @@ type RecordingState = 'idle' | 'recording';
 
 export function ChatArea() {
   const { user } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, selectChat } = useChat();
+  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage } = useChat();
   const { initiateCall, callState } = useCall();
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -49,6 +50,7 @@ export function ChatArea() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [isVideoNote, setIsVideoNote] = useState(false);
   const [videoPreviewStream, setVideoPreviewStream] = useState<MediaStream | null>(null);
+  const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -494,26 +496,57 @@ export function ChatArea() {
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}
                 >
-                  <div
-                    className={`max-w-[70%] lg:max-w-[50%] px-3 py-2 rounded-lg shadow-sm ${
-                      isOwn
-                        ? 'bg-[#d9fdd3] rounded-tr-none'
-                        : 'bg-white rounded-tl-none'
-                    }`}
-                  >
-                    {isMedia ? (
-                      renderMediaContent(message)
-                    ) : (
-                      <p className="text-sm break-words text-gray-800">{message.content}</p>
-                    )}
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      <span className="text-[10px] text-gray-500">
-                        {formatMessageTime(message.createdAt)}
-                      </span>
-                      {isOwn && getStatusIcon(message.status)}
+                  <div className={`flex items-start gap-1 ${isOwn ? 'flex-row-reverse' : ''}`}>
+                    <div
+                      className={`max-w-[70%] lg:max-w-[50%] px-3 py-2 rounded-lg shadow-sm ${
+                        isOwn
+                          ? 'bg-[#d9fdd3] rounded-tr-none'
+                          : 'bg-white rounded-tl-none'
+                      } ${message.isDeleted ? 'opacity-60 italic' : ''}`}
+                    >
+                      {message.isDeleted ? (
+                        <p className="text-sm text-gray-500">This message was deleted</p>
+                      ) : isMedia ? (
+                        renderMediaContent(message)
+                      ) : (
+                        <p className="text-sm break-words text-gray-800">{message.content}</p>
+                      )}
+                      <div className="flex items-center justify-end gap-1 mt-1">
+                        {message.isEdited && !message.isDeleted && (
+                          <span className="text-[10px] text-gray-400">edited</span>
+                        )}
+                        <span className="text-[10px] text-gray-500">
+                          {formatMessageTime(message.createdAt)}
+                        </span>
+                        {isOwn && getStatusIcon(message.status)}
+                      </div>
+                      {message.reactions && Object.keys(message.reactions).length > 0 && !message.isDeleted && (
+                        <MessageReactions
+                          reactions={message.reactions}
+                          userId={user?.id || ''}
+                          onAddReaction={(emoji) => addReaction(message.id, emoji)}
+                          onRemoveReaction={(emoji) => removeReaction(message.id, emoji)}
+                        />
+                      )}
                     </div>
+                    {!message.isDeleted && (
+                      <MessageContextMenu
+                        messageId={message.id}
+                        content={message.content || ''}
+                        isOwn={isOwn}
+                        isDeleted={message.isDeleted}
+                        reactions={message.reactions}
+                        userId={user?.id || ''}
+                        createdAt={message.createdAt}
+                        onAddReaction={(emoji) => addReaction(message.id, emoji)}
+                        onRemoveReaction={(emoji) => removeReaction(message.id, emoji)}
+                        onEdit={() => setEditingMessage({ id: message.id, content: message.content || '' })}
+                        onDelete={(deleteForEveryone) => deleteMessage(message.id, deleteForEveryone)}
+                        onCopy={() => navigator.clipboard.writeText(message.content || '')}
+                      />
+                    )}
                   </div>
                 </div>
               );
@@ -701,6 +734,19 @@ export function ChatArea() {
           onClick={() => setShowAttachMenu(false)}
         />
       )}
+
+      {/* Edit Message Dialog */}
+      <EditMessageDialog
+        isOpen={!!editingMessage}
+        content={editingMessage?.content || ''}
+        onSave={async (newContent) => {
+          if (editingMessage) {
+            await editMessage(editingMessage.id, newContent);
+            setEditingMessage(null);
+          }
+        }}
+        onCancel={() => setEditingMessage(null)}
+      />
     </div>
   );
 }
