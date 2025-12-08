@@ -50,14 +50,20 @@ const entities = [
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const databaseUrl = configService.get<string>('DATABASE_URL');
+        const nodeEnv = configService.get<string>('NODE_ENV');
+        // In production, disable synchronize and use migrations instead
+        // Set DB_SYNCHRONIZE=false in production after running migrations
+        const synchronize = configService.get<string>('DB_SYNCHRONIZE') !== 'false';
         
         if (databaseUrl) {
           return {
             type: 'postgres',
             url: databaseUrl,
             entities,
-            synchronize: true,
-            logging: configService.get<string>('NODE_ENV') === 'development',
+            synchronize,
+            migrationsRun: !synchronize, // Run migrations if synchronize is disabled
+            migrations: ['dist/database/migrations/*.js'],
+            logging: nodeEnv === 'development',
           };
         }
         
