@@ -1,9 +1,12 @@
 package com.chatapp.presentation.chat
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,8 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -29,6 +34,7 @@ import com.chatapp.domain.model.Message
 import com.chatapp.domain.model.MessageStatus
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.roundToInt
 
 val QUICK_REACTIONS = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
 
@@ -48,6 +54,7 @@ fun ChatScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var editingContent by remember { mutableStateOf("") }
+    var replyToMessage by remember { mutableStateOf<Message?>(null) }
 
     // Load messages when screen opens
     LaunchedEffect(chatId) {
@@ -192,7 +199,7 @@ fun ChatScreen(
                     reverseLayout = false
                 ) {
                     items(uiState.messages, key = { it.id }) { message ->
-                        MessageBubble(
+                        SwipeableMessageBubble(
                             message = message,
                             currentUserId = uiState.currentUserId,
                             onLongPress = {
@@ -203,9 +210,58 @@ fun ChatScreen(
                             },
                             onReactionClick = { emoji ->
                                 viewModel.toggleReaction(message.id, emoji)
+                            },
+                            onSwipeToReply = {
+                                if (!message.isDeleted) {
+                                    replyToMessage = message
+                                }
                             }
                         )
                         Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+            }
+
+            // Reply preview
+            if (replyToMessage != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFE8E8E8)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(4.dp)
+                                .height(40.dp)
+                                .background(Color(0xFF25D366))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Reply to",
+                                fontSize = 12.sp,
+                                color = Color(0xFF25D366),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = replyToMessage?.content?.take(50) ?: "",
+                                fontSize = 14.sp,
+                                color = Color.Gray,
+                                maxLines = 1
+                            )
+                        }
+                        IconButton(onClick = { replyToMessage = null }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Cancel reply",
+                                tint = Color.Gray
+                            )
+                        }
                     }
                 }
             }
@@ -240,8 +296,9 @@ fun ChatScreen(
                     FloatingActionButton(
                         onClick = { 
                             if (messageText.isNotBlank()) {
-                                viewModel.sendMessage(messageText)
+                                viewModel.sendMessage(messageText, replyToMessage?.id)
                                 messageText = ""
+                                replyToMessage = null
                             }
                         },
                         containerColor = Color(0xFF25D366),
@@ -255,6 +312,84 @@ fun ChatScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun SwipeableMessageBubble(
+    message: Message,
+    currentUserId: String,
+    onLongPress: () -> Unit,
+    onReactionClick: (String) -> Unit,
+    onSwipeToReply: () -> Unit
+) {
+    val isOwn = message.senderId == currentUserId
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val swipeThreshold = 100f
+    var hasTriggeredReply by remember { mutableStateOf(false) }
+    
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = offsetX,
+        animationSpec = tween(durationMillis = if (offsetX == 0f) 200 else 0),
+        label = "swipeOffset"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (offsetX > swipeThreshold && !hasTriggeredReply) {
+                            onSwipeToReply()
+                            hasTriggeredReply = true
+                        }
+                        offsetX = 0f
+                        hasTriggeredReply = false
+                    },
+                    onDragCancel = {
+                        offsetX = 0f
+                        hasTriggeredReply = false
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        // Only allow right swipe (positive direction)
+                        val newOffset = offsetX + dragAmount
+                        offsetX = newOffset.coerceIn(0f, swipeThreshold * 1.5f)
+                    }
+                )
+            }
+    ) {
+        // Reply icon that appears when swiping
+        if (animatedOffsetX > 20f) {
+            Box(
+                modifier = Modifier
+                    .align(if (isOwn) Alignment.CenterEnd else Alignment.CenterStart)
+                    .padding(start = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Reply,
+                    contentDescription = "Reply",
+                    tint = Color(0xFF25D366).copy(alpha = (animatedOffsetX / swipeThreshold).coerceIn(0f, 1f)),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        
+        // Message bubble with offset
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+        ) {
+            MessageBubble(
+                message = message,
+                currentUserId = currentUserId,
+                onLongPress = onLongPress,
+                onReactionClick = onReactionClick
+            )
         }
     }
 }

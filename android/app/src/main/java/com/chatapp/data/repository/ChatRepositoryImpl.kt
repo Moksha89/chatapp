@@ -2,11 +2,15 @@ package com.chatapp.data.repository
 
 import com.chatapp.data.api.ApiService
 import com.chatapp.data.api.dto.*
+import com.chatapp.data.local.MessageQueueManager
+import com.chatapp.data.local.entity.PendingMessageEntity
 import com.chatapp.domain.model.*
 import com.chatapp.domain.repository.ChatRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
@@ -14,7 +18,8 @@ import javax.inject.Singleton
 
 @Singleton
 class ChatRepositoryImpl @Inject constructor(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val messageQueueManager: MessageQueueManager
 ) : ChatRepository {
 
     private val _chats = MutableStateFlow<List<Chat>>(emptyList())
@@ -55,13 +60,53 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun sendMessage(chatId: String, content: String, tempId: String): Result<Message> {
-        return try {
-            val response = apiService.sendMessage(chatId, SendMessageRequest(content = content, tempId = tempId))
-            Result.success(response.toDomain())
-        } catch (e: Exception) {
-            Result.failure(e)
+    override suspend fun sendMessage(chatId: String, content: String, tempId: String, replyToMessageId: String?): Result<Message> {
+        // Queue the message for reliable delivery with retry
+        messageQueueManager.queueMessage(chatId, content, tempId, replyToMessageId)
+        
+        // Return a pending message immediately for optimistic UI update
+        return Result.success(Message(
+            id = tempId,
+            chatId = chatId,
+            senderId = "",
+            content = content,
+            type = MessageType.TEXT,
+            status = MessageStatus.SENDING,
+            createdAt = System.currentTimeMillis(),
+            tempId = tempId,
+            replyToMessageId = replyToMessageId
+        ))
+    }
+
+    fun getPendingMessagesForChat(chatId: String): Flow<List<Message>> {
+        return messageQueueManager.getPendingMessagesForChat(chatId).map { pendingMessages ->
+            pendingMessages.map { it.toPendingMessage() }
         }
+    }
+
+    private fun PendingMessageEntity.toPendingMessage(): Message {
+        return Message(
+            id = tempId,
+            chatId = chatId,
+            senderId = "",
+            content = content,
+            type = MessageType.TEXT,
+            status = when (status) {
+                "sending" -> MessageStatus.SENDING
+                "failed" -> MessageStatus.SENDING // Show as sending, user can retry
+                else -> MessageStatus.SENDING
+            },
+            createdAt = createdAt,
+            tempId = tempId
+        )
+    }
+
+    fun startMessageRetryLoop() {
+        messageQueueManager.startRetryLoop()
+    }
+
+    fun stopMessageRetryLoop() {
+        messageQueueManager.stopRetryLoop()
     }
 
     override suspend fun markMessagesRead(chatId: String, messageIds: List<String>): Result<Unit> {

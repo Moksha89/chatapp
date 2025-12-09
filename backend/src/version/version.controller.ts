@@ -26,10 +26,10 @@ export class VersionController {
     
     return {
       android: {
-        versionCode: 9,
-        versionName: '1.8.0',
+        versionCode: 10,
+        versionName: '1.9.0',
         downloadUrl: `${baseUrl}/version/download/android`,
-        releaseNotes: 'v1.8.0: Added runtime permission requests on startup, improved device removal with force logout, app download button on web',
+        releaseNotes: 'v1.9.0: Added offline message queueing with retry logic, swipe-to-reply gesture, improved message reliability',
         forceUpdate: false,
         minVersionCode: 1,
       },

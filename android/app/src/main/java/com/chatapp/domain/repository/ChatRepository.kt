@@ -9,7 +9,7 @@ interface ChatRepository {
     suspend fun refreshChats(): Result<List<Chat>>
     suspend fun createChat(participantId: String): Result<Chat>
     suspend fun getMessages(chatId: String, limit: Int = 50, before: String? = null): Result<List<Message>>
-    suspend fun sendMessage(chatId: String, content: String, tempId: String): Result<Message>
+    suspend fun sendMessage(chatId: String, content: String, tempId: String, replyToMessageId: String? = null): Result<Message>
     suspend fun markMessagesRead(chatId: String, messageIds: List<String>): Result<Unit>
     
     // Reactions

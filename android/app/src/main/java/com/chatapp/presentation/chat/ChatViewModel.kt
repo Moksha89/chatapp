@@ -56,13 +56,13 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun sendMessage(content: String) {
+    fun sendMessage(content: String, replyToMessageId: String? = null) {
         if (content.isBlank() || currentChatId.isEmpty()) return
         
         val tempId = UUID.randomUUID().toString()
         
         viewModelScope.launch {
-            chatRepository.sendMessage(currentChatId, content, tempId)
+            chatRepository.sendMessage(currentChatId, content, tempId, replyToMessageId)
                 .onSuccess { message ->
                     _uiState.update { state ->
                         state.copy(

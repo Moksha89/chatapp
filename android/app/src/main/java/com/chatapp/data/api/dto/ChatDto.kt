@@ -55,7 +55,8 @@ data class MessageResponse(
 data class SendMessageRequest(
     @SerializedName("content") val content: String,
     @SerializedName("type") val type: String = "text",
-    @SerializedName("tempId") val tempId: String? = null
+    @SerializedName("tempId") val tempId: String? = null,
+    @SerializedName("replyToMessageId") val replyToMessageId: String? = null
 )
 
 data class MarkReadRequest(

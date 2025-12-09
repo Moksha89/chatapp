@@ -7,7 +7,9 @@ interface QueuedAction {
 }
 
 const STORAGE_KEY = 'chatapp_offline_queue';
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
+const BASE_RETRY_DELAY_MS = 1000; // 1 second
+const MAX_RETRY_DELAY_MS = 60000; // 1 minute
 
 class OfflineQueue {
   private queue: QueuedAction[] = [];
@@ -128,7 +130,12 @@ class OfflineQueue {
           this.queue.shift();
           this.saveToStorage();
         } else {
-          await new Promise(resolve => setTimeout(resolve, 1000 * action.retryCount));
+          // Exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 60s
+          const delay = Math.min(
+            BASE_RETRY_DELAY_MS * Math.pow(2, action.retryCount - 1),
+            MAX_RETRY_DELAY_MS
+          );
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }

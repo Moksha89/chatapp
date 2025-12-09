@@ -2,6 +2,7 @@ package com.chatapp.di
 
 import android.content.Context
 import com.chatapp.data.api.ApiService
+import com.chatapp.data.local.MessageQueueManager
 import com.chatapp.data.repository.AuthRepositoryImpl
 import com.chatapp.data.repository.ChatRepositoryImpl
 import com.chatapp.data.repository.PrivacyRepositoryImpl
@@ -30,8 +31,11 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideChatRepository(apiService: ApiService): ChatRepository {
-        return ChatRepositoryImpl(apiService)
+    fun provideChatRepository(
+        apiService: ApiService,
+        messageQueueManager: MessageQueueManager
+    ): ChatRepository {
+        return ChatRepositoryImpl(apiService, messageQueueManager)
     }
 
     @Provides
