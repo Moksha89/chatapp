@@ -18,10 +18,12 @@ class SocketService {
 
     this.socket.on('connect', () => {
       console.log('Socket connected');
+      this.notifyListeners('_connection', { connected: true });
     });
 
     this.socket.on('disconnect', () => {
       console.log('Socket disconnected');
+      this.notifyListeners('_connection', { connected: false });
     });
 
     this.socket.on('error', (error) => {
@@ -29,10 +31,7 @@ class SocketService {
     });
 
     this.socket.onAny((event, data) => {
-      const eventListeners = this.listeners.get(event);
-      if (eventListeners) {
-        eventListeners.forEach((listener) => listener(data));
-      }
+      this.notifyListeners(event, data);
     });
   }
 
@@ -60,6 +59,13 @@ class SocketService {
 
   off(event: string, callback: (data: unknown) => void) {
     this.listeners.get(event)?.delete(callback);
+  }
+
+  private notifyListeners(event: string, data: unknown) {
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      eventListeners.forEach((listener) => listener(data));
+    }
   }
 
   emit(event: string, data: unknown, callback?: (response: unknown) => void) {

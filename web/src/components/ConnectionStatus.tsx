@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import { socketService } from '../services/socket';
 
@@ -7,37 +7,58 @@ type ConnectionState = 'connected' | 'connecting' | 'disconnected';
 export function ConnectionStatus() {
   const [state, setState] = useState<ConnectionState>('connecting');
   const [showBanner, setShowBanner] = useState(false);
+  const hasConnectedOnce = useRef(false);
+  const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const checkConnection = () => {
-      if (socketService.isConnected()) {
+    // Listen for socket connection state changes via event
+    const unsubscribe = socketService.on('_connection', (data: unknown) => {
+      const { connected } = data as { connected: boolean };
+      if (connected) {
+        hasConnectedOnce.current = true;
+        if (disconnectTimer.current) {
+          clearTimeout(disconnectTimer.current);
+          disconnectTimer.current = null;
+        }
         setState('connected');
         setShowBanner(false);
       } else {
+        // Only show banner if we had previously connected successfully
+        // Use a 5-second delay to avoid flashing during brief reconnects
+        if (hasConnectedOnce.current) {
+          setState('connecting');
+          setShowBanner(true);
+          disconnectTimer.current = setTimeout(() => {
+            if (!socketService.isConnected()) {
+              setState('disconnected');
+            }
+          }, 5000);
+        }
+      }
+    });
+
+    // Also poll as a fallback, but with a longer interval and grace period
+    const interval = setInterval(() => {
+      if (socketService.isConnected()) {
+        setState('connected');
+        setShowBanner(false);
+      } else if (hasConnectedOnce.current) {
         setState('disconnected');
         setShowBanner(true);
       }
-    };
-
-    checkConnection();
-
-    const interval = setInterval(checkConnection, 3000);
-
-    const handleOnline = () => {
-      setState('connecting');
-    };
+    }, 10000);
 
     const handleOffline = () => {
       setState('disconnected');
       setShowBanner(true);
     };
 
-    window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      unsubscribe();
       clearInterval(interval);
-      window.removeEventListener('online', handleOnline);
+      if (disconnectTimer.current) clearTimeout(disconnectTimer.current);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
