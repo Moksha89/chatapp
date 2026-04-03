@@ -188,7 +188,7 @@ export function QrLoginPage() {
             </div>
             
             <a 
-              href="/api/version/download/android" 
+              href="/version/download/android" 
               className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-white/20 hover:bg-white/30 rounded-lg text-white font-medium transition-colors"
             >
               <Download className="w-4 h-4" />

@@ -22,7 +22,7 @@ export class VersionController {
   @ApiOperation({ summary: 'Check for app updates' })
   @ApiResponse({ status: 200, description: 'Version information returned' })
   checkVersion(): AppVersion {
-    const baseUrl = process.env.APP_BASE_URL || 'http://173.208.132.8:3000';
+    const baseUrl = process.env.APP_BASE_URL || '';
     
     return {
       android: {
@@ -41,7 +41,7 @@ export class VersionController {
   @ApiResponse({ status: 200, description: 'Returns the APK file' })
   @ApiResponse({ status: 404, description: 'APK file not found' })
   downloadAndroid(@Res({ passthrough: true }) res: Response): StreamableFile | { error: string } {
-    const apkPath = process.env.APK_FILE_PATH || '/app/chatapp-release.apk';
+    const apkPath = process.env.APK_FILE_PATH || join(process.cwd(), 'uploads', 'chatapp-release.apk');
     
     if (!existsSync(apkPath)) {
       res.status(404);
