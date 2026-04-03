@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Filter, Hash, Globe } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -305,7 +305,7 @@ export function ChatSidebar() {
                     setShowChannelDialog(false);
                     setChannelName('');
                     setChannelDesc('');
-                  } catch {}
+                  } catch { /* ignore */ }
                 }}
               >Create</button>
             </div>
@@ -344,7 +344,7 @@ export function ChatSidebar() {
                     setShowCommunityDialog(false);
                     setCommunityName('');
                     setCommunityDesc('');
-                  } catch {}
+                  } catch { /* ignore */ }
                 }}
               >Create</button>
             </div>

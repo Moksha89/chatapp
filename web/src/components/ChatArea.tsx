@@ -26,12 +26,10 @@ import {
   ArrowLeft,
   Search,
   Star,
-  Reply,
   MoreVertical,
   Pin,
   MapPin,
   User,
-  Smile,
   BarChart3,
   Timer,
   Lock
@@ -66,7 +64,6 @@ export function ChatArea() {
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [showChatMenu, setShowChatMenu] = useState(false);
-  const [pinnedMessageId, setPinnedMessageId] = useState<string | null>(null);
   const [showDisappearingDialog, setShowDisappearingDialog] = useState(false);
   const [showWallpaperDialog, setShowWallpaperDialog] = useState(false);
   const [showStarredMessages, setShowStarredMessages] = useState(false);
@@ -523,21 +520,21 @@ export function ChatArea() {
                   <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
                     <Timer className="h-4 w-4" /> Disappearing messages
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); } catch {} } }}>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); } catch { /* ignore */ } } }}>
                     <Lock className="h-4 w-4" /> {activeChat?.isLocked ? 'Unlock chat' : 'Lock chat'}
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch {} }}>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { /* ignore */ } }}>
                     <Star className="h-4 w-4" /> Starred messages
                   </button>
                   <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowWallpaperDialog(true); }}>
                     <Image className="h-4 w-4" /> Chat wallpaper
                   </button>
                   {activeChat?.pinnedMessageId ? (
-                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); } catch {} } }}>
+                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); } catch { /* ignore */ } } }}>
                       <Pin className="h-4 w-4" /> Unpin message
                     </button>
                   ) : null}
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { const data = await api.exportChat(activeChat.id); const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `chat-export-${activeChat.id}.json`; a.click(); URL.revokeObjectURL(url); } catch {} } }}>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { const data = await api.exportChat(activeChat.id); const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `chat-export-${activeChat.id}.json`; a.click(); URL.revokeObjectURL(url); } catch { /* ignore */ } } }}>
                     <Download className="h-4 w-4" /> Export chat
                   </button>
                 </div>
@@ -955,7 +952,7 @@ export function ChatArea() {
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
                   onClick={async () => {
                     if (activeChat) {
-                      try { await api.setDisappearingMessages(activeChat.id, opt.value); } catch {}
+                      try { await api.setDisappearingMessages(activeChat.id, opt.value); } catch { /* ignore */ }
                     }
                     setShowDisappearingDialog(false);
                   }}
@@ -984,7 +981,7 @@ export function ChatArea() {
                   style={{ backgroundColor: color === 'default' ? '#efeae2' : color }}
                   onClick={async () => {
                     if (activeChat) {
-                      try { await api.setChatWallpaper(activeChat.id, color === 'default' ? null : color); } catch {}
+                      try { await api.setChatWallpaper(activeChat.id, color === 'default' ? null : color); } catch { /* ignore */ }
                     }
                     setShowWallpaperDialog(false);
                   }}
