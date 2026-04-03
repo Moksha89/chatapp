@@ -50,14 +50,6 @@ export class UsersController {
     };
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async getUser(@Param('id') id: string) {
-    return this.usersService.getPublicProfile(id);
-  }
-
   @Post('search')
   @ApiOperation({ summary: 'Search users by phone number' })
   @ApiResponse({ status: 200, description: 'Search results' })
@@ -141,5 +133,13 @@ export class UsersController {
         profilePhoto: u.profilePhoto,
         isBusiness: u.isBusiness,
       }));
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUser(@Param('id') id: string) {
+    return this.usersService.getPublicProfile(id);
   }
 }
