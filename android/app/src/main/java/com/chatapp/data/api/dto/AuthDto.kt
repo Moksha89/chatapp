@@ -42,6 +42,16 @@ data class UserDto(
     @SerializedName("displayName") val displayName: String
 )
 
+data class RefreshTokenRequest(
+    @SerializedName("refreshToken") val refreshToken: String
+)
+
+data class RefreshTokenResponse(
+    @SerializedName("accessToken") val accessToken: String,
+    @SerializedName("refreshToken") val refreshToken: String,
+    @SerializedName("expiresIn") val expiresIn: Int
+)
+
 data class QrPairingRequest(
     @SerializedName("pairingCode") val pairingCode: String
 )

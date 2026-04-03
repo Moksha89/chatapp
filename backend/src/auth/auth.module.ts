@@ -19,7 +19,7 @@ import { RateLimitGuard } from '../common/guards/rate-limit.guard';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'your-secret-key-change-in-production',
         signOptions: {
-          expiresIn: 900,
+          expiresIn: '30d',
         },
       }),
       inject: [ConfigService],
