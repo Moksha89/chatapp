@@ -27,6 +27,14 @@ interface Message {
   isEdited?: boolean;
   isDeleted?: boolean;
   editedAt?: string;
+  isStarred?: boolean;
+  forwardedFrom?: string;
+  mediaUrl?: string;
+  mediaType?: string;
+  mediaName?: string;
+  mediaSize?: number;
+  mediaDuration?: number;
+  expiresAt?: string;
 }
 
 interface Chat {
@@ -50,6 +58,10 @@ interface ChatContextType {
   isLoadingMessages: boolean;
   typingUsers: Map<string, Set<string>>;
   e2eeEnabled: boolean;
+  replyingTo: Message | null;
+  searchQuery: string;
+  searchResults: Message[];
+  chatFilter: string;
   selectChat: (chat: Chat | null) => void;
   sendMessage: (content: string, replyToMessageId?: string) => void;
   createChat: (userId: string) => Promise<Chat>;
@@ -61,6 +73,13 @@ interface ChatContextType {
   removeReaction: (messageId: string, emoji: string) => Promise<void>;
   editMessage: (messageId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string, deleteForEveryone: boolean) => Promise<void>;
+  toggleStar: (messageId: string) => Promise<void>;
+  forwardMessage: (messageId: string, targetChatId: string) => Promise<void>;
+  setReplyingTo: (message: Message | null) => void;
+  searchMessagesInChat: (query: string) => void;
+  setSearchQuery: (query: string) => void;
+  setChatFilter: (filter: string) => void;
+  getFilteredChats: () => Chat[];
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -74,6 +93,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, Set<string>>>(new Map());
   const [e2eeEnabled, setE2eeEnabled] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [chatFilter, setChatFilter] = useState('all');
 
   const initializeE2EE = useCallback(async () => {
     if (!isAuthenticated || !deviceId) return;
@@ -178,7 +201,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const sendMessageInternal = useCallback(async (
         chatId: string,
         content: string,
-        tempId: string
+        tempId: string,
+        replyToMessageId?: string
       ) => {
         const chat = chats.find(c => c.id === chatId);
         if (!chat || !user) return;
@@ -215,10 +239,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           ciphertext,
           type: 'text',
           tempId,
+          replyToMessageId,
         });
       }, [chats, user, e2eeEnabled, encryptMessageContent]);
 
-      const sendMessage = useCallback(async (content: string) => {
+      const sendMessage = useCallback(async (content: string, replyToMessageId?: string) => {
         if (!activeChat || !user || !deviceId) return;
 
         const tempId = `temp-${Date.now()}`;
@@ -231,6 +256,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           status: 'sending',
           createdAt: new Date().toISOString(),
           tempId,
+          replyToMessageId,
         };
 
         setMessages((prev) => [...prev, tempMessage]);
@@ -239,7 +265,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
         if (isOnline) {
           try {
-            await sendMessageInternal(activeChat.id, content, tempId);
+            await sendMessageInternal(activeChat.id, content, tempId, replyToMessageId);
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error('Failed to send message:', errorMessage);
@@ -326,6 +352,60 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   }, [activeChat]);
+
+  // Toggle Star
+  const toggleStar = useCallback(async (messageId: string) => {
+    if (!activeChat) return;
+    try {
+      const result = await api.toggleMessageStar(activeChat.id, messageId);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, isStarred: result.isStarred } : msg
+        )
+      );
+    } catch (error) {
+      console.error('Failed to toggle star:', error);
+    }
+  }, [activeChat]);
+
+  // Forward Message
+  const forwardMessage = useCallback(async (messageId: string, targetChatId: string) => {
+    if (!activeChat) return;
+    try {
+      await api.forwardMessage(activeChat.id, messageId, targetChatId);
+    } catch (error) {
+      console.error('Failed to forward message:', error);
+    }
+  }, [activeChat]);
+
+  // Search Messages
+  const searchMessagesInChat = useCallback((query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const filtered = messages.filter(m => 
+      m.content?.toLowerCase().includes(query.toLowerCase())
+    );
+    setSearchResults(filtered);
+  }, [messages]);
+
+  // Get Filtered Chats
+  const getFilteredChats = useCallback(() => {
+    let filtered = chats;
+    if (chatFilter === 'unread') {
+      filtered = filtered.filter(c => c.unreadCount > 0);
+    } else if (chatFilter === 'groups') {
+      filtered = filtered.filter(c => c.type === 'group');
+    }
+    if (searchQuery) {
+      filtered = filtered.filter(c => {
+        const name = c.name || '';
+        return name.toLowerCase().includes(searchQuery.toLowerCase());
+      });
+    }
+    return filtered;
+  }, [chats, chatFilter, searchQuery]);
 
   // Delete Message
   const deleteMessage = useCallback(async (messageId: string, deleteForEveryone: boolean) => {
@@ -522,6 +602,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         isLoadingMessages,
         typingUsers,
         e2eeEnabled,
+        replyingTo,
+        searchQuery,
+        searchResults,
+        chatFilter,
         selectChat,
         sendMessage,
         createChat,
@@ -533,6 +617,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         removeReaction,
         editMessage,
         deleteMessage,
+        toggleStar,
+        forwardMessage,
+        setReplyingTo,
+        searchMessagesInChat,
+        setSearchQuery,
+        setChatFilter,
+        getFilteredChats,
       }}
     >
       {children}

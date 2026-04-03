@@ -26,6 +26,15 @@ export class ChatEntity {
   @Column({ type: 'int', nullable: true })
   disappearingMessagesDuration: number | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  wallpaper: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  isLocked: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  pinnedMessageId: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

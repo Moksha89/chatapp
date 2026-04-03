@@ -90,6 +90,9 @@ export class ChatsService {
       iconUrl: data.iconUrl || null,
       createdBy: userId,
       disappearingMessagesDuration: null,
+      wallpaper: null,
+      isLocked: false,
+      pinnedMessageId: null,
     });
 
     await this.databaseService.createChatParticipant({
@@ -636,5 +639,158 @@ export class ChatsService {
     }
 
     return message;
+  }
+
+  // Pin/Unpin a message in a chat
+  async pinMessage(chatId: string, userId: string, messageId: string | null): Promise<Chat> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    if (messageId) {
+      const message = await this.databaseService.findMessageById(messageId);
+      if (!message || message.chatId !== chatId) {
+        throw new NotFoundException('Message not found');
+      }
+    }
+
+    const updated = await this.databaseService.updateChat(chatId, { pinnedMessageId: messageId });
+    if (!updated) {
+      throw new NotFoundException('Chat not found');
+    }
+    return updated;
+  }
+
+  // Set chat wallpaper
+  async setChatWallpaper(chatId: string, userId: string, wallpaper: string | null): Promise<Chat> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const updated = await this.databaseService.updateChat(chatId, { wallpaper });
+    if (!updated) {
+      throw new NotFoundException('Chat not found');
+    }
+    return updated;
+  }
+
+  // Lock/Unlock a chat
+  async toggleChatLock(chatId: string, userId: string): Promise<Chat> {
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const updated = await this.databaseService.updateChat(chatId, { isLocked: !chat.isLocked });
+    if (!updated) {
+      throw new NotFoundException('Chat not found');
+    }
+    return updated;
+  }
+
+  // Create a channel (type: 'channel')
+  async createChannel(userId: string, data: { name: string; description?: string }): Promise<Chat & { participants: ChatParticipant[] }> {
+    const chat = await this.databaseService.createChat({
+      type: 'channel',
+      name: data.name,
+      description: data.description || null,
+      iconUrl: null,
+      createdBy: userId,
+      disappearingMessagesDuration: null,
+      wallpaper: null,
+      isLocked: false,
+      pinnedMessageId: null,
+    });
+
+    await this.databaseService.createChatParticipant({
+      chatId: chat.id,
+      userId,
+      role: 'admin',
+      joinedAt: new Date(),
+      lastReadAt: null,
+    });
+
+    const participants = await this.databaseService.findChatParticipantsByChatId(chat.id);
+    const enrichedParticipants = await this.enrichParticipants(participants);
+    return { ...chat, participants: enrichedParticipants };
+  }
+
+  // Create a community (type: 'community')
+  async createCommunity(userId: string, data: { name: string; description?: string }): Promise<Chat & { participants: ChatParticipant[] }> {
+    const chat = await this.databaseService.createChat({
+      type: 'community',
+      name: data.name,
+      description: data.description || null,
+      iconUrl: null,
+      createdBy: userId,
+      disappearingMessagesDuration: null,
+      wallpaper: null,
+      isLocked: false,
+      pinnedMessageId: null,
+    });
+
+    await this.databaseService.createChatParticipant({
+      chatId: chat.id,
+      userId,
+      role: 'admin',
+      joinedAt: new Date(),
+      lastReadAt: null,
+    });
+
+    const participants = await this.databaseService.findChatParticipantsByChatId(chat.id);
+    const enrichedParticipants = await this.enrichParticipants(participants);
+    return { ...chat, participants: enrichedParticipants };
+  }
+
+  // Vote on a poll
+  async votePoll(chatId: string, userId: string, messageId: string, optionIndex: number): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId || message.type !== 'poll') {
+      throw new NotFoundException('Poll not found');
+    }
+
+    try {
+      const poll = JSON.parse(message.content);
+      if (optionIndex < 0 || optionIndex >= poll.options.length) {
+        throw new BadRequestException('Invalid option index');
+      }
+
+      // Remove user's previous vote if any
+      for (const opt of poll.options) {
+        if (opt.voters) {
+          opt.voters = opt.voters.filter((v: string) => v !== userId);
+        }
+      }
+
+      // Add vote
+      if (!poll.options[optionIndex].voters) {
+        poll.options[optionIndex].voters = [];
+      }
+      poll.options[optionIndex].voters.push(userId);
+      poll.options[optionIndex].votes = poll.options[optionIndex].voters.length;
+
+      const updated = await this.databaseService.updateMessage(messageId, {
+        content: JSON.stringify(poll),
+      });
+      if (!updated) {
+        throw new NotFoundException('Message not found');
+      }
+      return updated;
+    } catch (e) {
+      if (e instanceof BadRequestException || e instanceof NotFoundException) throw e;
+      throw new BadRequestException('Invalid poll data');
+    }
   }
 }

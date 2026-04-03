@@ -94,6 +94,9 @@ export interface Chat {
   iconUrl: string | null;
   createdBy: string | null;
   disappearingMessagesDuration: number | null;
+  wallpaper: string | null;
+  isLocked: boolean;
+  pinnedMessageId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

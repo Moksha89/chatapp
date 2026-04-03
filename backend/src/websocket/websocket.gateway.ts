@@ -89,7 +89,7 @@ export class WebsocketGateway
   @SubscribeMessage('message:send')
   async handleSendMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string; content: string; ciphertext?: string; type?: string; tempId?: string },
+    @MessageBody() data: { chatId: string; content: string; ciphertext?: string; type?: string; tempId?: string; replyToMessageId?: string },
   ) {
     if (!client.userId) {
       return { error: 'Not authenticated' };
@@ -105,6 +105,7 @@ export class WebsocketGateway
           ciphertext: data.ciphertext,
           type: data.type as 'text' | 'image' | 'file' | 'audio',
           tempId: data.tempId,
+          replyToMessageId: data.replyToMessageId,
         },
       );
 

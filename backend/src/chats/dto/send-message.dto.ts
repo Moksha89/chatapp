@@ -11,11 +11,11 @@ export class SendMessageDto {
   @IsOptional()
   ciphertext?: string;
 
-  @ApiPropertyOptional({ enum: ['text', 'image', 'video', 'audio', 'video-note', 'file'], description: 'Message type' })
+  @ApiPropertyOptional({ enum: ['text', 'image', 'video', 'audio', 'video-note', 'file', 'poll', 'location', 'contact', 'sticker'], description: 'Message type' })
   @IsString()
   @IsOptional()
-  @IsIn(['text', 'image', 'video', 'audio', 'video-note', 'file'])
-  type?: 'text' | 'image' | 'video' | 'audio' | 'video-note' | 'file';
+  @IsIn(['text', 'image', 'video', 'audio', 'video-note', 'file', 'poll', 'location', 'contact', 'sticker'])
+  type?: 'text' | 'image' | 'video' | 'audio' | 'video-note' | 'file' | 'poll' | 'location' | 'contact' | 'sticker';
 
   @ApiPropertyOptional({ description: 'Media URL for attachments' })
   @IsString()

@@ -88,6 +88,9 @@ async function seed() {
     iconUrl: null,
     createdBy: user1.id,
     disappearingMessagesDuration: null,
+    wallpaper: null,
+    isLocked: false,
+    pinnedMessageId: null,
   });
 
   await databaseService.createChatParticipant({

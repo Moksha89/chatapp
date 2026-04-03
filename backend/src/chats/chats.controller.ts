@@ -262,4 +262,74 @@ export class ChatsController {
   ) {
     return this.chatsService.getMessageById(chatId, user.id, messageId);
   }
+
+  // Pin/Unpin message
+  @Post(':id/pin')
+  @ApiOperation({ summary: 'Pin or unpin a message in chat' })
+  @ApiResponse({ status: 200, description: 'Message pinned/unpinned' })
+  async pinMessage(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { messageId: string | null },
+  ) {
+    return this.chatsService.pinMessage(chatId, user.id, body.messageId);
+  }
+
+  // Set chat wallpaper
+  @Put(':id/wallpaper')
+  @ApiOperation({ summary: 'Set chat wallpaper' })
+  @ApiResponse({ status: 200, description: 'Wallpaper updated' })
+  async setChatWallpaper(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { wallpaper: string | null },
+  ) {
+    return this.chatsService.setChatWallpaper(chatId, user.id, body.wallpaper);
+  }
+
+  // Toggle chat lock
+  @Post(':id/lock')
+  @ApiOperation({ summary: 'Lock or unlock a chat' })
+  @ApiResponse({ status: 200, description: 'Chat lock toggled' })
+  async toggleChatLock(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+  ) {
+    return this.chatsService.toggleChatLock(chatId, user.id);
+  }
+
+  // Create channel
+  @Post('channels')
+  @ApiOperation({ summary: 'Create a channel' })
+  @ApiResponse({ status: 201, description: 'Channel created' })
+  async createChannel(
+    @CurrentUser() user: CurrentUserData,
+    @Body() body: { name: string; description?: string },
+  ) {
+    return this.chatsService.createChannel(user.id, body);
+  }
+
+  // Create community
+  @Post('communities')
+  @ApiOperation({ summary: 'Create a community' })
+  @ApiResponse({ status: 201, description: 'Community created' })
+  async createCommunity(
+    @CurrentUser() user: CurrentUserData,
+    @Body() body: { name: string; description?: string },
+  ) {
+    return this.chatsService.createCommunity(user.id, body);
+  }
+
+  // Vote on poll
+  @Post(':id/messages/:messageId/vote')
+  @ApiOperation({ summary: 'Vote on a poll' })
+  @ApiResponse({ status: 200, description: 'Vote recorded' })
+  async votePoll(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { optionIndex: number },
+  ) {
+    return this.chatsService.votePoll(chatId, user.id, messageId, body.optionIndex);
+  }
 }

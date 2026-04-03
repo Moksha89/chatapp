@@ -41,7 +41,10 @@ export function MessageContextMenu({
   onRemoveReaction,
   onEdit,
   onDelete,
+  onReply,
   onCopy,
+  onStar,
+  onForward,
 }: MessageContextMenuProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
@@ -130,6 +133,7 @@ export function MessageContextMenu({
             <button
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
               onClick={() => {
+                onReply?.();
                 setShowMenu(false);
               }}
             >
@@ -153,6 +157,7 @@ export function MessageContextMenu({
             <button
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
               onClick={() => {
+                onStar?.();
                 setShowMenu(false);
               }}
             >
@@ -164,6 +169,7 @@ export function MessageContextMenu({
             <button
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
               onClick={() => {
+                onForward?.();
                 setShowMenu(false);
               }}
             >

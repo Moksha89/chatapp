@@ -23,7 +23,18 @@ import {
   FileText,
   Camera,
   Download,
-  ArrowLeft
+  ArrowLeft,
+  Search,
+  Star,
+  Reply,
+  MoreVertical,
+  Pin,
+  MapPin,
+  User,
+  Smile,
+  BarChart3,
+  Timer,
+  Lock
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -39,7 +50,7 @@ type RecordingState = 'idle' | 'recording';
 
 export function ChatArea() {
   const { user } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage } = useChat();
+  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats } = useChat();
   const { initiateCall, callState } = useCall();
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -51,6 +62,20 @@ export function ChatArea() {
   const [isVideoNote, setIsVideoNote] = useState(false);
   const [videoPreviewStream, setVideoPreviewStream] = useState<MediaStream | null>(null);
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
+  const [showForwardDialog, setShowForwardDialog] = useState<string | null>(null);
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [showChatMenu, setShowChatMenu] = useState(false);
+  const [pinnedMessageId, setPinnedMessageId] = useState<string | null>(null);
+  const [showDisappearingDialog, setShowDisappearingDialog] = useState(false);
+  const [showWallpaperDialog, setShowWallpaperDialog] = useState(false);
+  const [showStarredMessages, setShowStarredMessages] = useState(false);
+  const [showPollCreator, setShowPollCreator] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [showContactPicker, setShowContactPicker] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [starredMessages, setStarredMessages] = useState<typeof messages>([]);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -105,8 +130,9 @@ export function ChatArea() {
   const handleSend = async () => {
     if (!inputValue.trim() || !activeChat) return;
 
-    sendMessage(inputValue.trim());
+    sendMessage(inputValue.trim(), replyingTo?.id);
     setInputValue('');
+    setReplyingTo(null);
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -455,6 +481,15 @@ export function ChatArea() {
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => setShowSearchBar(!showSearchBar)}
+            title="Search"
+            className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleVoiceCall}
             disabled={callState !== 'idle'}
             title="Voice Call"
@@ -472,8 +507,63 @@ export function ChatArea() {
           >
             <Video className="h-5 w-5" />
           </Button>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowChatMenu(!showChatMenu)}
+              className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+            {showChatMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg py-1 min-w-[200px] z-50">
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
+                    <Timer className="h-4 w-4" /> Disappearing messages
+                  </button>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); } catch {} } }}>
+                    <Lock className="h-4 w-4" /> {activeChat?.isLocked ? 'Unlock chat' : 'Lock chat'}
+                  </button>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch {} }}>
+                    <Star className="h-4 w-4" /> Starred messages
+                  </button>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowWallpaperDialog(true); }}>
+                    <Image className="h-4 w-4" /> Chat wallpaper
+                  </button>
+                  {activeChat?.pinnedMessageId ? (
+                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); } catch {} } }}>
+                      <Pin className="h-4 w-4" /> Unpin message
+                    </button>
+                  ) : null}
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { const data = await api.exportChat(activeChat.id); const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `chat-export-${activeChat.id}.json`; a.click(); URL.revokeObjectURL(url); } catch {} } }}>
+                    <Download className="h-4 w-4" /> Export chat
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Search Bar */}
+      {showSearchBar && (
+        <div className="px-4 py-2 bg-white border-b flex items-center gap-2">
+          <Search className="h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search messages..."
+            className="flex-1 text-sm border-none outline-none bg-transparent"
+            value={chatSearchQuery}
+            onChange={(e) => setChatSearchQuery(e.target.value)}
+            autoFocus
+          />
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setShowSearchBar(false); setChatSearchQuery(''); }}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
@@ -490,9 +580,10 @@ export function ChatArea() {
           </div>
         ) : (
           <div className="space-y-2">
-            {messages.map((message) => {
+            {(chatSearchQuery ? messages.filter(m => m.content?.toLowerCase().includes(chatSearchQuery.toLowerCase())) : messages).map((message) => {
               const isOwn = message.senderId === user?.id;
-              const isMedia = ['image', 'video', 'audio', 'video-note', 'file'].includes(message.type);
+              const isMedia = ['image', 'video', 'audio', 'video-note', 'file', 'poll', 'location', 'contact'].includes(message.type);
+              const replyToMsg = message.replyToMessageId ? messages.find(m => m.id === message.replyToMessageId) : null;
               return (
                 <div
                   key={message.id}
@@ -506,14 +597,36 @@ export function ChatArea() {
                           : 'bg-white rounded-tl-none'
                       } ${message.isDeleted ? 'opacity-60 italic' : ''}`}
                     >
+                      {/* Reply preview */}
+                      {replyToMsg && !message.isDeleted && (
+                        <div className="border-l-4 border-green-500 bg-black/5 rounded px-2 py-1 mb-1 text-xs">
+                          <p className="font-medium text-green-700 truncate">
+                            {replyToMsg.senderId === user?.id ? 'You' : 'Them'}
+                          </p>
+                          <p className="text-gray-600 truncate">{replyToMsg.content}</p>
+                        </div>
+                      )}
+                      {/* Forwarded indicator */}
+                      {message.forwardedFrom && !message.isDeleted && (
+                        <p className="text-[10px] text-gray-400 italic mb-1">Forwarded</p>
+                      )}
                       {message.isDeleted ? (
                         <p className="text-sm text-gray-500">This message was deleted</p>
+                      ) : message.type === 'poll' ? (
+                        renderPollContent(message)
+                      ) : message.type === 'location' ? (
+                        renderLocationContent(message)
+                      ) : message.type === 'contact' ? (
+                        renderContactCardContent(message)
                       ) : isMedia ? (
                         renderMediaContent(message)
                       ) : (
                         <p className="text-sm break-words text-gray-800">{message.content}</p>
                       )}
                       <div className="flex items-center justify-end gap-1 mt-1">
+                        {message.isStarred && !message.isDeleted && (
+                          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                        )}
                         {message.isEdited && !message.isDeleted && (
                           <span className="text-[10px] text-gray-400">edited</span>
                         )}
@@ -545,6 +658,9 @@ export function ChatArea() {
                         onEdit={() => setEditingMessage({ id: message.id, content: message.content || '' })}
                         onDelete={(deleteForEveryone) => deleteMessage(message.id, deleteForEveryone)}
                         onCopy={() => navigator.clipboard.writeText(message.content || '')}
+                        onReply={() => setReplyingTo(message)}
+                        onStar={() => toggleStar(message.id)}
+                        onForward={() => setShowForwardDialog(message.id)}
                       />
                     )}
                   </div>
@@ -609,6 +725,21 @@ export function ChatArea() {
         </div>
       )}
 
+      {/* Reply Preview */}
+      {replyingTo && (
+        <div className="px-4 py-2 bg-white border-t flex items-center gap-3">
+          <div className="border-l-4 border-green-500 pl-2 flex-1 min-w-0">
+            <p className="text-xs font-medium text-green-700">
+              {replyingTo.senderId === user?.id ? 'You' : 'Them'}
+            </p>
+            <p className="text-xs text-gray-500 truncate">{replyingTo.content}</p>
+          </div>
+          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setReplyingTo(null)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Message Input */}
       {recordingState === 'idle' && (
         <div className="px-4 py-3 bg-[#f0f2f5]">
@@ -664,6 +795,33 @@ export function ChatArea() {
                       <Camera className="h-4 w-4 text-white" />
                     </div>
                     <span className="text-sm">Video Note</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowAttachMenu(false); setShowPollCreator(true); }}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
+                  >
+                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                      <BarChart3 className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm">Poll</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowAttachMenu(false); setShowLocationPicker(true); }}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
+                  >
+                    <div className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm">Location</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowAttachMenu(false); setShowContactPicker(true); }}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
+                  >
+                    <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm">Contact</span>
                   </button>
                 </div>
               )}
@@ -747,6 +905,328 @@ export function ChatArea() {
         }}
         onCancel={() => setEditingMessage(null)}
       />
+
+      {/* Forward Dialog */}
+      {showForwardDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col">
+            <h3 className="font-semibold mb-3">Forward to...</h3>
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {chats.filter(c => c.id !== activeChat?.id).map(chat => {
+                const chatName = chat.name || chat.participants.find(p => p.userId !== user?.id)?.user?.displayName || 'Unknown';
+                return (
+                  <button
+                    key={chat.id}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-100 rounded-lg flex items-center gap-3"
+                    onClick={async () => {
+                      if (showForwardDialog) {
+                        await forwardMessage(showForwardDialog, chat.id);
+                        setShowForwardDialog(null);
+                      }
+                    }}
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-green-500 text-white text-xs">
+                        {chatName.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{chatName}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-end mt-3">
+              <Button variant="outline" onClick={() => setShowForwardDialog(null)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disappearing Messages Dialog */}
+      {showDisappearingDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
+            <h3 className="font-semibold mb-3">Disappearing Messages</h3>
+            <p className="text-sm text-gray-500 mb-4">Messages will disappear after the selected duration.</p>
+            <div className="space-y-2">
+              {[{label: 'Off', value: null}, {label: '24 hours', value: 86400}, {label: '7 days', value: 604800}, {label: '90 days', value: 7776000}].map(opt => (
+                <button
+                  key={opt.label}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
+                  onClick={async () => {
+                    if (activeChat) {
+                      try { await api.setDisappearingMessages(activeChat.id, opt.value); } catch {}
+                    }
+                    setShowDisappearingDialog(false);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end mt-3">
+              <Button variant="outline" onClick={() => setShowDisappearingDialog(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallpaper Dialog */}
+      {showWallpaperDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
+            <h3 className="font-semibold mb-3">Chat Wallpaper</h3>
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {['default', '#d9fdd3', '#fde4cf', '#cff4fc', '#f0d9ff', '#ffe4e1', '#e8f5e9', '#fff3e0', '#e3f2fd', '#fce4ec', '#f3e5f5', '#e0f7fa'].map(color => (
+                <button
+                  key={color}
+                  className="w-full aspect-square rounded-lg border-2 border-gray-200 hover:border-green-500"
+                  style={{ backgroundColor: color === 'default' ? '#efeae2' : color }}
+                  onClick={async () => {
+                    if (activeChat) {
+                      try { await api.setChatWallpaper(activeChat.id, color === 'default' ? null : color); } catch {}
+                    }
+                    setShowWallpaperDialog(false);
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowWallpaperDialog(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Starred Messages Panel */}
+      {showStarredMessages && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Starred Messages</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowStarredMessages(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {starredMessages.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">No starred messages</p>
+              ) : starredMessages.map(msg => (
+                <div key={msg.id} className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm">{msg.content}</p>
+                  <p className="text-xs text-gray-400 mt-1">{new Date(msg.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Poll Creator Dialog */}
+      {showPollCreator && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
+            <h3 className="font-semibold mb-3">Create Poll</h3>
+            <input
+              type="text"
+              placeholder="Ask a question"
+              className="w-full px-3 py-2 border rounded-lg text-sm mb-3"
+              value={pollQuestion}
+              onChange={(e) => setPollQuestion(e.target.value)}
+            />
+            {pollOptions.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder={`Option ${i + 1}`}
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  value={opt}
+                  onChange={(e) => {
+                    const newOpts = [...pollOptions];
+                    newOpts[i] = e.target.value;
+                    setPollOptions(newOpts);
+                  }}
+                />
+                {pollOptions.length > 2 && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            {pollOptions.length < 12 && (
+              <button className="text-sm text-green-600 hover:text-green-700 mb-3" onClick={() => setPollOptions([...pollOptions, ''])}>
+                + Add option
+              </button>
+            )}
+            <div className="flex justify-end gap-2 mt-3">
+              <Button variant="outline" onClick={() => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); }}>Cancel</Button>
+              <Button
+                className="bg-green-500 hover:bg-green-600"
+                disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
+                onClick={() => {
+                  const pollData = JSON.stringify({
+                    question: pollQuestion,
+                    options: pollOptions.filter(o => o.trim()).map(text => ({ text, votes: 0, voters: [] }))
+                  });
+                  sendMessage(pollData);
+                  setShowPollCreator(false);
+                  setPollQuestion('');
+                  setPollOptions(['', '']);
+                }}
+              >Create</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Location Picker Dialog */}
+      {showLocationPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
+            <h3 className="font-semibold mb-3">Share Location</h3>
+            <p className="text-sm text-gray-500 mb-4">Share your current location or enter coordinates manually.</p>
+            <Button
+              className="w-full bg-green-500 hover:bg-green-600 mb-3"
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      const locData = JSON.stringify({
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        name: 'My Location'
+                      });
+                      sendMessage(locData);
+                      setShowLocationPicker(false);
+                    },
+                    () => {
+                      const locData = JSON.stringify({ latitude: 0, longitude: 0, name: 'Location (permission denied)' });
+                      sendMessage(locData);
+                      setShowLocationPicker(false);
+                    }
+                  );
+                }
+              }}
+            >
+              <MapPin className="h-4 w-4 mr-2" /> Share Current Location
+            </Button>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowLocationPicker(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Picker Dialog */}
+      {showContactPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col">
+            <h3 className="font-semibold mb-3">Share Contact</h3>
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {chats.map(chat => {
+                const otherUser = chat.participants.find(p => p.userId !== user?.id)?.user;
+                if (!otherUser) return null;
+                return (
+                  <button
+                    key={otherUser.id}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-100 rounded-lg flex items-center gap-3"
+                    onClick={() => {
+                      const contactData = JSON.stringify({
+                        name: otherUser.displayName,
+                        phoneNumber: otherUser.phoneNumber
+                      });
+                      sendMessage(contactData);
+                      setShowContactPicker(false);
+                    }}
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-blue-500 text-white text-xs">
+                        {otherUser.displayName?.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{otherUser.displayName}</p>
+                      <p className="text-xs text-gray-500">{otherUser.phoneNumber}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-end mt-3">
+              <Button variant="outline" onClick={() => setShowContactPicker(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+// Render poll content
+function renderPollContent(message: { content?: string }) {
+  try {
+    const poll = JSON.parse(message.content || '{}');
+    return (
+      <div className="min-w-[200px]">
+        <div className="flex items-center gap-2 mb-2">
+          <BarChart3 className="h-4 w-4 text-green-600" />
+          <span className="font-medium text-sm">{poll.question}</span>
+        </div>
+        {poll.options?.map((opt: { text: string; votes: number }, i: number) => (
+          <div key={i} className="mb-1">
+            <div className="flex justify-between text-xs text-gray-600 mb-0.5">
+              <span>{opt.text}</span>
+              <span>{opt.votes || 0}</span>
+            </div>
+            <div className="h-1.5 bg-gray-200 rounded-full">
+              <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(100, (opt.votes || 0) * 20)}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  } catch {
+    return <p className="text-sm">{message.content}</p>;
+  }
+}
+
+// Render location content
+function renderLocationContent(message: { content?: string }) {
+  try {
+    const loc = JSON.parse(message.content || '{}');
+    return (
+      <div className="min-w-[200px]">
+        <div className="bg-green-50 rounded-lg p-3 flex items-center gap-2">
+          <MapPin className="h-6 w-6 text-red-500" />
+          <div>
+            <p className="text-sm font-medium">{loc.name || 'Location'}</p>
+            <p className="text-xs text-gray-500">{loc.latitude?.toFixed(4)}, {loc.longitude?.toFixed(4)}</p>
+          </div>
+        </div>
+      </div>
+    );
+  } catch {
+    return <p className="text-sm">{message.content}</p>;
+  }
+}
+
+// Render contact card
+function renderContactCardContent(message: { content?: string }) {
+  try {
+    const contact = JSON.parse(message.content || '{}');
+    return (
+      <div className="min-w-[200px]">
+        <div className="bg-blue-50 rounded-lg p-3 flex items-center gap-2">
+          <User className="h-6 w-6 text-blue-500" />
+          <div>
+            <p className="text-sm font-medium">{contact.name || 'Contact'}</p>
+            <p className="text-xs text-gray-500">{contact.phoneNumber || ''}</p>
+          </div>
+        </div>
+      </div>
+    );
+  } catch {
+    return <p className="text-sm">{message.content}</p>;
+  }
 }

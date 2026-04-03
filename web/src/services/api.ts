@@ -861,6 +861,67 @@ class ApiService {
       createdAt: string;
     }>(`/chats/${chatId}/messages/${messageId}`);
   }
+
+  // Pin/Unpin message
+  async pinMessage(chatId: string, messageId: string | null) {
+    return this.request<{ id: string; pinnedMessageId: string | null }>(`/chats/${chatId}/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ messageId }),
+    });
+  }
+
+  // Set chat wallpaper
+  async setChatWallpaper(chatId: string, wallpaper: string | null) {
+    return this.request<{ id: string; wallpaper: string | null }>(`/chats/${chatId}/wallpaper`, {
+      method: 'PUT',
+      body: JSON.stringify({ wallpaper }),
+    });
+  }
+
+  // Toggle chat lock
+  async toggleChatLock(chatId: string) {
+    return this.request<{ id: string; isLocked: boolean }>(`/chats/${chatId}/lock`, {
+      method: 'POST',
+    });
+  }
+
+  // Create channel
+  async createChannel(name: string, description?: string) {
+    return this.request<{ id: string; type: string; name: string }>('/chats/channels', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    });
+  }
+
+  // Create community
+  async createCommunity(name: string, description?: string) {
+    return this.request<{ id: string; type: string; name: string }>('/chats/communities', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    });
+  }
+
+  // Vote on poll
+  async votePoll(chatId: string, messageId: string, optionIndex: number) {
+    return this.request<{ id: string; content: string }>(`/chats/${chatId}/messages/${messageId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ optionIndex }),
+    });
+  }
+
+  // Two-step verification
+  async enableTwoStepVerification(pin: string) {
+    return this.request<{ success: boolean }>('/users/me/two-step-verification', {
+      method: 'POST',
+      body: JSON.stringify({ pin }),
+    });
+  }
+
+  async disableTwoStepVerification() {
+    return this.request<{ success: boolean }>('/users/me/two-step-verification', {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiService();

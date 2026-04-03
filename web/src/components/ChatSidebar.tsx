@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Filter, Hash, Globe } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,7 @@ export function ChatSidebar() {
   const { user, logout } = useAuth();
   const { chats, activeChat, selectChat, isLoadingChats } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
+  const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities'>('all');
   const [showNewChat, setShowNewChat] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
@@ -40,10 +41,22 @@ export function ChatSidebar() {
   const [showProducts, setShowProducts] = useState(false);
   const [showAutoReply, setShowAutoReply] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showChannelDialog, setShowChannelDialog] = useState(false);
+  const [showCommunityDialog, setShowCommunityDialog] = useState(false);
+  const [channelName, setChannelName] = useState('');
+  const [channelDesc, setChannelDesc] = useState('');
+  const [communityName, setCommunityName] = useState('');
+  const [communityDesc, setCommunityDesc] = useState('');
 
   const filteredChats = chats.filter((chat) => {
     const chatName = chat.name || chat.participants.find((p) => p.userId !== user?.id)?.user?.displayName || '';
-    return chatName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = chatName.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (chatFilter === 'unread') return chat.unreadCount > 0;
+    if (chatFilter === 'groups') return chat.type === 'group';
+    if (chatFilter === 'channels') return chat.type === 'channel';
+    if (chatFilter === 'communities') return chat.type === 'community';
+    return true;
   });
 
   const getChatName = (chat: typeof chats[0]) => {
@@ -128,6 +141,15 @@ export function ChatSidebar() {
               Auto-Reply Messages
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowChannelDialog(true)}>
+              <Hash className="mr-2 h-4 w-4" />
+              Create Channel
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowCommunityDialog(true)}>
+              <Globe className="mr-2 h-4 w-4" />
+              Create Community
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setShowPrivacy(true)}>
               <Shield className="mr-2 h-4 w-4" />
               Privacy Settings
@@ -178,6 +200,21 @@ export function ChatSidebar() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+        </div>
+        <div className="flex gap-1 mt-2 flex-wrap">
+          {(['all', 'unread', 'groups', 'channels', 'communities'] as const).map((filter) => (
+            <button
+              key={filter}
+              className={`px-3 py-1 text-xs rounded-full capitalize ${
+                chatFilter === filter
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              onClick={() => setChatFilter(filter)}
+            >
+              {filter}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -236,6 +273,84 @@ export function ChatSidebar() {
       <ProductCatalog isOpen={showProducts} onClose={() => setShowProducts(false)} />
       <AutoReplySettings isOpen={showAutoReply} onClose={() => setShowAutoReply(false)} />
       <PrivacySettings isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
+
+      {/* Create Channel Dialog */}
+      {showChannelDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
+            <h3 className="font-semibold mb-3">Create Channel</h3>
+            <input
+              type="text"
+              placeholder="Channel name"
+              className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
+              value={channelName}
+              onChange={(e) => setChannelName(e.target.value)}
+            />
+            <textarea
+              placeholder="Description (optional)"
+              className="w-full px-3 py-2 border rounded-lg text-sm mb-3 resize-none"
+              rows={2}
+              value={channelDesc}
+              onChange={(e) => setChannelDesc(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => { setShowChannelDialog(false); setChannelName(''); setChannelDesc(''); }}>Cancel</button>
+              <button
+                className="px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                disabled={!channelName.trim()}
+                onClick={async () => {
+                  try {
+                    const { api } = await import('../services/api');
+                    await api.createChannel(channelName.trim(), channelDesc.trim() || undefined);
+                    setShowChannelDialog(false);
+                    setChannelName('');
+                    setChannelDesc('');
+                  } catch {}
+                }}
+              >Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Community Dialog */}
+      {showCommunityDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
+            <h3 className="font-semibold mb-3">Create Community</h3>
+            <input
+              type="text"
+              placeholder="Community name"
+              className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
+              value={communityName}
+              onChange={(e) => setCommunityName(e.target.value)}
+            />
+            <textarea
+              placeholder="Description (optional)"
+              className="w-full px-3 py-2 border rounded-lg text-sm mb-3 resize-none"
+              rows={2}
+              value={communityDesc}
+              onChange={(e) => setCommunityDesc(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => { setShowCommunityDialog(false); setCommunityName(''); setCommunityDesc(''); }}>Cancel</button>
+              <button
+                className="px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                disabled={!communityName.trim()}
+                onClick={async () => {
+                  try {
+                    const { api } = await import('../services/api');
+                    await api.createCommunity(communityName.trim(), communityDesc.trim() || undefined);
+                    setShowCommunityDialog(false);
+                    setCommunityName('');
+                    setCommunityDesc('');
+                  } catch {}
+                }}
+              >Create</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
