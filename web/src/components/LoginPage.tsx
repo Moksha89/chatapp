@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { QrLoginPage } from './QrLoginPage';
 import { useAuth } from '../context/AuthContext';
-import { Smartphone, ArrowLeft, Loader2, MessageSquare } from 'lucide-react';
+import { Smartphone, ArrowLeft, Loader2, MessageSquare, Download } from 'lucide-react';
 import { Button } from './ui/button';
 
 type LoginMode = 'qr' | 'phone';
@@ -209,14 +209,21 @@ export function LoginPage() {
           </div>
         )}
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
+        <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
           <button
             onClick={() => setMode('qr')}
-            className="w-full flex items-center justify-center gap-2 py-2 text-gray-600 hover:text-green-600 text-sm"
+            className="w-full flex items-center justify-center gap-2 py-2 text-gray-600 hover:text-[#00a884] text-sm"
           >
             <Smartphone className="w-4 h-4" />
             Login with QR code instead
           </button>
+          <a
+            href="/version/download/android"
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#00a884] hover:bg-[#008069] text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Download Android App
+          </a>
         </div>
       </div>
     </div>
