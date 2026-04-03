@@ -460,40 +460,50 @@ export function ChatArea() {
 
   if (!activeChat) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center max-w-md px-6">
-          <div className="bg-gradient-to-br from-green-400 to-green-600 p-8 rounded-full inline-block mb-6 shadow-lg">
+      <div className="flex-1 flex items-center justify-center bg-[#f0f2f5]">
+        <div className="text-center max-w-md px-6 fade-in">
+          <div className="bg-gradient-to-br from-[#00a884] to-[#008069] p-8 rounded-full inline-block mb-6 shadow-lg">
             <MessageCircle className="h-20 w-20 text-white" />
           </div>
-          <h2 className="text-3xl font-light text-gray-800 mb-3">WhatsApp Business Chat</h2>
-          <p className="text-gray-500 text-lg">Select a conversation to start messaging</p>
+          <h2 className="text-3xl font-light text-gray-700 mb-3">WhatsApp Business</h2>
+          <p className="text-gray-500 text-base mb-6">Send and receive messages without keeping your phone online.</p>
+          <p className="text-gray-400 text-sm">Use on up to 4 linked devices and 1 phone at the same time.</p>
+          <div className="encryption-banner mt-8 inline-flex items-center gap-2 mx-auto">
+            <Lock className="h-3 w-3" />
+            End-to-end encrypted
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#efeae2]">
+    <div className="flex-1 flex flex-col wa-chat-bg">
       {/* Chat Header */}
-      <div className="px-2 md:px-4 py-3 bg-[#f0f2f5] flex items-center border-b border-gray-200 shadow-sm">
+      <div className="px-2 md:px-4 py-2.5 bg-[#008069] flex items-center shadow-sm">
         {/* Back button for mobile */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => selectChat(null)}
-          className="md:hidden text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full mr-1"
+          className="md:hidden text-white hover:text-white/80 hover:bg-white/10 rounded-full mr-1"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <Avatar className="h-10 w-10 mr-3 ring-2 ring-green-500/20">
-          <AvatarFallback className="bg-gradient-to-br from-green-400 to-green-600 text-white font-medium">
+        <Avatar className="h-10 w-10 mr-3">
+          <AvatarFallback className="bg-[#00a884] text-white font-medium">
             {getChatInitials()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 truncate">{getChatName()}</h3>
-          {isOtherTyping && (
-            <p className="text-xs text-green-600 font-medium">typing...</p>
+          <h3 className="font-semibold text-white truncate">{getChatName()}</h3>
+          {isOtherTyping ? (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-green-200">typing</span>
+              <div className="typing-dots"><span></span><span></span><span></span></div>
+            </div>
+          ) : (
+            <p className="text-xs text-green-200">online</p>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -502,7 +512,7 @@ export function ChatArea() {
             size="icon"
             onClick={() => setShowSearchBar(!showSearchBar)}
             title="Search"
-            className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+            className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
           >
             <Search className="h-5 w-5" />
           </Button>
@@ -512,7 +522,7 @@ export function ChatArea() {
             onClick={handleVoiceCall}
             disabled={callState !== 'idle'}
             title="Voice Call"
-            className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+            className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
           >
             <Phone className="h-5 w-5" />
           </Button>
@@ -522,7 +532,7 @@ export function ChatArea() {
             onClick={handleVideoCall}
             disabled={callState !== 'idle'}
             title="Video Call"
-            className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+            className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
           >
             <Video className="h-5 w-5" />
           </Button>
@@ -531,14 +541,14 @@ export function ChatArea() {
               variant="ghost"
               size="icon"
               onClick={() => setShowChatMenu(!showChatMenu)}
-              className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+              className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
             >
               <MoreVertical className="h-5 w-5" />
             </Button>
             {showChatMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg py-1 min-w-[200px] z-50">
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl py-1 min-w-[200px] z-50 context-menu-enter">
                   <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
                     <Timer className="h-4 w-4" /> Disappearing messages
                   </button>
@@ -593,14 +603,24 @@ export function ChatArea() {
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         {isLoadingMessages ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-pulse text-gray-500">Loading messages...</div>
+          <div className="flex flex-col gap-3 p-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                <div className={`${i % 2 === 0 ? 'bg-[#d9fdd3]' : 'bg-white'} rounded-lg p-3 max-w-[60%] shadow-sm`}>
+                  <div className="skeleton h-3 w-32 mb-2" />
+                  <div className="skeleton h-3 w-20" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-500 bg-white/80 px-6 py-4 rounded-lg shadow-sm">
-              <p>No messages yet</p>
-              <p className="text-sm mt-1">Start the conversation!</p>
+              <div className="text-center">
+                <div className="encryption-banner inline-flex items-center gap-2 mb-4">
+                  <Lock className="h-3 w-3" />
+                  Messages are end-to-end encrypted. No one outside of this chat can read them.
+                </div>
+                <p className="text-gray-500 text-sm">Send a message to start chatting</p>
             </div>
           </div>
         ) : (
@@ -612,7 +632,7 @@ export function ChatArea() {
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}
+                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group msg-enter`}
                 >
                   <div className={`flex items-start gap-1 ${isOwn ? 'flex-row-reverse' : ''}`}>
                     <div
@@ -624,8 +644,8 @@ export function ChatArea() {
                     >
                       {/* Reply preview */}
                       {replyToMsg && !message.isDeleted && (
-                        <div className="border-l-4 border-green-500 bg-black/5 rounded px-2 py-1 mb-1 text-xs">
-                          <p className="font-medium text-green-700 truncate">
+                        <div className="border-l-4 border-[#00a884] bg-black/5 rounded px-2 py-1 mb-1 text-xs">
+                          <p className="font-medium text-[#008069] truncate">
                             {replyToMsg.senderId === user?.id ? 'You' : 'Them'}
                           </p>
                           <p className="text-gray-600 truncate">{replyToMsg.content}</p>
@@ -702,7 +722,7 @@ export function ChatArea() {
           <div className="flex items-center gap-3">
             <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-green-500 transition-all duration-300"
+                className="h-full bg-[#00a884] transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
@@ -713,9 +733,9 @@ export function ChatArea() {
 
       {/* Recording UI */}
       {recordingState === 'recording' && (
-        <div className="px-4 py-3 bg-white border-t flex items-center gap-4">
+        <div className="px-4 py-3 bg-white border-t flex items-center gap-4 fade-in">
           {isVideoNote && (
-            <div className="w-16 h-16 rounded-full overflow-hidden bg-black">
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-black shadow-lg">
               <video 
                 ref={videoPreviewRef} 
                 autoPlay 
@@ -726,7 +746,7 @@ export function ChatArea() {
             </div>
           )}
           <div className="flex-1 flex items-center gap-3">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            <div className="w-3 h-3 bg-red-500 rounded-full recording-pulse" />
             <span className="text-red-500 font-medium">{formatRecordingTime(recordingTime)}</span>
             <span className="text-gray-500 text-sm">
               {isVideoNote ? 'Recording video note...' : 'Recording voice message...'}
@@ -742,7 +762,7 @@ export function ChatArea() {
           </Button>
           <Button
             onClick={stopRecording}
-            className="bg-green-500 hover:bg-green-600 rounded-full"
+            className="bg-[#00a884] hover:bg-[#008069] rounded-full"
             size="icon"
           >
             <Send className="h-5 w-5" />
@@ -753,8 +773,8 @@ export function ChatArea() {
       {/* Reply Preview */}
       {replyingTo && (
         <div className="px-4 py-2 bg-white border-t flex items-center gap-3">
-          <div className="border-l-4 border-green-500 pl-2 flex-1 min-w-0">
-            <p className="text-xs font-medium text-green-700">
+          <div className="border-l-4 border-[#00a884] pl-2 flex-1 min-w-0">
+            <p className="text-xs font-medium text-[#008069]">
               {replyingTo.senderId === user?.id ? 'You' : 'Them'}
             </p>
             <p className="text-xs text-gray-500 truncate">{replyingTo.content}</p>
@@ -775,13 +795,13 @@ export function ChatArea() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
-                className="text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-full"
+                className="text-gray-500 hover:text-[#00a884] hover:bg-[#00a884]/10 rounded-full transition-colors"
               >
                 <Paperclip className="h-5 w-5" />
               </Button>
               
               {showAttachMenu && (
-                <div className="absolute bottom-12 left-0 bg-white rounded-lg shadow-lg p-2 flex flex-col gap-1 min-w-[160px] z-10">
+                <div className="absolute bottom-12 left-0 bg-white rounded-xl shadow-xl p-2 flex flex-col gap-1 min-w-[170px] z-10 attach-menu-enter">
                   <button
                     onClick={() => imageInputRef.current?.click()}
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
@@ -816,7 +836,7 @@ export function ChatArea() {
                     }}
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
                   >
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-[#00a884] rounded-full flex items-center justify-center">
                       <Camera className="h-4 w-4 text-white" />
                     </div>
                     <span className="text-sm">Video Note</span>
@@ -888,7 +908,7 @@ export function ChatArea() {
               variant="ghost"
               size="icon"
               onClick={() => setViewOnceMode(!viewOnceMode)}
-              className={`rounded-full ${viewOnceMode ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+              className={`rounded-full transition-colors ${viewOnceMode ? 'text-[#00a884] bg-[#00a884]/10' : 'text-gray-400 hover:text-[#00a884] hover:bg-[#00a884]/10'}`}
               title={viewOnceMode ? 'View once: ON' : 'View once: OFF'}
             >
               {viewOnceMode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -898,7 +918,7 @@ export function ChatArea() {
             <div className="flex-1 relative">
               <textarea
                 placeholder={viewOnceMode ? 'View once mode - media will disappear after viewing' : 'Type a message'}
-                className="w-full px-4 py-2.5 bg-white rounded-3xl border-0 focus:ring-2 focus:ring-green-500/20 resize-none text-sm"
+                className="w-full px-4 py-2.5 bg-white rounded-3xl border-0 focus:ring-2 focus:ring-[#00a884]/20 resize-none text-sm"
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
@@ -911,7 +931,7 @@ export function ChatArea() {
             {inputValue.trim() ? (
               <Button
                 onClick={handleSend}
-                className="bg-green-500 hover:bg-green-600 rounded-full h-10 w-10"
+                className="send-btn bg-[#00a884] hover:bg-[#008069] rounded-full h-10 w-10 shadow-sm"
                 size="icon"
               >
                 <Send className="h-5 w-5" />
@@ -921,7 +941,7 @@ export function ChatArea() {
                 onClick={startAudioRecording}
                 variant="ghost"
                 size="icon"
-                className="text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-full h-10 w-10"
+                className="text-gray-500 hover:text-[#00a884] hover:bg-[#00a884]/10 rounded-full h-10 w-10"
               >
                 <Mic className="h-5 w-5" />
               </Button>
@@ -953,8 +973,8 @@ export function ChatArea() {
 
       {/* Forward Dialog */}
       {showForwardDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col dialog-content">
             <h3 className="font-semibold mb-3">Forward to...</h3>
             <div className="flex-1 overflow-y-auto space-y-1">
               {chats.filter(c => c.id !== activeChat?.id).map(chat => {
@@ -971,7 +991,7 @@ export function ChatArea() {
                     }}
                   >
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-green-500 text-white text-xs">
+                      <AvatarFallback className="bg-[#00a884] text-white text-xs">
                         {chatName.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -989,7 +1009,7 @@ export function ChatArea() {
 
       {/* Disappearing Messages Dialog */}
       {showDisappearingDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-sm">
             <h3 className="font-semibold mb-3">Disappearing Messages</h3>
             <p className="text-sm text-gray-500 mb-4">Messages will disappear after the selected duration.</p>
@@ -1018,14 +1038,14 @@ export function ChatArea() {
 
       {/* Wallpaper Dialog */}
       {showWallpaperDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-sm">
             <h3 className="font-semibold mb-3">Chat Wallpaper</h3>
             <div className="grid grid-cols-4 gap-2 mb-4">
               {['default', '#d9fdd3', '#fde4cf', '#cff4fc', '#f0d9ff', '#ffe4e1', '#e8f5e9', '#fff3e0', '#e3f2fd', '#fce4ec', '#f3e5f5', '#e0f7fa'].map(color => (
                 <button
                   key={color}
-                  className="w-full aspect-square rounded-lg border-2 border-gray-200 hover:border-green-500"
+                  className="w-full aspect-square rounded-lg border-2 border-gray-200 hover:border-[#00a884]"
                   style={{ backgroundColor: color === 'default' ? '#efeae2' : color }}
                   onClick={async () => {
                     if (activeChat) {
@@ -1045,7 +1065,7 @@ export function ChatArea() {
 
       {/* Starred Messages Panel */}
       {showStarredMessages && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[70vh] flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Starred Messages</h3>
@@ -1069,7 +1089,7 @@ export function ChatArea() {
 
       {/* Poll Creator Dialog */}
       {showPollCreator && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-sm">
             <h3 className="font-semibold mb-3">Create Poll</h3>
             <input
@@ -1100,14 +1120,14 @@ export function ChatArea() {
               </div>
             ))}
             {pollOptions.length < 12 && (
-              <button className="text-sm text-green-600 hover:text-green-700 mb-3" onClick={() => setPollOptions([...pollOptions, ''])}>
+              <button className="text-sm text-[#00a884] hover:text-[#008069] mb-3" onClick={() => setPollOptions([...pollOptions, ''])}>
                 + Add option
               </button>
             )}
             <div className="flex justify-end gap-2 mt-3">
               <Button variant="outline" onClick={() => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); }}>Cancel</Button>
               <Button
-                className="bg-green-500 hover:bg-green-600"
+                className="bg-[#00a884] hover:bg-[#008069]"
                 disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
                 onClick={() => {
                   const pollData = JSON.stringify({
@@ -1127,12 +1147,12 @@ export function ChatArea() {
 
       {/* Location Picker Dialog */}
       {showLocationPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-sm">
             <h3 className="font-semibold mb-3">Share Location</h3>
             <p className="text-sm text-gray-500 mb-4">Share your current location or enter coordinates manually.</p>
             <Button
-              className="w-full bg-green-500 hover:bg-green-600 mb-3"
+              className="w-full bg-[#00a884] hover:bg-[#008069] mb-3"
               onClick={() => {
                 if (navigator.geolocation) {
                   navigator.geolocation.getCurrentPosition(
@@ -1165,7 +1185,7 @@ export function ChatArea() {
 
       {/* Contact Picker Dialog */}
       {showContactPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col">
             <h3 className="font-semibold mb-3">Share Contact</h3>
             <div className="flex-1 overflow-y-auto space-y-1">
@@ -1207,7 +1227,7 @@ export function ChatArea() {
 
       {/* GIF Picker Dialog */}
       {showGifPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-lg max-h-[70vh] flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Choose a GIF</h3>
@@ -1220,7 +1240,7 @@ export function ChatArea() {
               <input
                 type="text"
                 placeholder="Search GIFs..."
-                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-green-500/20"
+                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#00a884]/20"
                 value={gifSearchQuery}
                 onChange={(e) => {
                   setGifSearchQuery(e.target.value);
@@ -1281,13 +1301,13 @@ export function ChatArea() {
 
       {/* Chat Backup Dialog */}
       {showBackupDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-sm">
             <h3 className="font-semibold mb-3">Chat Backup</h3>
             <p className="text-sm text-gray-500 mb-4">Download a backup of this chat conversation.</p>
             <div className="space-y-2">
               <Button
-                className="w-full bg-green-500 hover:bg-green-600"
+                className="w-full bg-[#00a884] hover:bg-[#008069]"
                 onClick={async () => {
                   if (activeChat) {
                     try {
@@ -1337,14 +1357,14 @@ export function ChatArea() {
 
       {/* Chatbot Auto-Reply Dialog */}
       {showChatbotDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[70vh] flex flex-col">
             <h3 className="font-semibold mb-3">Chatbot Auto-Reply</h3>
             <p className="text-sm text-gray-500 mb-4">Set up automatic replies based on trigger keywords.</p>
             <div className="flex items-center gap-2 mb-4">
               <label className="text-sm font-medium">Enable chatbot:</label>
               <button
-                className={`w-10 h-6 rounded-full transition-colors ${chatbotEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                className={`w-10 h-6 rounded-full transition-colors ${chatbotEnabled ? 'bg-[#00a884]' : 'bg-gray-300'}`}
                 onClick={() => setChatbotEnabled(!chatbotEnabled)}
               >
                 <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${chatbotEnabled ? 'translate-x-4' : ''}`} />
@@ -1372,14 +1392,14 @@ export function ChatArea() {
                   )}
                 </div>
               ))}
-              <button className="text-sm text-green-600 hover:text-green-700" onClick={() => setChatbotRules([...chatbotRules, { trigger: '', response: '' }])}>
+              <button className="text-sm text-[#00a884] hover:text-[#008069]" onClick={() => setChatbotRules([...chatbotRules, { trigger: '', response: '' }])}>
                 + Add rule
               </button>
             </div>
             <div className="flex justify-end gap-2 mt-3">
               <Button variant="outline" onClick={() => setShowChatbotDialog(false)}>Cancel</Button>
               <Button
-                className="bg-green-500 hover:bg-green-600"
+                className="bg-[#00a884] hover:bg-[#008069]"
                 onClick={async () => {
                   if (activeChat) {
                     const validRules = chatbotRules.filter(r => r.trigger.trim() && r.response.trim());
@@ -1397,7 +1417,7 @@ export function ChatArea() {
 
       {/* Order Dialog */}
       {showOrderDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[70vh] flex flex-col">
             <h3 className="font-semibold mb-3">Create Order</h3>
             <p className="text-sm text-gray-500 mb-4">Add items to create an order in this chat.</p>
@@ -1433,7 +1453,7 @@ export function ChatArea() {
                   )}
                 </div>
               ))}
-              <button className="text-sm text-green-600 hover:text-green-700" onClick={() => setOrderItems([...orderItems, { productId: '', name: '', price: 0, quantity: 1 }])}>
+              <button className="text-sm text-[#00a884] hover:text-[#008069]" onClick={() => setOrderItems([...orderItems, { productId: '', name: '', price: 0, quantity: 1 }])}>
                 + Add item
               </button>
               <div className="border-t pt-2">
@@ -1443,7 +1463,7 @@ export function ChatArea() {
             <div className="flex justify-end gap-2 mt-3">
               <Button variant="outline" onClick={() => { setShowOrderDialog(false); setOrderItems([{ productId: '', name: '', price: 0, quantity: 1 }]); }}>Cancel</Button>
               <Button
-                className="bg-green-500 hover:bg-green-600"
+                className="bg-[#00a884] hover:bg-[#008069]"
                 disabled={!orderItems.some(item => item.name.trim() && item.price > 0)}
                 onClick={async () => {
                   if (activeChat) {
@@ -1471,7 +1491,7 @@ function renderPollContent(message: { content?: string }) {
     return (
       <div className="min-w-[200px]">
         <div className="flex items-center gap-2 mb-2">
-          <BarChart3 className="h-4 w-4 text-green-600" />
+          <BarChart3 className="h-4 w-4 text-[#00a884]" />
           <span className="font-medium text-sm">{poll.question}</span>
         </div>
         {poll.options?.map((opt: { text: string; votes: number }, i: number) => (
@@ -1481,7 +1501,7 @@ function renderPollContent(message: { content?: string }) {
               <span>{opt.votes || 0}</span>
             </div>
             <div className="h-1.5 bg-gray-200 rounded-full">
-              <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(100, (opt.votes || 0) * 20)}%` }} />
+              <div className="h-full bg-[#00a884] rounded-full" style={{ width: `${Math.min(100, (opt.votes || 0) * 20)}%` }} />
             </div>
           </div>
         ))}

@@ -90,12 +90,12 @@ export function ChatSidebar() {
 
   return (
     <div className="w-full md:w-96 border-r bg-white flex flex-col h-full">
-      <div className="p-3 bg-gray-100 flex items-center justify-between">
+      <div className="p-3 bg-[#008069] flex items-center justify-between">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="p-0 h-auto">
               <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-green-500 text-white">
+                <AvatarFallback className="bg-[#00a884] text-white font-semibold">
                   {user?.displayName?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -169,7 +169,7 @@ export function ChatSidebar() {
             onClick={() => setShowNewChat(true)}
             title="New Chat"
           >
-            <MessageSquarePlus className="h-5 w-5 text-gray-600" />
+            <MessageSquarePlus className="h-5 w-5 text-white/90 hover:text-white" />
           </Button>
           <Button
             variant="ghost"
@@ -177,16 +177,16 @@ export function ChatSidebar() {
             onClick={() => setShowCreateGroup(true)}
             title="Create Group"
           >
-            <Users className="h-5 w-5 text-gray-600" />
+            <Users className="h-5 w-5 text-white/90 hover:text-white" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={logout}
             title="Logout"
-            className="text-gray-600 hover:text-red-600"
+            className="text-white/90 hover:text-white"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5 text-white/90" />
           </Button>
         </div>
       </div>
@@ -205,9 +205,9 @@ export function ChatSidebar() {
           {(['all', 'unread', 'groups', 'channels', 'communities'] as const).map((filter) => (
             <button
               key={filter}
-              className={`px-3 py-1 text-xs rounded-full capitalize ${
+              className={`filter-pill px-3 py-1 text-xs rounded-full capitalize font-medium ${
                 chatFilter === filter
-                  ? 'bg-green-500 text-white'
+                  ? 'bg-[#00a884] text-white shadow-sm'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
               onClick={() => setChatFilter(filter)}
@@ -220,22 +220,40 @@ export function ChatSidebar() {
 
       <ScrollArea className="flex-1">
         {isLoadingChats ? (
-          <div className="p-4 text-center text-gray-500">Loading chats...</div>
+          <div className="p-3 space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="skeleton w-12 h-12 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-4 w-24" />
+                  <div className="skeleton h-3 w-40" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : filteredChats.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
-            {searchQuery ? 'No chats found' : 'No chats yet. Start a new conversation!'}
+          <div className="p-8 text-center">
+            <div className="text-gray-400 mb-2">
+              <MessageSquarePlus className="h-12 w-12 mx-auto opacity-50" />
+            </div>
+            <p className="text-gray-500 text-sm">
+              {searchQuery ? 'No chats found' : 'No chats yet'}
+            </p>
+            <p className="text-gray-400 text-xs mt-1">
+              {searchQuery ? 'Try a different search' : 'Start a new conversation!'}
+            </p>
           </div>
         ) : (
           filteredChats.map((chat) => (
             <div
               key={chat.id}
-              className={`flex items-center p-3 cursor-pointer hover:bg-gray-100 ${
-                activeChat?.id === chat.id ? 'bg-gray-200' : ''
-              }`}
+              className={`chat-item flex items-center p-3 cursor-pointer hover:bg-[#f0f2f5] ${
+                activeChat?.id === chat.id ? 'bg-[#f0f2f5]' : ''
+              } border-b border-gray-100`}
               onClick={() => selectChat(chat)}
             >
-              <Avatar className="h-12 w-12 mr-3">
-                <AvatarFallback className="bg-green-500 text-white">
+              <Avatar className="h-12 w-12 mr-3 flex-shrink-0">
+                <AvatarFallback className="bg-[#00a884] text-white font-medium">
                   {getChatInitials(chat)}
                 </AvatarFallback>
               </Avatar>
@@ -251,7 +269,7 @@ export function ChatSidebar() {
                     {chat.lastMessage?.content || 'No messages yet'}
                   </span>
                   {chat.unreadCount > 0 && (
-                    <span className="bg-green-500 text-white text-xs rounded-full px-2 py-0.5 ml-2">
+                    <span className="unread-badge bg-[#00a884] text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 ml-2">
                       {chat.unreadCount}
                     </span>
                   )}
@@ -296,7 +314,7 @@ export function ChatSidebar() {
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => { setShowChannelDialog(false); setChannelName(''); setChannelDesc(''); }}>Cancel</button>
               <button
-                className="px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-[#00a884] text-white rounded-lg hover:bg-[#008069] disabled:opacity-50"
                 disabled={!channelName.trim()}
                 onClick={async () => {
                   try {
@@ -335,7 +353,7 @@ export function ChatSidebar() {
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => { setShowCommunityDialog(false); setCommunityName(''); setCommunityDesc(''); }}>Cancel</button>
               <button
-                className="px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-[#00a884] text-white rounded-lg hover:bg-[#008069] disabled:opacity-50"
                 disabled={!communityName.trim()}
                 onClick={async () => {
                   try {

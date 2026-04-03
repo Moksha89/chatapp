@@ -3,8 +3,7 @@
 @tailwind utilities;
 @layer base {
   :root {
-    --radius: 0.5rem
-  ;
+    --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -12,7 +11,8 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
   .dark {
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -21,7 +21,143 @@
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  /* WhatsApp chat background doodle pattern */
+  .wa-chat-bg {
+    background-color: #efeae2;
+    background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6d0c5' fill-opacity='0.3'%3E%3Ccircle cx='10' cy='10' r='1.5'/%3E%3Ccircle cx='30' cy='15' r='1'/%3E%3Ccircle cx='50' cy='8' r='1.2'/%3E%3Ccircle cx='70' cy='20' r='1'/%3E%3Ccircle cx='20' cy='35' r='1.3'/%3E%3Ccircle cx='40' cy='30' r='1'/%3E%3Ccircle cx='60' cy='40' r='1.5'/%3E%3Ccircle cx='10' cy='50' r='1'/%3E%3Ccircle cx='35' cy='55' r='1.2'/%3E%3Ccircle cx='55' cy='60' r='1'/%3E%3Ccircle cx='75' cy='55' r='1.3'/%3E%3Ccircle cx='15' cy='70' r='1'/%3E%3Ccircle cx='45' cy='75' r='1.5'/%3E%3Ccircle cx='65' cy='70' r='1'/%3E%3Cpath d='M5 25 Q8 22 11 25' stroke='%23d6d0c5' stroke-width='0.5' fill='none' stroke-opacity='0.4'/%3E%3Cpath d='M25 45 Q28 42 31 45' stroke='%23d6d0c5' stroke-width='0.5' fill='none' stroke-opacity='0.4'/%3E%3Cpath d='M55 25 Q58 22 61 25' stroke='%23d6d0c5' stroke-width='0.5' fill='none' stroke-opacity='0.4'/%3E%3Cpath d='M45 50 Q48 47 51 50' stroke='%23d6d0c5' stroke-width='0.5' fill='none' stroke-opacity='0.4'/%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* Message entrance animation */
+  .msg-enter {
+    animation: msgSlideIn 0.2s ease-out;
+  }
+  @keyframes msgSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Dialog overlay + content animations */
+  .dialog-overlay {
+    animation: overlayFadeIn 0.2s ease-out;
+  }
+  @keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .dialog-content {
+    animation: dialogScaleIn 0.2s ease-out;
+  }
+  @keyframes dialogScaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* Attach menu slide-up */
+  .attach-menu-enter {
+    animation: attachSlideUp 0.2s ease-out;
+  }
+  @keyframes attachSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Context menu animation */
+  .context-menu-enter {
+    animation: contextMenuIn 0.15s ease-out;
+  }
+  @keyframes contextMenuIn {
+    from { opacity: 0; transform: scale(0.9) translateY(-4px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Typing indicator bouncing dots */
+  .typing-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .typing-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #00a884;
+    animation: typingBounce 1.4s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(1) { animation-delay: 0s; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* Chat list item smooth hover */
+  .chat-item {
+    transition: background-color 0.15s ease;
+  }
+
+  /* Filter pill transitions */
+  .filter-pill {
+    transition: all 0.2s ease;
+  }
+
+  /* Loading skeleton shimmer */
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Send button hover/active */
+  .send-btn {
+    transition: transform 0.15s ease;
+  }
+  .send-btn:hover { transform: scale(1.08); }
+  .send-btn:active { transform: scale(0.95); }
+
+  /* Recording pulse */
+  .recording-pulse {
+    animation: recordPulse 1s ease-in-out infinite;
+  }
+  @keyframes recordPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+  }
+
+  /* Unread badge subtle pulse */
+  .unread-badge {
+    animation: badgePulse 2s ease-in-out infinite;
+  }
+  @keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  /* Encryption banner */
+  .encryption-banner {
+    background-color: #fdf4c5;
+    color: #54656f;
+    font-size: 12px;
+    padding: 6px 16px;
+    text-align: center;
+    border-radius: 6px;
   }
 }
 
