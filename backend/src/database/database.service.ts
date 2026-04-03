@@ -570,18 +570,50 @@ export class DatabaseService implements OnModuleInit {
     return (result.affected ?? 0) > 0;
   }
 
-  async getChatsForUser(userId: string): Promise<Array<Chat & { participants: ChatParticipant[]; lastMessage?: Message; labels: Label[] }>> {
+  async getChatsForUser(userId: string): Promise<Array<Chat & { participants: (ChatParticipant & { user?: { id: string; displayName: string; phoneNumber: string; profilePhoto: string | null } })[]; lastMessage?: Message; unreadCount: number; labels: Label[] }>> {
     const userParticipations = await this.findChatParticipantsByUserId(userId);
     const chatIds = userParticipations.map((p) => p.chatId);
     
-    const results: Array<Chat & { participants: ChatParticipant[]; lastMessage?: Message; labels: Label[] }> = [];
+    const results: Array<Chat & { participants: (ChatParticipant & { user?: { id: string; displayName: string; phoneNumber: string; profilePhoto: string | null } })[]; lastMessage?: Message; unreadCount: number; labels: Label[] }> = [];
     
     for (const chatId of chatIds) {
       const chat = await this.findChatById(chatId);
       if (!chat) continue;
       
       const participants = await this.findChatParticipantsByChatId(chatId);
+      
+      // Enrich participants with user data (displayName, phoneNumber, profilePhoto)
+      const enrichedParticipants = await Promise.all(
+        participants.map(async (p) => {
+          const user = await this.findUserById(p.userId);
+          return {
+            ...p,
+            user: user ? {
+              id: user.id,
+              displayName: user.displayName,
+              phoneNumber: user.phoneNumber,
+              profilePhoto: user.profilePhoto,
+            } : undefined,
+          };
+        })
+      );
+      
       const messages = await this.findMessagesByChatId(chatId, 1);
+      
+      // Count unread messages (messages not sent by this user with status != 'read')
+      const userParticipant = participants.find(p => p.userId === userId);
+      let unreadCount = 0;
+      if (userParticipant) {
+        const allMessages = await this.messageRepository.find({
+          where: { chatId },
+          order: { createdAt: 'DESC' },
+        });
+        unreadCount = allMessages.filter(
+          m => m.senderId !== userId && m.status !== 'read' && 
+               (!userParticipant.lastReadAt || m.createdAt > userParticipant.lastReadAt)
+        ).length;
+      }
+      
       const chatLabelIds = (await this.findChatLabelsByChatId(chatId)).map((cl) => cl.labelId);
       const labels: Label[] = [];
       
@@ -592,8 +624,9 @@ export class DatabaseService implements OnModuleInit {
       
       results.push({
         ...chat,
-        participants,
+        participants: enrichedParticipants,
         lastMessage: messages[0],
+        unreadCount,
         labels,
       });
     }

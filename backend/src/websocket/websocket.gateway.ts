@@ -203,7 +203,7 @@ export class WebsocketGateway
     for (const participantId of participants) {
       this.websocketService.emitToUser(participantId, 'typing:indicator', {
         chatId: data.chatId,
-        oderId: client.userId,
+        userId: client.userId,
         isTyping: true,
       });
     }
