@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useCall } from '../context/CallContext';
+import { useToast } from './Toast';
 import { socketService } from '../services/socket';
 import { api } from '../services/api';
 import { Button } from './ui/button';
@@ -56,6 +57,7 @@ export function ChatArea() {
   const { user } = useAuth();
   const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats } = useChat();
   const { initiateCall, callState } = useCall();
+  const { showError } = useToast();
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -196,10 +198,11 @@ export function ChatArea() {
       }, 500);
     } catch (error) {
       console.error('Failed to upload media:', error);
+      showError('Failed to upload media', 'Please try again');
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [activeChat]);
+  }, [activeChat, showError]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>, type: MediaMessage['type']) => {
     const file = e.target.files?.[0];
@@ -245,8 +248,9 @@ export function ChatArea() {
       }, 1000);
     } catch (error) {
       console.error('Failed to start audio recording:', error);
+      showError('Microphone access denied', 'Please enable microphone permissions');
     }
-  }, [uploadAndSendMedia]);
+  }, [uploadAndSendMedia, showError]);
 
   const startVideoNoteRecording = useCallback(async () => {
     try {
@@ -292,8 +296,9 @@ export function ChatArea() {
       }, 1000);
     } catch (error) {
       console.error('Failed to start video recording:', error);
+      showError('Camera access denied', 'Please enable camera permissions');
     }
-  }, [uploadAndSendMedia]);
+  }, [uploadAndSendMedia, showError]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -537,17 +542,17 @@ export function ChatArea() {
                   <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
                     <Timer className="h-4 w-4" /> Disappearing messages
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); } catch { /* ignore */ } } }}>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); } catch { showError('Failed to toggle chat lock'); } } }}>
                     <Lock className="h-4 w-4" /> {activeChat?.isLocked ? 'Unlock chat' : 'Lock chat'}
                   </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { /* ignore */ } }}>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
                     <Star className="h-4 w-4" /> Starred messages
                   </button>
                   <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowWallpaperDialog(true); }}>
                     <Image className="h-4 w-4" /> Chat wallpaper
                   </button>
                   {activeChat?.pinnedMessageId ? (
-                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); } catch { /* ignore */ } } }}>
+                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); } catch { showError('Failed to unpin message'); } } }}>
                       <Pin className="h-4 w-4" /> Unpin message
                     </button>
                   ) : null}
@@ -995,7 +1000,7 @@ export function ChatArea() {
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
                   onClick={async () => {
                     if (activeChat) {
-                      try { await api.setDisappearingMessages(activeChat.id, opt.value); } catch { /* ignore */ }
+                      try { await api.setDisappearingMessages(activeChat.id, opt.value); } catch { showError('Failed to set disappearing messages'); }
                     }
                     setShowDisappearingDialog(false);
                   }}
@@ -1024,7 +1029,7 @@ export function ChatArea() {
                   style={{ backgroundColor: color === 'default' ? '#efeae2' : color }}
                   onClick={async () => {
                     if (activeChat) {
-                      try { await api.setChatWallpaper(activeChat.id, color === 'default' ? null : color); } catch { /* ignore */ }
+                      try { await api.setChatWallpaper(activeChat.id, color === 'default' ? null : color); } catch { showError('Failed to set wallpaper'); }
                     }
                     setShowWallpaperDialog(false);
                   }}
@@ -1294,7 +1299,7 @@ export function ChatArea() {
                       a.download = data.filename;
                       a.click();
                       URL.revokeObjectURL(url);
-                    } catch { /* ignore */ }
+                    } catch { showError('Failed to export chat as text'); }
                   }
                   setShowBackupDialog(false);
                 }}
@@ -1315,7 +1320,7 @@ export function ChatArea() {
                       a.download = data.filename;
                       a.click();
                       URL.revokeObjectURL(url);
-                    } catch { /* ignore */ }
+                    } catch { showError('Failed to export chat as JSON'); }
                   }
                   setShowBackupDialog(false);
                 }}
@@ -1380,7 +1385,7 @@ export function ChatArea() {
                     const validRules = chatbotRules.filter(r => r.trigger.trim() && r.response.trim());
                     try {
                       await api.configureChatbot(activeChat.id, { enabled: chatbotEnabled, rules: validRules });
-                    } catch { /* ignore */ }
+                    } catch { showError('Failed to save chatbot configuration'); }
                   }
                   setShowChatbotDialog(false);
                 }}
@@ -1445,7 +1450,7 @@ export function ChatArea() {
                     const validItems = orderItems.filter(item => item.name.trim() && item.price > 0).map((item, i) => ({ ...item, productId: `prod-${i}` }));
                     try {
                       await api.createOrder(activeChat.id, validItems);
-                    } catch { /* ignore */ }
+                    } catch { showError('Failed to create order'); }
                   }
                   setShowOrderDialog(false);
                   setOrderItems([{ productId: '', name: '', price: 0, quantity: 1 }]);

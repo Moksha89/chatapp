@@ -15,9 +15,9 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Register FCM push notification token' })
   async registerToken(
     @CurrentUser() user: CurrentUserData,
-    @Body() body: { token: string },
+    @Body() body: { token: string; platform?: string },
   ) {
-    this.notificationsService.registerToken(user.id, body.token);
+    await this.notificationsService.registerToken(user.id, body.token, body.platform || 'web');
     return { success: true };
   }
 
@@ -27,7 +27,7 @@ export class NotificationsController {
     @CurrentUser() user: CurrentUserData,
     @Body() body: { token: string },
   ) {
-    this.notificationsService.unregisterToken(user.id, body.token);
+    await this.notificationsService.unregisterToken(user.id, body.token);
     return { success: true };
   }
 }

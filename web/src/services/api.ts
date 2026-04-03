@@ -976,7 +976,8 @@ class ApiService {
 
   // GIF search via Tenor API
   async searchGifs(query: string) {
-    const tenorApiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ'; // Free Tenor API key
+    const tenorApiKey = import.meta.env.VITE_TENOR_API_KEY || '';
+    if (!tenorApiKey) throw new Error('Tenor API key not configured');
     const url = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${tenorApiKey}&limit=20&media_filter=gif`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('GIF search failed');
@@ -985,7 +986,8 @@ class ApiService {
   }
 
   async getTrendingGifs() {
-    const tenorApiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
+    const tenorApiKey = import.meta.env.VITE_TENOR_API_KEY || '';
+    if (!tenorApiKey) throw new Error('Tenor API key not configured');
     const url = `https://tenor.googleapis.com/v2/featured?key=${tenorApiKey}&limit=20&media_filter=gif`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('GIF fetch failed');

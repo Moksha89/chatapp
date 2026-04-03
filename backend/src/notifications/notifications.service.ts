@@ -1,11 +1,19 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as fs from 'fs';
+import { FcmTokenEntity } from '../database/entities/fcm-token.entity';
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
   private firebaseApp: admin.app.App | null = null;
+
+  constructor(
+    @InjectRepository(FcmTokenEntity)
+    private fcmTokenRepository: Repository<FcmTokenEntity>,
+  ) {}
 
   async onModuleInit() {
     try {
@@ -24,20 +32,26 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
-  // Store FCM tokens (in-memory for now, could be persisted to DB)
-  private fcmTokens: Map<string, string[]> = new Map();
-
-  registerToken(userId: string, token: string): void {
-    const tokens = this.fcmTokens.get(userId) || [];
-    if (!tokens.includes(token)) {
-      tokens.push(token);
-      this.fcmTokens.set(userId, tokens);
+  async registerToken(userId: string, token: string, platform: string = 'web'): Promise<void> {
+    const existing = await this.fcmTokenRepository.findOne({
+      where: { userId, token },
+    });
+    if (!existing) {
+      await this.fcmTokenRepository.save(
+        this.fcmTokenRepository.create({ userId, token, platform }),
+      );
+    } else {
+      await this.fcmTokenRepository.update(existing.id, { lastUsedAt: new Date() });
     }
   }
 
-  unregisterToken(userId: string, token: string): void {
-    const tokens = this.fcmTokens.get(userId) || [];
-    this.fcmTokens.set(userId, tokens.filter(t => t !== token));
+  async unregisterToken(userId: string, token: string): Promise<void> {
+    await this.fcmTokenRepository.delete({ userId, token });
+  }
+
+  async getTokensForUser(userId: string): Promise<string[]> {
+    const tokenEntities = await this.fcmTokenRepository.find({ where: { userId } });
+    return tokenEntities.map(t => t.token);
   }
 
   async sendPushNotification(
@@ -48,7 +62,7 @@ export class NotificationsService implements OnModuleInit {
   ): Promise<void> {
     if (!this.firebaseApp) return;
 
-    const tokens = this.fcmTokens.get(userId) || [];
+    const tokens = await this.getTokensForUser(userId);
     if (tokens.length === 0) return;
 
     try {
@@ -76,7 +90,7 @@ export class NotificationsService implements OnModuleInit {
 
       const response = await this.firebaseApp.messaging().sendEachForMulticast(message);
       
-      // Clean up invalid tokens
+      // Clean up invalid tokens from database
       if (response.failureCount > 0) {
         const invalidTokens: string[] = [];
         response.responses.forEach((resp, idx) => {
@@ -85,8 +99,9 @@ export class NotificationsService implements OnModuleInit {
           }
         });
         if (invalidTokens.length > 0) {
-          const validTokens = tokens.filter(t => !invalidTokens.includes(t));
-          this.fcmTokens.set(userId, validTokens);
+          for (const invalidToken of invalidTokens) {
+            await this.fcmTokenRepository.delete({ userId, token: invalidToken });
+          }
         }
       }
     } catch (error) {

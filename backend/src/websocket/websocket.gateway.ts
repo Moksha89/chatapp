@@ -367,11 +367,19 @@ export class WebsocketGateway
     return { success: true };
   }
 
-  // Group Call Support
+  // Group Call Support — server-side tracking for mesh networking
+  private activeGroupCalls: Map<string, {
+    chatId: string;
+    callType: 'audio' | 'video';
+    initiatorId: string;
+    participants: Set<string>;
+    createdAt: Date;
+  }> = new Map();
+
   @SubscribeMessage('call:group:initiate')
   async handleGroupCallInitiate(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string; callType: 'audio' | 'video'; offer: RTCSessionDescriptionInit },
+    @MessageBody() data: { chatId: string; callType: 'audio' | 'video' },
   ) {
     if (!client.userId) {
       return { error: 'Not authenticated' };
@@ -379,41 +387,123 @@ export class WebsocketGateway
 
     const callId = `gcall_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const caller = await this.usersService.findById(client.userId);
-    const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+    const chatParticipants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
 
-    for (const participantId of participants) {
+    // Track active group call with initiator as first participant
+    this.activeGroupCalls.set(callId, {
+      chatId: data.chatId,
+      callType: data.callType,
+      initiatorId: client.userId,
+      participants: new Set([client.userId]),
+      createdAt: new Date(),
+    });
+
+    // Notify all other chat members about the incoming group call
+    for (const participantId of chatParticipants) {
       this.websocketService.emitToUser(participantId, 'call:group:incoming', {
         callId,
         chatId: data.chatId,
         callerId: client.userId,
         callerName: caller?.displayName || 'Unknown',
         callType: data.callType,
-        offer: data.offer,
-        participants: [client.userId, ...participants],
+        participants: [client.userId, ...chatParticipants],
       });
     }
 
-    console.log(`Group call initiated: ${callId} in chat ${data.chatId}`);
-    return { success: true, callId, participants };
+    console.log(`Group call initiated: ${callId} in chat ${data.chatId} by ${client.userId}`);
+    return { success: true, callId, participants: [client.userId, ...chatParticipants] };
   }
 
   @SubscribeMessage('call:group:join')
   async handleGroupCallJoin(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { callId: string; chatId: string; answer: RTCSessionDescriptionInit },
+    @MessageBody() data: { callId: string; chatId: string },
   ) {
     if (!client.userId) {
       return { error: 'Not authenticated' };
     }
 
-    const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
-    for (const participantId of participants) {
+    const groupCall = this.activeGroupCalls.get(data.callId);
+    if (!groupCall) {
+      return { error: 'Group call not found or ended' };
+    }
+
+    // Get existing participants before adding the new one
+    const existingParticipants = Array.from(groupCall.participants);
+    groupCall.participants.add(client.userId);
+
+    // Notify existing participants that a new peer joined — they each need to create a peer connection
+    for (const participantId of existingParticipants) {
       this.websocketService.emitToUser(participantId, 'call:group:participant-joined', {
         callId: data.callId,
         userId: client.userId,
-        answer: data.answer,
+        existingPeers: existingParticipants.filter(id => id !== participantId),
       });
     }
+
+    // Tell the joining user who is already in the call so they can create peer connections
+    client.emit('call:group:peers', {
+      callId: data.callId,
+      peers: existingParticipants,
+    });
+
+    console.log(`User ${client.userId} joined group call ${data.callId} (${groupCall.participants.size} participants)`);
+    return { success: true, peers: existingParticipants };
+  }
+
+  // Per-peer offer for mesh networking (each participant pair creates a peer connection)
+  @SubscribeMessage('call:group:offer')
+  async handleGroupCallOffer(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string; offer: RTCSessionDescriptionInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    this.websocketService.emitToUser(data.targetUserId, 'call:group:offer', {
+      callId: data.callId,
+      fromUserId: client.userId,
+      offer: data.offer,
+    });
+
+    return { success: true };
+  }
+
+  // Per-peer answer for mesh networking
+  @SubscribeMessage('call:group:answer')
+  async handleGroupCallAnswer(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string; answer: RTCSessionDescriptionInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    this.websocketService.emitToUser(data.targetUserId, 'call:group:answer', {
+      callId: data.callId,
+      fromUserId: client.userId,
+      answer: data.answer,
+    });
+
+    return { success: true };
+  }
+
+  // Per-peer ICE candidate exchange for mesh networking
+  @SubscribeMessage('call:group:ice-candidate')
+  async handleGroupCallIceCandidate(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string; candidate: RTCIceCandidateInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    this.websocketService.emitToUser(data.targetUserId, 'call:group:ice-candidate', {
+      callId: data.callId,
+      fromUserId: client.userId,
+      candidate: data.candidate,
+    });
 
     return { success: true };
   }
@@ -427,12 +517,25 @@ export class WebsocketGateway
       return { error: 'Not authenticated' };
     }
 
-    const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
-    for (const participantId of participants) {
-      this.websocketService.emitToUser(participantId, 'call:group:participant-left', {
-        callId: data.callId,
-        userId: client.userId,
-      });
+    const groupCall = this.activeGroupCalls.get(data.callId);
+    if (groupCall) {
+      groupCall.participants.delete(client.userId);
+
+      // Notify remaining participants to close their peer connection with the leaving user
+      for (const participantId of groupCall.participants) {
+        this.websocketService.emitToUser(participantId, 'call:group:participant-left', {
+          callId: data.callId,
+          userId: client.userId,
+        });
+      }
+
+      // Clean up if no participants remain
+      if (groupCall.participants.size === 0) {
+        this.activeGroupCalls.delete(data.callId);
+        console.log(`Group call ${data.callId} ended — no participants remaining`);
+      } else {
+        console.log(`User ${client.userId} left group call ${data.callId} (${groupCall.participants.size} remaining)`);
+      }
     }
 
     return { success: true };

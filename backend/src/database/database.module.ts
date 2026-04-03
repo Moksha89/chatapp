@@ -19,6 +19,7 @@ import {
   BroadcastEntity,
   ProductEntity,
   AutoReplyEntity,
+  FcmTokenEntity,
 } from './entities';
 import { DatabaseService } from './database.service';
 
@@ -40,6 +41,7 @@ const entities = [
   BroadcastEntity,
   ProductEntity,
   AutoReplyEntity,
+  FcmTokenEntity,
 ];
 
 @Global()

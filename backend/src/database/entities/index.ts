@@ -15,3 +15,4 @@ export { StatusEntity } from './status.entity';
 export { BroadcastEntity } from './broadcast.entity';
 export { ProductEntity } from './product.entity';
 export { AutoReplyEntity } from './auto-reply.entity';
+export { FcmTokenEntity } from './fcm-token.entity';

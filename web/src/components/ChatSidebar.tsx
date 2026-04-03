@@ -305,7 +305,7 @@ export function ChatSidebar() {
                     setShowChannelDialog(false);
                     setChannelName('');
                     setChannelDesc('');
-                  } catch { /* ignore */ }
+                  } catch { alert('Failed to create channel'); }
                 }}
               >Create</button>
             </div>
@@ -344,7 +344,7 @@ export function ChatSidebar() {
                     setShowCommunityDialog(false);
                     setCommunityName('');
                     setCommunityDesc('');
-                  } catch { /* ignore */ }
+                  } catch { alert('Failed to create community'); }
                 }}
               >Create</button>
             </div>
