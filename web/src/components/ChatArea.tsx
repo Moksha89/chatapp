@@ -75,7 +75,7 @@ export function ChatArea() {
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
-  const [starredMessages, setStarredMessages] = useState<typeof messages>([]);
+  const [starredMessages, setStarredMessages] = useState<Array<{ id: string; chatId: string; senderId: string; content: string; type: string; createdAt: string; isStarred: boolean; status?: string }>>([]);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);

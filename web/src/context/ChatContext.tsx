@@ -48,6 +48,10 @@ interface Chat {
   }>;
   lastMessage?: Message;
   unreadCount: number;
+  wallpaper?: string | null;
+  isLocked?: boolean;
+  pinnedMessageId?: string | null;
+  disappearingMessagesDuration?: number | null;
 }
 
 interface ChatContextType {

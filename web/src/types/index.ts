@@ -10,13 +10,17 @@ export interface User {
 
 export interface Chat {
   id: string;
-  type: 'direct' | 'group';
+  type: 'direct' | 'group' | 'channel' | 'community';
   name?: string;
   participants: ChatParticipant[];
   lastMessage?: Message;
   unreadCount: number;
   createdAt: Date;
   updatedAt: Date;
+  wallpaper?: string | null;
+  isLocked?: boolean;
+  pinnedMessageId?: string | null;
+  disappearingMessagesDuration?: number | null;
 }
 
 export interface ChatParticipant {
