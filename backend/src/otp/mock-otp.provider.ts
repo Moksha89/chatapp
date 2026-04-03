@@ -41,7 +41,8 @@ export class MockOtpProvider implements OtpProvider {
       return { success: false, message: 'Invalid OTP' };
     }
 
-    this.otpStore.delete(phoneNumber);
+    // Don't delete OTP on verification - allow reuse until expiry
+    // This supports flows where login is tried first, then register
     return { success: true, message: 'OTP verified successfully' };
   }
 }
