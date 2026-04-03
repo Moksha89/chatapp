@@ -45,6 +45,26 @@ export class ChatsService {
     return user.readReceiptsEnabled ?? true;
   }
 
+  /**
+   * Enrich participants with user data (displayName, phoneNumber, profilePhoto)
+   */
+  private async enrichParticipants(participants: ChatParticipant[]) {
+    return Promise.all(
+      participants.map(async (p) => {
+        const user = await this.databaseService.findUserById(p.userId);
+        return {
+          ...p,
+          user: user ? {
+            id: user.id,
+            displayName: user.displayName,
+            phoneNumber: user.phoneNumber,
+            profilePhoto: user.profilePhoto,
+          } : undefined,
+        };
+      })
+    );
+  }
+
   async createChat(userId: string, data: CreateChatDto): Promise<Chat & { participants: ChatParticipant[] }> {
     if (data.type === 'direct') {
       if (!data.participantId) {
@@ -58,7 +78,8 @@ export class ChatsService {
 
       if (existingChat) {
         const participants = await this.databaseService.findChatParticipantsByChatId(existingChat.id);
-        return { ...existingChat, participants };
+        const enrichedParticipants = await this.enrichParticipants(participants);
+        return { ...existingChat, participants: enrichedParticipants };
       }
     }
 
@@ -105,7 +126,8 @@ export class ChatsService {
     }
 
     const participants = await this.databaseService.findChatParticipantsByChatId(chat.id);
-    return { ...chat, participants };
+    const enrichedParticipants = await this.enrichParticipants(participants);
+    return { ...chat, participants: enrichedParticipants };
   }
 
   async addParticipant(chatId: string, userId: string, newParticipantId: string): Promise<ChatParticipant> {
@@ -223,7 +245,8 @@ export class ChatsService {
     }
 
     const participants = await this.databaseService.findChatParticipantsByChatId(chatId);
-    return { ...chat, participants };
+    const enrichedParticipants = await this.enrichParticipants(participants);
+    return { ...chat, participants: enrichedParticipants };
   }
 
   async getMessages(

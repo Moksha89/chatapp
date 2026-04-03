@@ -172,6 +172,10 @@ class ApiService {
     });
   }
 
+  async getAllUsers() {
+    return this.request<Array<{ id: string; phoneNumber: string; displayName: string; profilePhoto: string | null; isBusiness: boolean }>>('/users/all');
+  }
+
   async getLabels() {
     return this.request<Array<{ id: string; name: string; color: string }>>('/labels');
   }

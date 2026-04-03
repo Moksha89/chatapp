@@ -45,8 +45,8 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
   const loadAllUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      // Search with empty string to get all users
-      const results = await api.searchUsers('');
+      // Use the /users/all endpoint to get all registered users
+      const results = await api.getAllUsers();
       // Filter out current user
       const filteredUsers = results.filter((u: User) => u.id !== currentUser?.id);
       setAllUsers(filteredUsers);
