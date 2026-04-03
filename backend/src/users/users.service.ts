@@ -59,7 +59,12 @@ export class UsersService {
 
   async searchByPhone(phoneNumber: string): Promise<User[]> {
     const users = await this.databaseService.getAllUsers();
-    return users.filter((u) => u.phoneNumber.includes(phoneNumber));
+    const query = phoneNumber.toLowerCase();
+    return users.filter(
+      (u) =>
+        u.phoneNumber.includes(phoneNumber) ||
+        (u.displayName && u.displayName.toLowerCase().includes(query)),
+    );
   }
 
   async getPublicProfile(id: string): Promise<{

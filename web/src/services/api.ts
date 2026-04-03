@@ -2,9 +2,47 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 
 class ApiService {
   private accessToken: string | null = null;
+  private refreshPromise: Promise<string | null> | null = null;
 
   setAccessToken(token: string | null) {
     this.accessToken = token;
+  }
+
+  private async tryRefreshToken(): Promise<string | null> {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) return null;
+
+    try {
+      const response = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      if (data.accessToken) {
+        this.accessToken = data.accessToken;
+        localStorage.setItem('accessToken', data.accessToken);
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
+        return data.accessToken;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async refreshAccessToken(): Promise<string | null> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.tryRefreshToken().finally(() => {
+        this.refreshPromise = null;
+      });
+    }
+    return this.refreshPromise;
   }
 
   private async request<T>(
@@ -24,6 +62,24 @@ class ApiService {
       ...options,
       headers,
     });
+
+    if (response.status === 401 && this.accessToken && !endpoint.startsWith('/auth/')) {
+      const newToken = await this.refreshAccessToken();
+      if (newToken) {
+        (headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
+        const retryResponse = await fetch(`${API_URL}${endpoint}`, {
+          ...options,
+          headers,
+        });
+
+        if (!retryResponse.ok) {
+          const error = await retryResponse.json().catch(() => ({ message: 'Request failed' }));
+          throw new Error(error.message || 'Request failed');
+        }
+
+        return retryResponse.json();
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }));

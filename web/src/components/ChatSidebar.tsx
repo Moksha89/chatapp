@@ -27,7 +27,7 @@ import { PrivacySettings } from './PrivacySettings';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
-  const { chats, activeChat, selectChat, isLoadingChats } = useChat();
+  const { chats, activeChat, selectChat, isLoadingChats, refreshChats } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities'>('all');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -330,6 +330,7 @@ export function ChatSidebar() {
                     setShowChannelDialog(false);
                     setChannelName('');
                     setChannelDesc('');
+                    await refreshChats();
                   } catch { alert('Failed to create channel'); }
                 }}
               >Create</button>
@@ -369,6 +370,7 @@ export function ChatSidebar() {
                     setShowCommunityDialog(false);
                     setCommunityName('');
                     setCommunityDesc('');
+                    await refreshChats();
                   } catch { alert('Failed to create community'); }
                 }}
               >Create</button>

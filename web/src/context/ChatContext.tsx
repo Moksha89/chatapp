@@ -401,6 +401,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       filtered = filtered.filter(c => c.unreadCount > 0);
     } else if (chatFilter === 'groups') {
       filtered = filtered.filter(c => c.type === 'group');
+    } else if (chatFilter === 'channels') {
+      filtered = filtered.filter(c => c.type === 'channel');
+    } else if (chatFilter === 'communities') {
+      filtered = filtered.filter(c => c.type === 'community');
     }
     if (searchQuery) {
       filtered = filtered.filter(c => {

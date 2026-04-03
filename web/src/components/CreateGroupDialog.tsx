@@ -48,7 +48,7 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
   const loadAllUsers = async () => {
     setIsLoading(true);
     try {
-      const results = await api.searchUsers('');
+      const results = await api.getAllUsers();
       const filteredUsers = results.filter((u: User) => u.id !== currentUser?.id);
       setAllUsers(filteredUsers);
     } catch (error) {
