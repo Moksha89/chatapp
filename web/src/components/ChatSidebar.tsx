@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -153,6 +153,13 @@ export function ChatSidebar() {
             <DropdownMenuItem onClick={() => setShowPrivacy(true)}>
               <Shield className="mr-2 h-4 w-4" />
               Privacy Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/version/download/android" className="flex items-center cursor-pointer">
+                <Download className="mr-2 h-4 w-4" />
+                Download Android App
+              </a>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="text-red-600">

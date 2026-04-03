@@ -468,6 +468,13 @@ export function ChatArea() {
           <h2 className="text-3xl font-light text-gray-700 mb-3">WhatsApp Business</h2>
           <p className="text-gray-500 text-base mb-6">Send and receive messages without keeping your phone online.</p>
           <p className="text-gray-400 text-sm">Use on up to 4 linked devices and 1 phone at the same time.</p>
+          <a
+            href="/version/download/android"
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-[#00a884] hover:bg-[#008069] text-white rounded-full text-sm font-medium shadow-sm transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Download Android App
+          </a>
           <div className="encryption-banner mt-8 inline-flex items-center gap-2 mx-auto">
             <Lock className="h-3 w-3" />
             End-to-end encrypted
