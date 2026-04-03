@@ -332,4 +332,101 @@ export class ChatsController {
   ) {
     return this.chatsService.votePoll(chatId, user.id, messageId, body.optionIndex);
   }
+
+  // Mark view-once message as viewed
+  @Post(':id/messages/:messageId/view-once')
+  @ApiOperation({ summary: 'Mark view-once message as viewed' })
+  @ApiResponse({ status: 200, description: 'View-once message marked as viewed' })
+  async markViewOnceViewed(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.chatsService.markViewOnceViewed(chatId, user.id, messageId);
+  }
+
+  // Export chat as text backup
+  @Get(':id/backup')
+  @ApiOperation({ summary: 'Export chat as text backup' })
+  @ApiResponse({ status: 200, description: 'Chat backup generated' })
+  @ApiQuery({ name: 'format', required: false, enum: ['json', 'text'] })
+  async backupChat(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+    @Query('format') format?: string,
+  ) {
+    return this.chatsService.backupChat(id, user.id, format || 'text');
+  }
+
+  // Chatbot auto-reply configuration
+  @Post(':id/chatbot')
+  @ApiOperation({ summary: 'Configure chatbot auto-reply for a chat' })
+  @ApiResponse({ status: 200, description: 'Chatbot configured' })
+  async configureChatbot(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { enabled: boolean; rules: Array<{ trigger: string; response: string }> },
+  ) {
+    return this.chatsService.configureChatbot(chatId, user.id, body);
+  }
+
+  // Get chatbot config
+  @Get(':id/chatbot')
+  @ApiOperation({ summary: 'Get chatbot configuration' })
+  @ApiResponse({ status: 200, description: 'Chatbot config retrieved' })
+  async getChatbot(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+  ) {
+    return this.chatsService.getChatbot(chatId, user.id);
+  }
+
+  // Submit flow response
+  @Post(':id/messages/:messageId/flow')
+  @ApiOperation({ summary: 'Submit a WhatsApp Flow response' })
+  @ApiResponse({ status: 200, description: 'Flow response submitted' })
+  async submitFlowResponse(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { formData: Record<string, string | number | boolean> },
+  ) {
+    return this.chatsService.submitFlowResponse(chatId, user.id, messageId, body.formData);
+  }
+
+  // Create order from catalog
+  @Post(':id/orders')
+  @ApiOperation({ summary: 'Create order from catalog products' })
+  @ApiResponse({ status: 201, description: 'Order created' })
+  async createOrder(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { items: Array<{ productId: string; name: string; price: number; quantity: number }> },
+  ) {
+    return this.chatsService.createOrder(chatId, user.id, body.items);
+  }
+
+  // Get orders for a chat
+  @Get(':id/orders')
+  @ApiOperation({ summary: 'Get orders for a chat' })
+  @ApiResponse({ status: 200, description: 'Orders retrieved' })
+  async getOrders(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+  ) {
+    return this.chatsService.getOrders(chatId, user.id);
+  }
+
+  // Update order status
+  @Put(':id/orders/:orderId')
+  @ApiOperation({ summary: 'Update order status' })
+  @ApiResponse({ status: 200, description: 'Order status updated' })
+  async updateOrderStatus(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Param('orderId') orderId: string,
+    @Body() body: { status: string },
+  ) {
+    return this.chatsService.updateOrderStatus(chatId, user.id, orderId, body.status);
+  }
 }

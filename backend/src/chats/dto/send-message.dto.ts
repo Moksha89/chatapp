@@ -51,4 +51,8 @@ export class SendMessageDto {
   @IsString()
   @IsOptional()
   replyToMessageId?: string;
+
+  @ApiPropertyOptional({ description: 'Whether this is a view-once media message' })
+  @IsOptional()
+  isViewOnce?: boolean;
 }

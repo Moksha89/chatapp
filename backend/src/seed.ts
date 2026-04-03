@@ -134,6 +134,8 @@ async function seed() {
     isDeleted: false,
     editedAt: null,
     expiresAt: null,
+    isViewOnce: false,
+    isViewed: false,
   });
 
   const message2 = await databaseService.createMessage({
@@ -159,6 +161,8 @@ async function seed() {
     isDeleted: false,
     editedAt: null,
     expiresAt: null,
+    isViewOnce: false,
+    isViewed: false,
   });
 
   const message3 = await databaseService.createMessage({
@@ -184,6 +188,8 @@ async function seed() {
     isDeleted: false,
     editedAt: null,
     expiresAt: null,
+    isViewOnce: false,
+    isViewed: false,
   });
 
   console.log('Created demo messages:');

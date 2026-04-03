@@ -32,7 +32,14 @@ import {
   User,
   BarChart3,
   Timer,
-  Lock
+  Lock,
+  Eye,
+  EyeOff,
+  Bot,
+  ShoppingCart,
+  Package,
+  FileDown,
+  Smile
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -73,6 +80,17 @@ export function ChatArea() {
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [starredMessages, setStarredMessages] = useState<Array<{ id: string; chatId: string; senderId: string; content: string; type: string; createdAt: string; isStarred: boolean; status?: string }>>([]);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [gifSearchQuery, setGifSearchQuery] = useState('');
+  const [gifResults, setGifResults] = useState<Array<{ id: string; title: string; media_formats: { gif: { url: string }; tinygif: { url: string } } }>>([]);
+  const [isLoadingGifs, setIsLoadingGifs] = useState(false);
+  const [showChatbotDialog, setShowChatbotDialog] = useState(false);
+  const [chatbotEnabled, setChatbotEnabled] = useState(false);
+  const [chatbotRules, setChatbotRules] = useState<Array<{ trigger: string; response: string }>>([{ trigger: '', response: '' }]);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [orderItems, setOrderItems] = useState<Array<{ productId: string; name: string; price: number; quantity: number }>>([{ productId: '', name: '', price: 0, quantity: 1 }]);
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [viewOnceMode, setViewOnceMode] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -534,8 +552,14 @@ export function ChatArea() {
                       <Pin className="h-4 w-4" /> Unpin message
                     </button>
                   ) : null}
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { const data = await api.exportChat(activeChat.id); const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `chat-export-${activeChat.id}.json`; a.click(); URL.revokeObjectURL(url); } catch { /* ignore */ } } }}>
-                    <Download className="h-4 w-4" /> Export chat
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowBackupDialog(true); }}>
+                    <FileDown className="h-4 w-4" /> Chat backup
+                  </button>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowChatbotDialog(true); if (activeChat) { api.getChatbot(activeChat.id).then(config => { setChatbotEnabled(config.enabled); if (config.rules.length > 0) setChatbotRules(config.rules); }).catch(() => {}); } }}>
+                    <Bot className="h-4 w-4" /> Chatbot auto-reply
+                  </button>
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowOrderDialog(true); }}>
+                    <ShoppingCart className="h-4 w-4" /> Create order
                   </button>
                 </div>
               </>
@@ -820,6 +844,15 @@ export function ChatArea() {
                     </div>
                     <span className="text-sm">Contact</span>
                   </button>
+                  <button
+                    onClick={() => { setShowAttachMenu(false); setShowGifPicker(true); setIsLoadingGifs(true); api.getTrendingGifs().then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false)); }}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
+                  >
+                    <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center">
+                      <Smile className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm">GIF</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -846,10 +879,21 @@ export function ChatArea() {
               onChange={(e) => handleFileSelect(e, 'file')}
             />
 
+            {/* View Once Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setViewOnceMode(!viewOnceMode)}
+              className={`rounded-full ${viewOnceMode ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+              title={viewOnceMode ? 'View once: ON' : 'View once: OFF'}
+            >
+              {viewOnceMode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </Button>
+
             {/* Text Input */}
             <div className="flex-1 relative">
               <textarea
-                placeholder="Type a message"
+                placeholder={viewOnceMode ? 'View once mode - media will disappear after viewing' : 'Type a message'}
                 className="w-full px-4 py-2.5 bg-white rounded-3xl border-0 focus:ring-2 focus:ring-green-500/20 resize-none text-sm"
                 value={inputValue}
                 onChange={handleInputChange}
@@ -1152,6 +1196,262 @@ export function ChatArea() {
             </div>
             <div className="flex justify-end mt-3">
               <Button variant="outline" onClick={() => setShowContactPicker(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GIF Picker Dialog */}
+      {showGifPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-lg max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Choose a GIF</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setShowGifPicker(false); setGifSearchQuery(''); setGifResults([]); }}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Search className="h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search GIFs..."
+                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-green-500/20"
+                value={gifSearchQuery}
+                onChange={(e) => {
+                  setGifSearchQuery(e.target.value);
+                  if (e.target.value.trim()) {
+                    setIsLoadingGifs(true);
+                    api.searchGifs(e.target.value).then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false));
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {isLoadingGifs ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-pulse text-gray-500">Loading GIFs...</div>
+                </div>
+              ) : gifResults.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 text-sm">No GIFs found. Try a different search.</div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {gifResults.map(gif => (
+                    <button
+                      key={gif.id}
+                      className="aspect-square overflow-hidden rounded-lg hover:opacity-80 transition-opacity"
+                      onClick={() => {
+                        const gifUrl = gif.media_formats?.gif?.url || gif.media_formats?.tinygif?.url || '';
+                        if (activeChat && gifUrl) {
+                          api.sendMediaMessage(activeChat.id, {
+                            content: gif.title || 'GIF',
+                            type: 'image',
+                            mediaUrl: gifUrl,
+                            mediaType: 'image/gif',
+                            mediaName: `${gif.title || 'gif'}.gif`,
+                            mediaSize: 0,
+                            tempId: `temp-${Date.now()}`,
+                          }).catch(() => {});
+                        }
+                        setShowGifPicker(false);
+                        setGifSearchQuery('');
+                        setGifResults([]);
+                      }}
+                    >
+                      <img
+                        src={gif.media_formats?.tinygif?.url || gif.media_formats?.gif?.url}
+                        alt={gif.title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2 text-center">Powered by Tenor</p>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Backup Dialog */}
+      {showBackupDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
+            <h3 className="font-semibold mb-3">Chat Backup</h3>
+            <p className="text-sm text-gray-500 mb-4">Download a backup of this chat conversation.</p>
+            <div className="space-y-2">
+              <Button
+                className="w-full bg-green-500 hover:bg-green-600"
+                onClick={async () => {
+                  if (activeChat) {
+                    try {
+                      const data = await api.backupChat(activeChat.id, 'text');
+                      const blob = new Blob([data.content], { type: data.mimeType });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = data.filename;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch { /* ignore */ }
+                  }
+                  setShowBackupDialog(false);
+                }}
+              >
+                <FileDown className="h-4 w-4 mr-2" /> Download as Text
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={async () => {
+                  if (activeChat) {
+                    try {
+                      const data = await api.backupChat(activeChat.id, 'json');
+                      const blob = new Blob([data.content], { type: data.mimeType });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = data.filename;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch { /* ignore */ }
+                  }
+                  setShowBackupDialog(false);
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" /> Download as JSON
+              </Button>
+            </div>
+            <div className="flex justify-end mt-3">
+              <Button variant="outline" onClick={() => setShowBackupDialog(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chatbot Auto-Reply Dialog */}
+      {showChatbotDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[70vh] flex flex-col">
+            <h3 className="font-semibold mb-3">Chatbot Auto-Reply</h3>
+            <p className="text-sm text-gray-500 mb-4">Set up automatic replies based on trigger keywords.</p>
+            <div className="flex items-center gap-2 mb-4">
+              <label className="text-sm font-medium">Enable chatbot:</label>
+              <button
+                className={`w-10 h-6 rounded-full transition-colors ${chatbotEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                onClick={() => setChatbotEnabled(!chatbotEnabled)}
+              >
+                <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${chatbotEnabled ? 'translate-x-4' : ''}`} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-3">
+              {chatbotRules.map((rule, i) => (
+                <div key={i} className="border rounded-lg p-3">
+                  <input
+                    type="text"
+                    placeholder="Trigger keyword (e.g. hello, help, price)"
+                    className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
+                    value={rule.trigger}
+                    onChange={(e) => { const rules = [...chatbotRules]; rules[i] = { ...rules[i], trigger: e.target.value }; setChatbotRules(rules); }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Auto-reply message"
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    value={rule.response}
+                    onChange={(e) => { const rules = [...chatbotRules]; rules[i] = { ...rules[i], response: e.target.value }; setChatbotRules(rules); }}
+                  />
+                  {chatbotRules.length > 1 && (
+                    <button className="text-xs text-red-500 mt-1" onClick={() => setChatbotRules(chatbotRules.filter((_, j) => j !== i))}>Remove</button>
+                  )}
+                </div>
+              ))}
+              <button className="text-sm text-green-600 hover:text-green-700" onClick={() => setChatbotRules([...chatbotRules, { trigger: '', response: '' }])}>
+                + Add rule
+              </button>
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <Button variant="outline" onClick={() => setShowChatbotDialog(false)}>Cancel</Button>
+              <Button
+                className="bg-green-500 hover:bg-green-600"
+                onClick={async () => {
+                  if (activeChat) {
+                    const validRules = chatbotRules.filter(r => r.trigger.trim() && r.response.trim());
+                    try {
+                      await api.configureChatbot(activeChat.id, { enabled: chatbotEnabled, rules: validRules });
+                    } catch { /* ignore */ }
+                  }
+                  setShowChatbotDialog(false);
+                }}
+              >Save</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Dialog */}
+      {showOrderDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[70vh] flex flex-col">
+            <h3 className="font-semibold mb-3">Create Order</h3>
+            <p className="text-sm text-gray-500 mb-4">Add items to create an order in this chat.</p>
+            <div className="flex-1 overflow-y-auto space-y-3">
+              {orderItems.map((item, i) => (
+                <div key={i} className="border rounded-lg p-3 space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Product name"
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    value={item.name}
+                    onChange={(e) => { const items = [...orderItems]; items[i] = { ...items[i], name: e.target.value, productId: `prod-${i}` }; setOrderItems(items); }}
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      placeholder="Price"
+                      className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                      value={item.price || ''}
+                      onChange={(e) => { const items = [...orderItems]; items[i] = { ...items[i], price: parseFloat(e.target.value) || 0 }; setOrderItems(items); }}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Qty"
+                      min="1"
+                      className="w-20 px-3 py-2 border rounded-lg text-sm"
+                      value={item.quantity}
+                      onChange={(e) => { const items = [...orderItems]; items[i] = { ...items[i], quantity: parseInt(e.target.value) || 1 }; setOrderItems(items); }}
+                    />
+                  </div>
+                  {orderItems.length > 1 && (
+                    <button className="text-xs text-red-500" onClick={() => setOrderItems(orderItems.filter((_, j) => j !== i))}>Remove</button>
+                  )}
+                </div>
+              ))}
+              <button className="text-sm text-green-600 hover:text-green-700" onClick={() => setOrderItems([...orderItems, { productId: '', name: '', price: 0, quantity: 1 }])}>
+                + Add item
+              </button>
+              <div className="border-t pt-2">
+                <p className="text-sm font-medium">Total: ${orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <Button variant="outline" onClick={() => { setShowOrderDialog(false); setOrderItems([{ productId: '', name: '', price: 0, quantity: 1 }]); }}>Cancel</Button>
+              <Button
+                className="bg-green-500 hover:bg-green-600"
+                disabled={!orderItems.some(item => item.name.trim() && item.price > 0)}
+                onClick={async () => {
+                  if (activeChat) {
+                    const validItems = orderItems.filter(item => item.name.trim() && item.price > 0).map((item, i) => ({ ...item, productId: `prod-${i}` }));
+                    try {
+                      await api.createOrder(activeChat.id, validItems);
+                    } catch { /* ignore */ }
+                  }
+                  setShowOrderDialog(false);
+                  setOrderItems([{ productId: '', name: '', price: 0, quantity: 1 }]);
+                }}
+              >Create Order</Button>
             </div>
           </div>
         </div>

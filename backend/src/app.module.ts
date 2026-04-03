@@ -18,6 +18,7 @@ import { ProductsModule } from './products/products.module';
 import { AutoRepliesModule } from './auto-replies/auto-replies.module';
 import { HealthModule } from './health/health.module';
 import { VersionModule } from './version/version.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { VersionModule } from './version/version.module';
     AutoRepliesModule,
     HealthModule,
     VersionModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

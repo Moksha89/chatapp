@@ -72,6 +72,12 @@ export class MessageEntity {
   @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 
+  @Column({ type: 'boolean', default: false })
+  isViewOnce: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  isViewed: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

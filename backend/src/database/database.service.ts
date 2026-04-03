@@ -135,6 +135,8 @@ export interface Message {
   isDeleted: boolean;
   editedAt: Date | null;
   expiresAt: Date | null;
+  isViewOnce: boolean;
+  isViewed: boolean;
 }
 
 export interface Label {

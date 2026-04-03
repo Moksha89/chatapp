@@ -317,6 +317,8 @@ export class ChatsService {
       isDeleted: false,
       editedAt: null,
       expiresAt: null,
+      isViewOnce: data.isViewOnce || false,
+      isViewed: false,
     });
 
     await this.databaseService.updateChat(chatId, { updatedAt: new Date() });
@@ -452,6 +454,8 @@ export class ChatsService {
       isDeleted: false,
       editedAt: null,
       expiresAt: null,
+      isViewOnce: false,
+      isViewed: false,
     });
 
     await this.databaseService.updateChat(targetChatId, { updatedAt: new Date() });
@@ -792,5 +796,345 @@ export class ChatsService {
       if (e instanceof BadRequestException || e instanceof NotFoundException) throw e;
       throw new BadRequestException('Invalid poll data');
     }
+  }
+
+  // Mark view-once message as viewed
+  async markViewOnceViewed(chatId: string, userId: string, messageId: string): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (!message.isViewOnce) {
+      throw new BadRequestException('Message is not view-once');
+    }
+
+    if (message.isViewed) {
+      throw new BadRequestException('Message already viewed');
+    }
+
+    // Only the recipient can mark as viewed (not the sender)
+    if (message.senderId === userId) {
+      throw new BadRequestException('Sender cannot mark own view-once message as viewed');
+    }
+
+    const updated = await this.databaseService.updateMessage(messageId, {
+      isViewed: true,
+    });
+    if (!updated) {
+      throw new NotFoundException('Message not found');
+    }
+    return updated;
+  }
+
+  // Chat backup in text or JSON format
+  async backupChat(chatId: string, userId: string, format: string): Promise<{ filename: string; content: string; mimeType: string }> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const chat = await this.databaseService.findChatById(chatId);
+    if (!chat) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const messages = await this.databaseService.getMessagesForExport(chatId);
+    const chatName = chat.name || 'Chat';
+
+    if (format === 'text') {
+      let text = `WhatsApp Chat Backup - ${chatName}\n`;
+      text += `Exported on: ${new Date().toISOString()}\n`;
+      text += `Total messages: ${messages.length}\n`;
+      text += '─'.repeat(50) + '\n\n';
+
+      for (const msg of messages) {
+        const date = new Date(msg.createdAt).toLocaleString();
+        const sender = msg.senderId;
+        if (msg.isDeleted) {
+          text += `[${date}] ${sender}: <This message was deleted>\n`;
+        } else if (msg.type === 'image' || msg.type === 'video' || msg.type === 'audio' || msg.type === 'document') {
+          text += `[${date}] ${sender}: <${msg.type}: ${msg.mediaName || 'attachment'}>\n`;
+        } else {
+          text += `[${date}] ${sender}: ${msg.content}\n`;
+        }
+      }
+
+      return {
+        filename: `${chatName}-backup.txt`,
+        content: text,
+        mimeType: 'text/plain',
+      };
+    }
+
+    // JSON format
+    return {
+      filename: `${chatName}-backup.json`,
+      content: JSON.stringify({
+        chatName,
+        chatId,
+        exportedAt: new Date().toISOString(),
+        messageCount: messages.length,
+        messages: messages.map(m => ({
+          id: m.id,
+          sender: m.senderId,
+          content: m.isDeleted ? '<deleted>' : m.content,
+          type: m.type,
+          mediaUrl: m.mediaUrl,
+          mediaName: m.mediaName,
+          createdAt: m.createdAt,
+          isEdited: m.isEdited,
+          isDeleted: m.isDeleted,
+        })),
+      }, null, 2),
+      mimeType: 'application/json',
+    };
+  }
+
+  // In-memory chatbot configurations (keyed by chatId)
+  private chatbotConfigs: Map<string, { enabled: boolean; rules: Array<{ trigger: string; response: string }> }> = new Map();
+
+  // Configure chatbot auto-reply
+  async configureChatbot(chatId: string, userId: string, config: { enabled: boolean; rules: Array<{ trigger: string; response: string }> }): Promise<{ chatId: string; enabled: boolean; rules: Array<{ trigger: string; response: string }> }> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    this.chatbotConfigs.set(chatId, config);
+    return { chatId, ...config };
+  }
+
+  // Get chatbot config
+  async getChatbot(chatId: string, userId: string): Promise<{ chatId: string; enabled: boolean; rules: Array<{ trigger: string; response: string }> }> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const config = this.chatbotConfigs.get(chatId) || { enabled: false, rules: [] };
+    return { chatId, ...config };
+  }
+
+  // Process incoming message for chatbot auto-reply
+  async processChatbotReply(chatId: string, message: Message): Promise<Message | null> {
+    const config = this.chatbotConfigs.get(chatId);
+    if (!config || !config.enabled || config.rules.length === 0) {
+      return null;
+    }
+
+    const content = message.content.toLowerCase();
+    for (const rule of config.rules) {
+      if (content.includes(rule.trigger.toLowerCase())) {
+        // Send auto-reply
+        const reply = await this.databaseService.createMessage({
+          chatId,
+          senderId: 'chatbot',
+          senderDeviceId: null,
+          content: rule.response,
+          ciphertext: null,
+          type: 'text',
+          status: 'sent',
+          mediaUrl: null,
+          mediaType: null,
+          mediaName: null,
+          mediaSize: null,
+          mediaDuration: null,
+          deliveredAt: null,
+          readAt: null,
+          isStarred: false,
+          forwardedFrom: null,
+          replyToMessageId: message.id,
+          reactions: null,
+          isEdited: false,
+          isDeleted: false,
+          editedAt: null,
+          expiresAt: null,
+          isViewOnce: false,
+          isViewed: false,
+        });
+        return reply;
+      }
+    }
+    return null;
+  }
+
+  // Submit flow response (interactive form in chat)
+  async submitFlowResponse(chatId: string, userId: string, messageId: string, formData: Record<string, string | number | boolean>): Promise<Message> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const message = await this.databaseService.findMessageById(messageId);
+    if (!message || message.chatId !== chatId || message.type !== 'flow') {
+      throw new NotFoundException('Flow message not found');
+    }
+
+    // Create a response message with the form data
+    const responseMessage = await this.databaseService.createMessage({
+      chatId,
+      senderId: userId,
+      senderDeviceId: null,
+      content: JSON.stringify({ flowId: messageId, formData }),
+      ciphertext: null,
+      type: 'flow_response',
+      status: 'sent',
+      mediaUrl: null,
+      mediaType: null,
+      mediaName: null,
+      mediaSize: null,
+      mediaDuration: null,
+      deliveredAt: null,
+      readAt: null,
+      isStarred: false,
+      forwardedFrom: null,
+      replyToMessageId: messageId,
+      reactions: null,
+      isEdited: false,
+      isDeleted: false,
+      editedAt: null,
+      expiresAt: null,
+      isViewOnce: false,
+      isViewed: false,
+    });
+
+    return responseMessage;
+  }
+
+  // In-memory orders store
+  private orders: Map<string, Array<{
+    id: string;
+    chatId: string;
+    userId: string;
+    items: Array<{ productId: string; name: string; price: number; quantity: number }>;
+    total: number;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>> = new Map();
+
+  // Create an order from catalog products
+  async createOrder(chatId: string, userId: string, items: Array<{ productId: string; name: string; price: number; quantity: number }>): Promise<{
+    id: string;
+    chatId: string;
+    userId: string;
+    items: Array<{ productId: string; name: string; price: number; quantity: number }>;
+    total: number;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    if (!items || items.length === 0) {
+      throw new BadRequestException('Order must have at least one item');
+    }
+
+    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const order = {
+      id: `order-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+      chatId,
+      userId,
+      items,
+      total,
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const chatOrders = this.orders.get(chatId) || [];
+    chatOrders.push(order);
+    this.orders.set(chatId, chatOrders);
+
+    // Send order message in chat
+    await this.databaseService.createMessage({
+      chatId,
+      senderId: userId,
+      senderDeviceId: null,
+      content: JSON.stringify({ orderId: order.id, items, total, status: 'pending' }),
+      ciphertext: null,
+      type: 'order',
+      status: 'sent',
+      mediaUrl: null,
+      mediaType: null,
+      mediaName: null,
+      mediaSize: null,
+      mediaDuration: null,
+      deliveredAt: null,
+      readAt: null,
+      isStarred: false,
+      forwardedFrom: null,
+      replyToMessageId: null,
+      reactions: null,
+      isEdited: false,
+      isDeleted: false,
+      editedAt: null,
+      expiresAt: null,
+      isViewOnce: false,
+      isViewed: false,
+    });
+
+    return order;
+  }
+
+  // Get orders for a chat
+  async getOrders(chatId: string, userId: string): Promise<Array<{
+    id: string;
+    chatId: string;
+    userId: string;
+    items: Array<{ productId: string; name: string; price: number; quantity: number }>;
+    total: number;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    return this.orders.get(chatId) || [];
+  }
+
+  // Update order status
+  async updateOrderStatus(chatId: string, userId: string, orderId: string, status: string): Promise<{
+    id: string;
+    chatId: string;
+    userId: string;
+    items: Array<{ productId: string; name: string; price: number; quantity: number }>;
+    total: number;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    const chatOrders = this.orders.get(chatId) || [];
+    const order = chatOrders.find(o => o.id === orderId);
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      throw new BadRequestException(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+    }
+
+    order.status = status;
+    order.updatedAt = new Date();
+
+    return order;
   }
 }

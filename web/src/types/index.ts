@@ -39,12 +39,44 @@ export interface Message {
   senderDeviceId?: string;
   content?: string;
   ciphertext?: string;
-  type: 'text' | 'image' | 'file' | 'audio';
+  type: 'text' | 'image' | 'file' | 'audio' | 'video' | 'poll' | 'location' | 'contact' | 'sticker' | 'template' | 'interactive' | 'flow' | 'flow_response' | 'order' | 'gif';
   status: 'sending' | 'sent' | 'delivered' | 'read';
   createdAt: Date;
   deliveredAt?: Date;
   readAt?: Date;
   tempId?: string;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  mediaName?: string | null;
+  mediaSize?: number | null;
+  mediaDuration?: number | null;
+  isStarred?: boolean;
+  forwardedFrom?: string | null;
+  replyToMessageId?: string | null;
+  reactions?: { [emoji: string]: string[] } | null;
+  isEdited?: boolean;
+  isDeleted?: boolean;
+  editedAt?: Date | null;
+  expiresAt?: Date | null;
+  isViewOnce?: boolean;
+  isViewed?: boolean;
+}
+
+export interface ChatbotConfig {
+  chatId: string;
+  enabled: boolean;
+  rules: Array<{ trigger: string; response: string }>;
+}
+
+export interface Order {
+  id: string;
+  chatId: string;
+  userId: string;
+  items: Array<{ productId: string; name: string; price: number; quantity: number }>;
+  total: number;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Label {

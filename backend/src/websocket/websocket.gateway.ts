@@ -367,6 +367,134 @@ export class WebsocketGateway
     return { success: true };
   }
 
+  // Group Call Support
+  @SubscribeMessage('call:group:initiate')
+  async handleGroupCallInitiate(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { chatId: string; callType: 'audio' | 'video'; offer: RTCSessionDescriptionInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    const callId = `gcall_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const caller = await this.usersService.findById(client.userId);
+    const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+
+    for (const participantId of participants) {
+      this.websocketService.emitToUser(participantId, 'call:group:incoming', {
+        callId,
+        chatId: data.chatId,
+        callerId: client.userId,
+        callerName: caller?.displayName || 'Unknown',
+        callType: data.callType,
+        offer: data.offer,
+        participants: [client.userId, ...participants],
+      });
+    }
+
+    console.log(`Group call initiated: ${callId} in chat ${data.chatId}`);
+    return { success: true, callId, participants };
+  }
+
+  @SubscribeMessage('call:group:join')
+  async handleGroupCallJoin(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; chatId: string; answer: RTCSessionDescriptionInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+    for (const participantId of participants) {
+      this.websocketService.emitToUser(participantId, 'call:group:participant-joined', {
+        callId: data.callId,
+        userId: client.userId,
+        answer: data.answer,
+      });
+    }
+
+    return { success: true };
+  }
+
+  @SubscribeMessage('call:group:leave')
+  async handleGroupCallLeave(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; chatId: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+    for (const participantId of participants) {
+      this.websocketService.emitToUser(participantId, 'call:group:participant-left', {
+        callId: data.callId,
+        userId: client.userId,
+      });
+    }
+
+    return { success: true };
+  }
+
+  // Proxy Support for Calls
+  @SubscribeMessage('call:proxy:configure')
+  async handleProxyConfigure(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { enabled: boolean; proxyServer?: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    // Store proxy configuration for the user's calls
+    // When enabled, ICE candidates will be relayed through TURN servers
+    const iceServers = data.enabled && data.proxyServer
+      ? [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: `turn:${data.proxyServer}`, username: 'proxy', credential: 'proxy' },
+        ]
+      : [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ];
+
+    client.emit('call:proxy:configured', {
+      enabled: data.enabled,
+      iceServers,
+    });
+
+    console.log(`Proxy ${data.enabled ? 'enabled' : 'disabled'} for user ${client.userId}`);
+    return { success: true, iceServers };
+  }
+
+  // View-once message viewed notification
+  @SubscribeMessage('message:view-once:viewed')
+  async handleViewOnceViewed(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { chatId: string; messageId: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      const message = await this.chatsService.markViewOnceViewed(data.chatId, client.userId, data.messageId);
+      
+      this.websocketService.emitToUser(message.senderId, 'message:view-once:opened', {
+        chatId: data.chatId,
+        messageId: data.messageId,
+        viewedBy: client.userId,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('View-once error:', error);
+      return { error: 'Failed to mark view-once message' };
+    }
+  }
+
   // Message Reactions
   @SubscribeMessage('message:reaction:add')
   async handleAddReaction(

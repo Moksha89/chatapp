@@ -922,6 +922,76 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Mark view-once message as viewed
+  async markViewOnceViewed(chatId: string, messageId: string) {
+    return this.request<{ id: string; isViewed: boolean }>(`/chats/${chatId}/messages/${messageId}/view-once`, {
+      method: 'POST',
+    });
+  }
+
+  // Chat backup
+  async backupChat(chatId: string, format: 'text' | 'json' = 'text') {
+    return this.request<{ filename: string; content: string; mimeType: string }>(`/chats/${chatId}/backup?format=${format}`);
+  }
+
+  // Chatbot configuration
+  async configureChatbot(chatId: string, config: { enabled: boolean; rules: Array<{ trigger: string; response: string }> }) {
+    return this.request<{ chatId: string; enabled: boolean; rules: Array<{ trigger: string; response: string }> }>(`/chats/${chatId}/chatbot`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async getChatbot(chatId: string) {
+    return this.request<{ chatId: string; enabled: boolean; rules: Array<{ trigger: string; response: string }> }>(`/chats/${chatId}/chatbot`);
+  }
+
+  // WhatsApp Flows
+  async submitFlowResponse(chatId: string, messageId: string, formData: Record<string, string | number | boolean>) {
+    return this.request<{ id: string }>(`/chats/${chatId}/messages/${messageId}/flow`, {
+      method: 'POST',
+      body: JSON.stringify({ formData }),
+    });
+  }
+
+  // Order management
+  async createOrder(chatId: string, items: Array<{ productId: string; name: string; price: number; quantity: number }>) {
+    return this.request<{ id: string; total: number; status: string }>(`/chats/${chatId}/orders`, {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  }
+
+  async getOrders(chatId: string) {
+    return this.request<Array<{ id: string; items: Array<{ productId: string; name: string; price: number; quantity: number }>; total: number; status: string; createdAt: string }>>(`/chats/${chatId}/orders`);
+  }
+
+  async updateOrderStatus(chatId: string, orderId: string, status: string) {
+    return this.request<{ id: string; status: string }>(`/chats/${chatId}/orders/${orderId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // GIF search via Tenor API
+  async searchGifs(query: string) {
+    const tenorApiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ'; // Free Tenor API key
+    const url = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${tenorApiKey}&limit=20&media_filter=gif`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('GIF search failed');
+    const data = await response.json();
+    return data.results as Array<{ id: string; title: string; media_formats: { gif: { url: string }; tinygif: { url: string } } }>;
+  }
+
+  async getTrendingGifs() {
+    const tenorApiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
+    const url = `https://tenor.googleapis.com/v2/featured?key=${tenorApiKey}&limit=20&media_filter=gif`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('GIF fetch failed');
+    const data = await response.json();
+    return data.results as Array<{ id: string; title: string; media_formats: { gif: { url: string }; tinygif: { url: string } } }>;
+  }
 }
 
 export const api = new ApiService();
