@@ -37,7 +37,6 @@ import {
   EyeOff,
   Bot,
   ShoppingCart,
-  Package,
   FileDown,
   Smile
 } from 'lucide-react';
