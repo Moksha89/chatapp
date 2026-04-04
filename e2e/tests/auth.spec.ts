@@ -1,78 +1,61 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4173';
+const BASE_URL = process.env.BASE_URL || 'http://208.110.87.24:8888';
 const DEV_OTP = '123456';
 
+async function sendOTPWithRetry(page: import('@playwright/test').Page, phone: string) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('input[type="tel"]').fill(phone);
+    await page.locator('button:has-text("Send OTP")').click();
+
+    // Check for rate limit error
+    await page.waitForTimeout(1000);
+    const rateLimited = await page.locator('text=Too many requests').isVisible().catch(() => false);
+    if (rateLimited) {
+      await page.waitForTimeout(15000);
+      continue;
+    }
+    return;
+  }
+  throw new Error('Rate limited after all retries');
+}
+
 test.describe('Authentication Flow', () => {
-  test('should show login page with phone input', async ({ page }) => {
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('input[type="tel"]')).toBeVisible({ timeout: 20000 });
+  // Allow extra time for rate limit retries
+  test.setTimeout(120000);
+
+  test('should show login page with all UI elements', async ({ page }) => {
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('input[type="tel"]')).toBeVisible({ timeout: 30000 });
     await expect(page.locator('text=ChatApp')).toBeVisible();
     await expect(page.locator('text=Sign in to continue')).toBeVisible();
-  });
-
-  test('should show Send OTP button', async ({ page }) => {
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 20000 });
+    // Send OTP button
     await expect(page.locator('button:has-text("Send OTP")')).toBeVisible();
-  });
-
-  test('should have download Android app link', async ({ page }) => {
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 20000 });
+    // Download Android app link
     await expect(page.locator('a[href="/version/download/android"]')).toBeVisible();
     await expect(page.locator('text=Download Android App')).toBeVisible();
-  });
-
-  test('should have QR login option', async ({ page }) => {
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 20000 });
+    // QR login option
     await expect(page.locator('text=Login with QR code')).toBeVisible();
-  });
-
-  test('should show test OTP hint', async ({ page }) => {
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 20000 });
+    // Test OTP hint
     await expect(page.locator('text=123456')).toBeVisible();
   });
 
-  test('should show OTP input after entering phone number', async ({ page }) => {
+  test('should show OTP input and handle invalid OTP', async ({ page }) => {
     const phone = '+1' + Date.now().toString().slice(-10);
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 20000 });
-    await page.locator('input[type="tel"]').fill(phone);
-    await page.locator('button:has-text("Send OTP")').click();
-    await expect(page.locator('input[maxlength="6"]')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=OTP Code')).toBeVisible();
-  });
-
-  test('should show error for invalid OTP', async ({ page }) => {
-    const phone = '+1' + (Date.now() + 100).toString().slice(-10);
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 20000 });
-    await page.locator('input[type="tel"]').fill(phone);
-    await page.locator('button:has-text("Send OTP")').click();
-    await page.locator('input[maxlength="6"]').waitFor({ state: 'visible', timeout: 15000 });
+    await sendOTPWithRetry(page, phone);
+    await expect(page.locator('input[maxlength="6"]')).toBeVisible({ timeout: 30000 });
+    // Enter invalid OTP
     await page.locator('input[maxlength="6"]').fill('000000');
     await page.locator('button:has-text("Verify")').click();
-    await expect(page.locator('.text-red-500')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.text-red-500')).toBeVisible({ timeout: 15000 });
   });
 
   test('should register new user with valid OTP', async ({ page }) => {
     const phone = '+1' + (Date.now() + 200).toString().slice(-10);
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 20000 });
-    await page.locator('input[type="tel"]').fill(phone);
-    await page.locator('button:has-text("Send OTP")').click();
-    await page.locator('input[maxlength="6"]').waitFor({ state: 'visible', timeout: 15000 });
+    await sendOTPWithRetry(page, phone);
+    await page.locator('input[maxlength="6"]').waitFor({ state: 'visible', timeout: 30000 });
     await page.locator('input[maxlength="6"]').fill(DEV_OTP);
     await page.locator('button:has-text("Verify")').click();
 

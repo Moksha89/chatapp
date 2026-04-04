@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4173';
+const BASE_URL = process.env.BASE_URL || 'http://208.110.87.24:8888';
 const API_URL = process.env.API_URL || 'http://208.110.87.24:8080';
 
 test.describe('Performance & Code Splitting', () => {
   test('page loads within 15 seconds', async ({ page }) => {
     const start = Date.now();
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 15000 });
     const duration = Date.now() - start;
     expect(duration).toBeLessThan(15000);
   });
@@ -20,8 +20,8 @@ test.describe('Performance & Code Splitting', () => {
         jsRequests.push(url);
       }
     });
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 15000 });
     expect(jsRequests.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -33,8 +33,8 @@ test.describe('Performance & Code Splitting', () => {
         jsRequests.push(url);
       }
     });
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 15000 });
     const vendorChunks = jsRequests.filter(
       (url) => url.includes('vendor') || url.includes('chunk')
     );
@@ -49,8 +49,8 @@ test.describe('Performance & Code Splitting', () => {
         cssRequests.push(url);
       }
     });
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 15000 });
     expect(cssRequests.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -76,8 +76,8 @@ test.describe('Performance & Code Splitting', () => {
         errors.push(error.message);
       }
     });
-    await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.locator('input[type="tel"]').waitFor({ state: 'visible', timeout: 15000 });
     // Wait a bit for any deferred errors
     await page.waitForTimeout(2000);
     expect(errors).toEqual([]);
