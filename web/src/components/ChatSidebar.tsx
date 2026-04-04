@@ -85,7 +85,7 @@ export function ChatSidebar() {
         return 'typing...';
       }
     }
-    if (!chat.lastMessage?.content) return 'No messages yet';
+    if (!chat.lastMessage) return 'No messages yet';
     const msg = chat.lastMessage;
     const msgContent = msg.content || '';
     const msgType = msg.type || 'text';

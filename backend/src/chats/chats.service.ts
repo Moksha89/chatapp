@@ -845,12 +845,13 @@ export class ChatsService {
     const messages = await this.databaseService.getMessagesForExport(chatId);
     const chatName = chat.name || 'Chat';
 
-    // Bug #12 fix: Build a sender name lookup map
+    // Bug #12 fix: Build a sender name lookup map using batch query
     const senderNames: Record<string, string> = {};
     const participants = await this.databaseService.findChatParticipantsByChatId(chatId);
-    for (const p of participants) {
-      const u = await this.databaseService.findUserById(p.userId);
-      if (u) senderNames[p.userId] = u.displayName || u.phoneNumber;
+    const participantUserIds = participants.map(p => p.userId);
+    const participantUsers = await this.databaseService.findUsersByIds(participantUserIds);
+    for (const u of participantUsers) {
+      senderNames[u.id] = u.displayName || u.phoneNumber;
     }
 
     if (format === 'text') {

@@ -611,59 +611,92 @@ export class DatabaseService implements OnModuleInit {
     const userParticipations = await this.findChatParticipantsByUserId(userId);
     const chatIds = userParticipations.map((p) => p.chatId);
     
+    if (chatIds.length === 0) return [];
+
+    // Batch fetch all chats in a single query
+    const chats = await this.chatRepository.find({ where: { id: In(chatIds) } }) as Chat[];
+    const chatMap = new Map(chats.map(c => [c.id, c]));
+
+    // Batch fetch all participants for all chats in a single query
+    const allParticipants = await this.chatParticipantRepository.find({ where: { chatId: In(chatIds) } }) as ChatParticipant[];
+    const participantsByChatId = new Map<string, ChatParticipant[]>();
+    const allUserIds = new Set<string>();
+    for (const p of allParticipants) {
+      if (!participantsByChatId.has(p.chatId)) participantsByChatId.set(p.chatId, []);
+      participantsByChatId.get(p.chatId)!.push(p);
+      allUserIds.add(p.userId);
+    }
+
+    // Batch fetch all users referenced by participants in a single query
+    const allUsers = await this.findUsersByIds(Array.from(allUserIds));
+    const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+    // Batch fetch last message per chat using a single query per chat (unavoidable for ORDER BY + LIMIT 1)
+    // But we can parallelize them
+    const lastMessagesPromises = chatIds.map(chatId => 
+      this.findMessagesByChatId(chatId, 1).then(msgs => ({ chatId, message: msgs[0] }))
+    );
+    const lastMessagesResults = await Promise.all(lastMessagesPromises);
+    const lastMessageMap = new Map(lastMessagesResults.map(r => [r.chatId, r.message]));
+
+    // Batch count unread messages using a single COUNT query per chat (parallelized)
+    const userParticipantsMap = new Map(allParticipants.filter(p => p.userId === userId).map(p => [p.chatId, p]));
+    const unreadCountPromises = chatIds.map(async (chatId) => {
+      const userParticipant = userParticipantsMap.get(chatId);
+      if (!userParticipant) return { chatId, count: 0 };
+      const qb = this.messageRepository.createQueryBuilder('msg')
+        .where('msg."chatId" = :chatId', { chatId })
+        .andWhere('msg."senderId" != :userId', { userId });
+      qb.andWhere('msg.status != :readStatus', { readStatus: 'read' });
+      if (userParticipant.lastReadAt) {
+        qb.andWhere('msg."createdAt" > :lastReadAt', { lastReadAt: userParticipant.lastReadAt });
+      }
+      const count = await qb.getCount();
+      return { chatId, count };
+    });
+    const unreadResults = await Promise.all(unreadCountPromises);
+    const unreadMap = new Map(unreadResults.map(r => [r.chatId, r.count]));
+
+    // Batch fetch all chat labels in a single query
+    const allChatLabels = await this.chatLabelRepository.find({ where: { chatId: In(chatIds) } }) as ChatLabel[];
+    const labelIdsByChatId = new Map<string, string[]>();
+    const allLabelIds = new Set<string>();
+    for (const cl of allChatLabels) {
+      if (!labelIdsByChatId.has(cl.chatId)) labelIdsByChatId.set(cl.chatId, []);
+      labelIdsByChatId.get(cl.chatId)!.push(cl.labelId);
+      allLabelIds.add(cl.labelId);
+    }
+
+    // Batch fetch all labels in a single query
+    const allLabels = allLabelIds.size > 0 
+      ? await this.labelRepository.find({ where: { id: In(Array.from(allLabelIds)) } }) as Label[]
+      : [];
+    const labelMap = new Map(allLabels.map(l => [l.id, l]));
+
+    // Assemble results
     const results: Array<Chat & { participants: (ChatParticipant & { user?: { id: string; displayName: string; phoneNumber: string; profilePhoto: string | null } })[]; lastMessage?: Message; unreadCount: number; labels: Label[] }> = [];
-    
+
     for (const chatId of chatIds) {
-      const chat = await this.findChatById(chatId);
+      const chat = chatMap.get(chatId);
       if (!chat) continue;
-      
-      const participants = await this.findChatParticipantsByChatId(chatId);
-      
-      // Enrich participants with user data (displayName, phoneNumber, profilePhoto)
-      const enrichedParticipants = await Promise.all(
-        participants.map(async (p) => {
-          const user = await this.findUserById(p.userId);
-          return {
-            ...p,
-            user: user ? {
-              id: user.id,
-              displayName: user.displayName,
-              phoneNumber: user.phoneNumber,
-              profilePhoto: user.profilePhoto,
-            } : undefined,
-          };
-        })
-      );
-      
-      const messages = await this.findMessagesByChatId(chatId, 1);
-      
-      // Count unread messages (messages not sent by this user with status != 'read')
-      const userParticipant = participants.find(p => p.userId === userId);
-      let unreadCount = 0;
-      if (userParticipant) {
-        const allMessages = await this.messageRepository.find({
-          where: { chatId },
-          order: { createdAt: 'DESC' },
-        });
-        unreadCount = allMessages.filter(
-          m => m.senderId !== userId && m.status !== 'read' && 
-               (!userParticipant.lastReadAt || m.createdAt > userParticipant.lastReadAt)
-        ).length;
-      }
-      
-      const chatLabelIds = (await this.findChatLabelsByChatId(chatId)).map((cl) => cl.labelId);
-      const labels: Label[] = [];
-      
-      for (const labelId of chatLabelIds) {
-        const label = await this.findLabelById(labelId);
-        if (label) labels.push(label);
-      }
-      
+
+      const participants = participantsByChatId.get(chatId) || [];
+      const enrichedParticipants = participants.map(p => {
+        const u = userMap.get(p.userId);
+        return {
+          ...p,
+          user: u ? { id: u.id, displayName: u.displayName, phoneNumber: u.phoneNumber, profilePhoto: u.profilePhoto } : undefined,
+        };
+      });
+
+      const chatLabelIds = labelIdsByChatId.get(chatId) || [];
+      const labels = chatLabelIds.map(lid => labelMap.get(lid)).filter((l): l is Label => !!l);
+
       results.push({
         ...chat,
         participants: enrichedParticipants,
-        lastMessage: messages[0],
-        unreadCount,
+        lastMessage: lastMessageMap.get(chatId),
+        unreadCount: unreadMap.get(chatId) || 0,
         labels,
       });
     }

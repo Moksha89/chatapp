@@ -178,7 +178,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!activeChat || messages.length === 0) return;
     const oldestMessage = messages[0];
     try {
-      const olderMessages = await api.getMessages(activeChat.id, 50, oldestMessage.id);
+      const olderMessages = await api.getMessages(activeChat.id, 50, oldestMessage.createdAt);
       setMessages((prev) => [...(olderMessages as Message[]), ...prev]);
     } catch (error) {
       console.error('Failed to load more messages:', error);
@@ -510,7 +510,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           }
 
           // Feature #9: Play notification sound for incoming messages
-          if (message.senderId !== user?.id) {
+          // Only play sound when NOT viewing the active chat or window is hidden
+          if (message.senderId !== user?.id && (activeChat?.id !== chatId || document.hidden)) {
             try {
               const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
               const oscillator = audioCtx.createOscillator();
@@ -526,10 +527,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             } catch { /* audio context may not be available */ }
           }
 
+          // Only increment unread count for chats that are NOT currently active
           setChats((prev) =>
             prev.map((chat) =>
               chat.id === chatId
-                ? { ...chat, lastMessage: decryptedMessage, unreadCount: chat.unreadCount + 1 }
+                ? { ...chat, lastMessage: decryptedMessage, unreadCount: activeChat?.id === chatId ? 0 : chat.unreadCount + 1 }
                 : chat
             )
           );
