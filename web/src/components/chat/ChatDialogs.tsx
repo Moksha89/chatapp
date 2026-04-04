@@ -24,7 +24,7 @@ interface Participant {
   userId: string;
   role?: string;
   user?: {
-    id?: string;
+    id: string;
     displayName?: string;
     phoneNumber?: string;
     profilePhoto?: string;
@@ -42,6 +42,7 @@ interface ActiveChat {
   disappearingMessagesDuration?: number | null;
   description?: string | null;
   unreadCount?: number;
+  lastMessage?: unknown;
 }
 
 interface ChatDialogsProps {
@@ -50,7 +51,6 @@ interface ChatDialogsProps {
   user: { id: string; displayName?: string; phoneNumber?: string } | null;
   chats: ActiveChat[];
   refreshChats: () => Promise<void>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   selectChat: (chat: ActiveChat | null) => void;
 
   // Edit message
