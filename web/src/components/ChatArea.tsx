@@ -42,14 +42,7 @@ import {
   Smile,
   Upload,
   Users,
-  Shield,
-  LogOut,
-  UserPlus,
-  UserMinus,
-  ChevronLeft,
-  ChevronRight,
-  Volume2,
-  ZoomIn
+  LogOut
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -109,7 +102,6 @@ export function ChatArea() {
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [globalSearchResults, setGlobalSearchResults] = useState<Array<{ id: string; chatId: string; content: string; createdAt: string }>>([]);
-  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1681,7 +1673,7 @@ export function ChatArea() {
                               try {
                                 const result = await api.uploadMedia(file);
                                 await api.updateProfile({ profilePhoto: result.url });
-                                setProfilePhotoFile(null);
+                                // photo uploaded successfully
                               } catch {
                                 showError('Failed to upload profile photo');
                               }
