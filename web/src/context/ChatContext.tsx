@@ -41,9 +41,11 @@ interface Chat {
   id: string;
   type: string;
   name?: string;
+  description?: string | null;
   participants: Array<{
     id: string;
     userId: string;
+    role?: string;
     user?: User;
   }>;
   lastMessage?: Message;
