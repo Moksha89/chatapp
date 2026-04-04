@@ -43,10 +43,8 @@ import {
   Upload,
   Users,
   LogOut,
-  ArrowDown,
   ChevronDown,
   BellOff,
-  Trash2,
   Hash,
   Globe
 } from 'lucide-react';

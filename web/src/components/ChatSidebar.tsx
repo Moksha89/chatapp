@@ -27,7 +27,7 @@ import { PrivacySettings } from './PrivacySettings';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
-  const { chats, activeChat, selectChat, isLoadingChats, refreshChats, typingUsers, onlineUsers } = useChat();
+  const { chats, activeChat, selectChat, isLoadingChats, refreshChats, typingUsers } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities'>('all');
   const [showNewChat, setShowNewChat] = useState(false);
