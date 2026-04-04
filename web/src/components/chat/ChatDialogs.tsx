@@ -134,6 +134,7 @@ interface ChatDialogsProps {
 export function ChatDialogs(props: ChatDialogsProps) {
   const { showError } = useToast();
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
+  const gifDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const {
     activeChat, userId, user, chats, refreshChats, selectChat,
     editingMessage, editMessage, setEditingMessage,
@@ -469,9 +470,14 @@ export function ChatDialogs(props: ChatDialogsProps) {
                 value={gifSearchQuery}
                 onChange={(e) => {
                   setGifSearchQuery(e.target.value);
-                  if (e.target.value.trim()) {
+                  // Bug #6 fix: Debounce GIF search to avoid excessive API calls
+                  if (gifDebounceRef.current) clearTimeout(gifDebounceRef.current);
+                  const query = e.target.value;
+                  if (query.trim()) {
                     setIsLoadingGifs(true);
-                    api.searchGifs(e.target.value).then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false));
+                    gifDebounceRef.current = setTimeout(() => {
+                      api.searchGifs(query).then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false));
+                    }, 400);
                   }
                 }}
                 autoFocus
@@ -938,6 +944,8 @@ export function ChatDialogs(props: ChatDialogsProps) {
                       await api.leaveGroup(activeChat.id);
                       setShowChannelInfo(false);
                       selectChat(null);
+                      // Bug #2 fix: Refresh sidebar after leaving channel/community
+                      await refreshChats();
                     } catch { showError(`Failed to leave ${activeChat.type}`); }
                   }
                 }}

@@ -150,6 +150,19 @@ export function ChatArea() {
     setShowScrollToBottom(distanceFromBottom > 200);
   }, []);
 
+  // Bug #5 fix: Attach scroll listener to the actual Radix viewport element
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
+    if (!viewport) return;
+    const onScroll = () => {
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      setShowScrollToBottom(distanceFromBottom > 200);
+    };
+    viewport.addEventListener('scroll', onScroll);
+    return () => viewport.removeEventListener('scroll', onScroll);
+  }, [activeChat]);
+
   const scrollToBottom = () => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
@@ -210,6 +223,10 @@ export function ChatArea() {
     sendMessage(inputValue.trim(), replyingTo?.id);
     setInputValue('');
     setReplyingTo(null);
+
+    // Bug #7 fix: Reset textarea height after sending multiline message
+    const textarea = document.querySelector('textarea[placeholder="Type a message"]') as HTMLTextAreaElement;
+    if (textarea) textarea.style.height = 'auto';
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);

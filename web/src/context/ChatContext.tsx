@@ -105,6 +105,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Message[]>([]);
   const [chatFilter, setChatFilter] = useState('all');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
 
   const initializeE2EE = useCallback(async () => {
     if (!isAuthenticated || !deviceId) return;
@@ -175,15 +177,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated]);
 
   const loadMoreMessages = useCallback(async () => {
-    if (!activeChat || messages.length === 0) return;
+    if (!activeChat || messages.length === 0 || isLoadingMore || !hasMoreMessages) return;
     const oldestMessage = messages[0];
+    setIsLoadingMore(true);
     try {
       const olderMessages = await api.getMessages(activeChat.id, 50, oldestMessage.createdAt);
-      setMessages((prev) => [...(olderMessages as Message[]), ...prev]);
+      if ((olderMessages as Message[]).length === 0) {
+        setHasMoreMessages(false);
+      } else {
+        setMessages((prev) => [...(olderMessages as Message[]), ...prev]);
+      }
     } catch (error) {
       console.error('Failed to load more messages:', error);
+    } finally {
+      setIsLoadingMore(false);
     }
-  }, [activeChat, messages]);
+  }, [activeChat, messages, isLoadingMore, hasMoreMessages]);
 
   // Feature #3 fix: Clear unread count and mark messages read when entering chat
   const selectChat = useCallback((chat: Chat | null) => {
@@ -191,6 +200,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (chat) {
       // Clear unread count in sidebar immediately
       setChats(prev => prev.map(c => c.id === chat.id ? { ...c, unreadCount: 0 } : c));
+      // Reset pagination state for new chat
+      setHasMoreMessages(true);
+      setIsLoadingMore(false);
       // Load messages and mark unread as read in a single API call
       setIsLoadingMessages(true);
       api.getMessages(chat.id).then((msgs: unknown[]) => {
@@ -524,6 +536,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
               oscillator.start(audioCtx.currentTime);
               oscillator.stop(audioCtx.currentTime + 0.15);
+              // Bug #4 fix: Close AudioContext after sound finishes to prevent resource leak
+              oscillator.onended = () => { audioCtx.close(); };
             } catch { /* audio context may not be available */ }
           }
 
@@ -546,6 +560,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             : msg
         )
       );
+      // Bug #1 fix: Also update sidebar lastMessage status
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.lastMessage?.tempId === tempId
+            ? { ...chat, lastMessage: { ...chat.lastMessage, id: messageId, status: 'sent', createdAt: timestamp } }
+            : chat
+        )
+      );
     };
 
     const handleMessageDelivered = (data: unknown) => {
@@ -555,6 +577,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           msg.id === messageId ? { ...msg, status: 'delivered' } : msg
         )
       );
+      // Bug #1 fix: Also update sidebar lastMessage status
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.lastMessage?.id === messageId
+            ? { ...chat, lastMessage: { ...chat.lastMessage, status: 'delivered' } }
+            : chat
+        )
+      );
     };
 
     const handleMessageRead = (data: unknown) => {
@@ -562,6 +592,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setMessages((prev) =>
         prev.map((msg) =>
           messageIds.includes(msg.id) ? { ...msg, status: 'read' } : msg
+        )
+      );
+      // Bug #1 fix: Also update sidebar lastMessage status
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.lastMessage && messageIds.includes(chat.lastMessage.id)
+            ? { ...chat, lastMessage: { ...chat.lastMessage, status: 'read' } }
+            : chat
         )
       );
     };
