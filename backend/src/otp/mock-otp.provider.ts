@@ -4,7 +4,7 @@ import { OtpProvider, OtpSendResult, OtpVerifyResult } from './otp-provider.inte
 
 @Injectable()
 export class MockOtpProvider implements OtpProvider {
-  private otpStore: Map<string, { otp: string; expiresAt: Date }> = new Map();
+  private otpStore: Map<string, { otp: string; expiresAt: Date; usageCount: number }> = new Map();
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -13,15 +13,15 @@ export class MockOtpProvider implements OtpProvider {
     const otp = devOtp || Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    this.otpStore.set(phoneNumber, { otp, expiresAt });
+    this.otpStore.set(phoneNumber, { otp, expiresAt, usageCount: 0 });
 
     console.log(`[MOCK SMS] OTP for ${phoneNumber}: ${otp}`);
 
-    const isDev = this.configService.get('NODE_ENV') !== 'production';
+    const nodeEnv = this.configService.get('NODE_ENV');
     return {
       success: true,
       message: 'OTP sent successfully (mock)',
-      otp: isDev ? otp : undefined,
+      otp: nodeEnv !== 'production' ? otp : undefined,
     };
   }
 
@@ -41,8 +41,11 @@ export class MockOtpProvider implements OtpProvider {
       return { success: false, message: 'Invalid OTP' };
     }
 
-    // Don't delete OTP on verification - allow reuse until expiry
-    // This supports flows where login is tried first, then register
+    // Allow up to 2 uses (login attempt + register), then invalidate
+    stored.usageCount++;
+    if (stored.usageCount >= 2) {
+      this.otpStore.delete(phoneNumber);
+    }
     return { success: true, message: 'OTP verified successfully' };
   }
 }

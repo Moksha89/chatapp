@@ -25,9 +25,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("../release-key.jks")
-            storePassword = "chatapp123"
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "chatapp123"
             keyAlias = "chatapp"
-            keyPassword = "chatapp123"
+            keyPassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "chatapp123"
         }
     }
 

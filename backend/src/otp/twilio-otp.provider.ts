@@ -9,7 +9,7 @@ interface TwilioClient {
 @Injectable()
 export class TwilioOtpProvider implements OtpProvider {
   private readonly logger = new Logger(TwilioOtpProvider.name);
-  private otpStore: Map<string, { otp: string; expiresAt: Date }> = new Map();
+  private otpStore: Map<string, { otp: string; expiresAt: Date; usageCount: number }> = new Map();
   private twilioClient: TwilioClient | null = null;
   private initPromise: Promise<void>;
 
@@ -47,7 +47,7 @@ export class TwilioOtpProvider implements OtpProvider {
     const otp = devOtp || Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    this.otpStore.set(normalizedPhone, { otp, expiresAt });
+    this.otpStore.set(normalizedPhone, { otp, expiresAt, usageCount: 0 });
     this.logger.log(`OTP stored for ${normalizedPhone}`);
 
     if (!this.twilioClient) {
@@ -109,9 +109,12 @@ export class TwilioOtpProvider implements OtpProvider {
       return { success: false, message: 'Invalid OTP' };
     }
 
-    // Don't delete OTP on success - let it expire naturally after 5 minutes
-    // This allows multiple verification attempts (e.g., login fails -> register) to work
-    this.logger.log(`OTP verified successfully for ${normalizedPhone}`);
+    // Allow up to 2 uses (login attempt + register), then invalidate
+    stored.usageCount++;
+    if (stored.usageCount >= 2) {
+      this.otpStore.delete(normalizedPhone);
+    }
+    this.logger.log(`OTP verified successfully for ${normalizedPhone} (usage ${stored.usageCount || 'invalidated'})`);
     return { success: true, message: 'OTP verified successfully' };
   }
 }

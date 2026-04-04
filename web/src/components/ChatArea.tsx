@@ -6,7 +6,7 @@ import { useToast } from './Toast';
 import { socketService } from '../services/socket';
 import { api } from '../services/api';
 import { Button } from './ui/button';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { MessageContextMenu, MessageReactions, EditMessageDialog } from './MessageContextMenu';
 import { 
@@ -109,8 +109,22 @@ export function ChatArea() {
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [globalSearchResults, setGlobalSearchResults] = useState<Array<{ id: string; chatId: string; content: string; createdAt: string }>>([]);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
-  const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
+  const [mutedChats, setMutedChats] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('mutedChats');
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [availableUsersForAdd, setAvailableUsersForAdd] = useState<Array<{ id: string; displayName: string; phoneNumber: string }>>([]);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
+
+  // Fix #2: Persist mute notifications to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('mutedChats', JSON.stringify(Array.from(mutedChats)));
+    } catch { /* ignore storage errors */ }
+  }, [mutedChats]);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -567,6 +581,11 @@ export function ChatArea() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar className="h-10 w-10 mr-3">
+          {(() => {
+            const otherP = activeChat?.participants.find(p => p.userId !== user?.id);
+            const photo = activeChat?.type === 'direct' ? (otherP?.user as { profilePhoto?: string } | undefined)?.profilePhoto : undefined;
+            return photo ? <AvatarImage src={photo} alt={getChatName()} /> : null;
+          })()}
           <AvatarFallback className="bg-[#00a884] text-white font-medium">
             {getChatInitials()}
           </AvatarFallback>
@@ -1782,21 +1801,14 @@ export function ChatArea() {
                   try {
                     const allUsers = await api.getAllUsers();
                     const existingIds = activeChat.participants.map(p => p.userId);
-                    const availableUsers = allUsers.filter((u: { id: string }) => !existingIds.includes(u.id));
-                    if (availableUsers.length === 0) {
+                    const available = allUsers.filter((u: { id: string }) => !existingIds.includes(u.id));
+                    if (available.length === 0) {
                       showError('No more users to add');
                       return;
                     }
-                    const userName = prompt(`Add member:\n${availableUsers.map((u: { id: string; displayName: string }, i: number) => `${i + 1}. ${u.displayName}`).join('\n')}\n\nEnter number:`);
-                    if (userName) {
-                      const idx = parseInt(userName) - 1;
-                      if (idx >= 0 && idx < availableUsers.length) {
-                        await api.addParticipant(activeChat.id, availableUsers[idx].id);
-                        await refreshChats();
-                        showError('Member added successfully');
-                      }
-                    }
-                  } catch { showError('Failed to add member'); }
+                    setAvailableUsersForAdd(available as Array<{ id: string; displayName: string; phoneNumber: string }>);
+                    setShowAddMemberDialog(true);
+                  } catch { showError('Failed to load users'); }
                 }}
               >
                 <Users className="h-4 w-4 mr-2" /> Add Member
@@ -2109,6 +2121,51 @@ export function ChatArea() {
                   setOrderItems([{ productId: '', name: '', price: 0, quantity: 1 }]);
                 }}
               >Create Order</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fix #3: Add Member Dialog (replaces browser prompt()) */}
+      {showAddMemberDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm max-h-[60vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Add Member</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowAddMemberDialog(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {availableUsersForAdd.map(u => (
+                <button
+                  key={u.id}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 rounded-lg text-left transition-colors"
+                  onClick={async () => {
+                    if (activeChat) {
+                      try {
+                        await api.addParticipant(activeChat.id, u.id);
+                        await refreshChats();
+                        setShowAddMemberDialog(false);
+                        setAvailableUsersForAdd([]);
+                      } catch { showError('Failed to add member'); }
+                    }
+                  }}
+                >
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-[#00a884] text-white text-xs">
+                      {u.displayName.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{u.displayName}</p>
+                    <p className="text-xs text-gray-500">{u.phoneNumber}</p>
+                  </div>
+                </button>
+              ))}
+              {availableUsersForAdd.length === 0 && (
+                <p className="text-center text-sm text-gray-500 py-4">No users available to add</p>
+              )}
             </div>
           </div>
         </div>

@@ -17,8 +17,14 @@ export class NotificationsService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
-      if (fs.existsSync(serviceAccountPath)) {
+      // Check multiple possible locations for the Firebase service account file
+      const possiblePaths = [
+        process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
+        path.join(process.cwd(), 'firebase-service-account.json'),
+        path.join(__dirname, '..', '..', 'firebase-service-account.json'),
+      ].filter(Boolean) as string[];
+      const serviceAccountPath = possiblePaths.find(p => fs.existsSync(p)) || '';
+      if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
         const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
         this.firebaseApp = admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
