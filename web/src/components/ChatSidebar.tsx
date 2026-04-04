@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,7 @@ import { PrivacySettings } from './PrivacySettings';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
-  const { chats, activeChat, selectChat, isLoadingChats, refreshChats } = useChat();
+  const { chats, activeChat, selectChat, isLoadingChats, refreshChats, typingUsers, onlineUsers } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities'>('all');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -73,6 +73,18 @@ export function ChatSidebar() {
   };
 
   const getLastMessagePreview = (chat: typeof chats[0]) => {
+    // Show typing indicator in sidebar
+    const chatTyping = typingUsers.get(chat.id);
+    if (chatTyping && chatTyping.size > 0) {
+      const typingIds = Array.from(chatTyping).filter(id => id !== user?.id);
+      if (typingIds.length > 0) {
+        if (chat.type === 'group' || chat.type === 'channel' || chat.type === 'community') {
+          const names = typingIds.map(id => chat.participants.find(p => p.userId === id)?.user?.displayName || 'Someone');
+          return `${names.join(', ')} typing...`;
+        }
+        return 'typing...';
+      }
+    }
     if (!chat.lastMessage?.content) return 'No messages yet';
     const content = chat.lastMessage.content;
     if (chat.type === 'group' || chat.type === 'channel' || chat.type === 'community') {
@@ -82,6 +94,23 @@ export function ChatSidebar() {
       return sender ? `${sender}: ${content}` : content;
     }
     return content;
+  };
+
+  const isTypingInChat = (chat: typeof chats[0]) => {
+    const chatTyping = typingUsers.get(chat.id);
+    if (!chatTyping) return false;
+    const typingIds = Array.from(chatTyping).filter(id => id !== user?.id);
+    return typingIds.length > 0;
+  };
+
+  const getMessageStatusIcon = (chat: typeof chats[0]) => {
+    if (!chat.lastMessage || chat.lastMessage.senderId !== user?.id) return null;
+    switch (chat.lastMessage.status) {
+      case 'sent': return <Check className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />;
+      case 'delivered': return <CheckCheck className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />;
+      case 'read': return <CheckCheck className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />;
+      default: return null;
+    }
   };
 
   const getChatName = (chat: typeof chats[0]) => {
@@ -233,7 +262,7 @@ export function ChatSidebar() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex gap-1 mt-2 flex-wrap">
+        <div className="flex gap-1 mt-2 flex-wrap filter-pills-container">
           {(['all', 'unread', 'groups', 'channels', 'communities'] as const).map((filter) => (
             <button
               key={filter}
@@ -300,7 +329,8 @@ export function ChatSidebar() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500 truncate">
+                  <span className={`text-sm truncate flex items-center gap-1 ${isTypingInChat(chat) ? 'text-[#00a884] italic' : 'text-gray-500'}`}>
+                    {!isTypingInChat(chat) && getMessageStatusIcon(chat)}
                     {getLastMessagePreview(chat)}
                   </span>
                   {chat.unreadCount > 0 && (

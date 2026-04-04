@@ -589,6 +589,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Real-time poll vote updates
+    const handlePollVoteUpdated = (data: unknown) => {
+      const { chatId, messageId, content } = data as { chatId: string; messageId: string; content: string };
+      if (activeChat?.id === chatId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, content } : msg
+          )
+        );
+      }
+    };
+
     // Real-time edit updates from other users
     const handleMessageEdited = (data: unknown) => {
       const { chatId, messageId, content, editedAt } = data as { 
@@ -644,6 +656,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const unsubMessageEdited = socketService.on('message:edited', handleMessageEdited);
     const unsubMessageDeleted = socketService.on('message:deleted', handleMessageDeleted);
     const unsubPresence = socketService.on('presence:update', handlePresenceUpdate);
+    const unsubPollVote = socketService.on('poll:vote:updated', handlePollVoteUpdated);
 
     return () => {
       unsubNewMessage();
@@ -655,6 +668,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unsubMessageEdited();
       unsubMessageDeleted();
       unsubPresence();
+      unsubPollVote();
     };
   }, [isAuthenticated, activeChat]);
 

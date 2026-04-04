@@ -43,7 +43,12 @@ import {
   Upload,
   Users,
   LogOut,
-  ArrowDown
+  ArrowDown,
+  ChevronDown,
+  BellOff,
+  Trash2,
+  Hash,
+  Globe
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -635,50 +640,83 @@ export function ChatArea() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
                 <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl py-1 min-w-[200px] z-50 context-menu-enter">
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
-                    <Timer className="h-4 w-4" /> Disappearing messages
-                  </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); } catch { showError('Failed to toggle chat lock'); } } }}>
-                    <Lock className="h-4 w-4" /> {activeChat?.isLocked ? 'Unlock chat' : 'Lock chat'}
-                  </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
-                    <Star className="h-4 w-4" /> Starred messages
-                  </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowWallpaperDialog(true); }}>
-                    <Image className="h-4 w-4" /> Chat wallpaper
-                  </button>
-                  {activeChat?.pinnedMessageId ? (
-                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); } catch { showError('Failed to unpin message'); } } }}>
-                      <Pin className="h-4 w-4" /> Unpin message
-                    </button>
-                  ) : null}
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowBackupDialog(true); }}>
-                    <FileDown className="h-4 w-4" /> Chat backup
-                  </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowChatbotDialog(true); if (activeChat) { api.getChatbot(activeChat.id).then(config => { setChatbotEnabled(config.enabled); if (config.rules.length > 0) setChatbotRules(config.rules); }).catch(() => {}); } }}>
-                    <Bot className="h-4 w-4" /> Chatbot auto-reply
-                  </button>
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowOrderDialog(true); }}>
-                    <ShoppingCart className="h-4 w-4" /> Create order
-                  </button>
-                  {activeChat?.type === 'group' && (
-                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGroupInfo(true); }}>
-                      <Users className="h-4 w-4" /> Group info
-                    </button>
+                  {/* Context-sensitive menu items based on chat type */}
+                  {activeChat?.type === 'channel' ? (
+                    <>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowChannelInfo(true); }}>
+                        <Hash className="h-4 w-4" /> Channel info
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGlobalSearch(true); }}>
+                        <Search className="h-4 w-4" /> Search messages
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
+                        <Star className="h-4 w-4" /> Starred messages
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); /* mute */ }}>
+                        <BellOff className="h-4 w-4" /> Mute notifications
+                      </button>
+                    </>
+                  ) : activeChat?.type === 'community' ? (
+                    <>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowChannelInfo(true); }}>
+                        <Globe className="h-4 w-4" /> Community info
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGlobalSearch(true); }}>
+                        <Search className="h-4 w-4" /> Search messages
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
+                        <Star className="h-4 w-4" /> Starred messages
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); /* mute */ }}>
+                        <BellOff className="h-4 w-4" /> Mute notifications
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {activeChat?.type === 'group' && (
+                        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGroupInfo(true); }}>
+                          <Users className="h-4 w-4" /> Group info
+                        </button>
+                      )}
+                      {activeChat?.type === 'direct' && (
+                        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowContactDetails(true); }}>
+                          <User className="h-4 w-4" /> Contact info
+                        </button>
+                      )}
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGlobalSearch(true); }}>
+                        <Search className="h-4 w-4" /> Search messages
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); /* mute */ }}>
+                        <BellOff className="h-4 w-4" /> Mute notifications
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
+                        <Star className="h-4 w-4" /> Starred messages
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
+                        <Timer className="h-4 w-4" /> Disappearing messages
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); } catch { showError('Failed to toggle chat lock'); } } }}>
+                        <Lock className="h-4 w-4" /> {activeChat?.isLocked ? 'Unlock chat' : 'Lock chat'}
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowWallpaperDialog(true); }}>
+                        <Image className="h-4 w-4" /> Chat wallpaper
+                      </button>
+                      {activeChat?.pinnedMessageId ? (
+                        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); } catch { showError('Failed to unpin message'); } } }}>
+                          <Pin className="h-4 w-4" /> Unpin message
+                        </button>
+                      ) : null}
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowBackupDialog(true); }}>
+                        <FileDown className="h-4 w-4" /> Chat backup
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowChatbotDialog(true); if (activeChat) { api.getChatbot(activeChat.id).then(config => { setChatbotEnabled(config.enabled); if (config.rules.length > 0) setChatbotRules(config.rules); }).catch(() => {}); } }}>
+                        <Bot className="h-4 w-4" /> Chatbot auto-reply
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowOrderDialog(true); }}>
+                        <ShoppingCart className="h-4 w-4" /> Create order
+                      </button>
+                    </>
                   )}
-                  {(activeChat?.type === 'channel' || activeChat?.type === 'community') && (
-                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowChannelInfo(true); }}>
-                      <Users className="h-4 w-4" /> {activeChat?.type === 'channel' ? 'Channel info' : 'Community info'}
-                    </button>
-                  )}
-                  {activeChat?.type === 'direct' && (
-                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowContactDetails(true); }}>
-                      <User className="h-4 w-4" /> Contact info
-                    </button>
-                  )}
-                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGlobalSearch(true); }}>
-                    <Search className="h-4 w-4" /> Search messages
-                  </button>
                 </div>
               </>
             )}
@@ -719,24 +757,33 @@ export function ChatArea() {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    {activeChat?.type === 'direct' && (
-                      <div className="encryption-banner inline-flex items-center gap-2 mb-4">
-                        <Lock className="h-3 w-3" />
-                        Messages are end-to-end encrypted. No one outside of this chat can read them.
-                      </div>
-                    )}
-                    <p className="text-gray-500 text-sm">
-                      {activeChat?.type === 'channel' 
-                        ? (activeChat.participants.find(p => p.userId === user?.id && p.role === 'admin') 
-                          ? 'Post the first message to this channel' 
-                          : 'Only admins can post in this channel')
-                        : activeChat?.type === 'community' ? 'Welcome to the community' : 'Send a message to start chatting'}
-                    </p>
+            <div className="text-center">
+              {activeChat?.type === 'direct' && (
+                <div className="encryption-banner inline-flex items-center gap-2 mb-4">
+                  <Lock className="h-3 w-3" />
+                  Messages are end-to-end encrypted. No one outside of this chat can read them.
+                </div>
+              )}
+              <p className="text-gray-500 text-sm">
+                {activeChat?.type === 'channel'
+                  ? (activeChat.participants.find(p => p.userId === user?.id && p.role === 'admin')
+                    ? 'Post the first message to this channel'
+                    : 'Only admins can post in this channel')
+                  : activeChat?.type === 'community' ? 'Welcome to the community' : 'Send a message to start chatting'}
+              </p>
             </div>
           </div>
         ) : (
           <div className="space-y-2">
+            {/* E2EE banner at top of messages for direct chats */}
+            {activeChat?.type === 'direct' && (
+              <div className="flex items-center justify-center my-3">
+                <div className="encryption-banner inline-flex items-center gap-2">
+                  <Lock className="h-3 w-3" />
+                  Messages are end-to-end encrypted. No one outside of this chat can read them.
+                </div>
+              </div>
+            )}
             {(chatSearchQuery ? messages.filter(m => m.content?.toLowerCase().includes(chatSearchQuery.toLowerCase())) : messages).map((message, msgIndex, filteredMsgs) => {
               const isOwn = message.senderId === user?.id;
               const isMedia = ['image', 'video', 'audio', 'video-note', 'file', 'poll', 'location', 'contact'].includes(message.type);
@@ -746,17 +793,25 @@ export function ChatArea() {
                   {/* Feature #8: Date separators */}
                   {shouldShowDateSeparator(msgIndex, filteredMsgs) && (
                     <div className="flex items-center justify-center my-3">
-                      <div className="bg-white/80 text-gray-500 text-xs px-3 py-1 rounded-lg shadow-sm">
-                        {formatDateSeparator(message.createdAt)}
-                      </div>
+                        <div className="bg-white text-gray-600 text-[11px] font-medium px-3 py-1.5 rounded-lg shadow-sm">
+                          {formatDateSeparator(message.createdAt)}
+                        </div>
                     </div>
                   )}
                 <div
-                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group msg-enter`}
+                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group msg-enter relative`}
                 >
-                  <div className={`flex items-start gap-1 ${isOwn ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-start gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
+                    {/* Sender avatar in group messages */}
+                    {!isOwn && (activeChat?.type === 'group' || activeChat?.type === 'community' || activeChat?.type === 'channel') && (
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarFallback className="bg-[#00a884] text-white text-xs">
+                          {getSenderName(message.senderId).slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div
-                      className={`max-w-[70%] lg:max-w-[50%] px-3 py-2 rounded-lg shadow-sm ${
+                      className={`w-fit max-w-[70%] lg:max-w-[60%] px-3 py-1.5 rounded-lg shadow-sm ${
                         isOwn
                           ? 'bg-[#d9fdd3] rounded-tr-none'
                           : 'bg-white rounded-tl-none'
@@ -792,9 +847,9 @@ export function ChatArea() {
                       ) : (
                         <p className="text-sm break-words text-gray-800">{message.content}</p>
                       )}
-                      <div className="flex items-center justify-end gap-1 mt-1">
+                      <div className="flex items-center justify-end gap-1 mt-0.5">
                         {message.isStarred && !message.isDeleted && (
-                          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                          <Star className="h-2.5 w-2.5 text-yellow-500 fill-yellow-500" />
                         )}
                         {message.isEdited && !message.isDeleted && (
                           <span className="text-[10px] text-gray-400">edited</span>
@@ -841,15 +896,15 @@ export function ChatArea() {
         )}
       </ScrollArea>
 
-      {/* Scroll to bottom button */}
+      {/* Scroll to bottom button with new message indicator */}
       {showScrollToBottom && (
         <div className="absolute bottom-24 right-6 z-10">
           <Button
             onClick={scrollToBottom}
-            className="rounded-full bg-white shadow-lg hover:bg-gray-50 text-gray-600 h-10 w-10 p-0"
+            className="rounded-full bg-white shadow-lg hover:bg-gray-50 text-gray-600 h-10 w-10 p-0 relative"
             size="icon"
           >
-            <ArrowDown className="h-5 w-5" />
+            <ChevronDown className="h-5 w-5" />
           </Button>
         </div>
       )}
@@ -913,7 +968,7 @@ export function ChatArea() {
         <div className="px-4 py-2 bg-white border-t flex items-center gap-3">
           <div className="border-l-4 border-[#00a884] pl-2 flex-1 min-w-0">
             <p className="text-xs font-medium text-[#008069]">
-              {replyingTo.senderId === user?.id ? 'You' : 'Them'}
+              {replyingTo.senderId === user?.id ? 'You' : getSenderName(replyingTo.senderId)}
             </p>
             <p className="text-xs text-gray-500 truncate">{replyingTo.content}</p>
           </div>
@@ -1067,20 +1122,52 @@ export function ChatArea() {
               {showEmojiPicker && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
-                  <div className="absolute bottom-12 left-0 bg-white rounded-xl shadow-xl p-3 z-20 w-[280px]">
-                    <div className="grid grid-cols-8 gap-1">
-                      {['\uD83D\uDE00','\uD83D\uDE02','\uD83D\uDE0D','\uD83E\uDD23','\uD83D\uDE4F','\uD83D\uDC4D','\u2764\uFE0F','\uD83D\uDD25','\uD83C\uDF89','\uD83D\uDE22','\uD83D\uDE31','\uD83D\uDE0E','\uD83E\uDD14','\uD83D\uDE18','\uD83D\uDE4C','\uD83D\uDCAF','\uD83C\uDF1F','\uD83D\uDC4C','\uD83D\uDE09','\uD83D\uDE01','\uD83D\uDE14','\uD83D\uDE33','\uD83D\uDC4B','\uD83D\uDE80','\uD83C\uDF38','\uD83D\uDCA5','\uD83C\uDF08','\uD83C\uDF82','\u2705','\u274C','\uD83D\uDCAC','\uD83C\uDFC6'].map(emoji => (
-                        <button
-                          key={emoji}
-                          className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg"
-                          onClick={() => {
-                            setInputValue(prev => prev + emoji);
-                            setShowEmojiPicker(false);
-                          }}
-                        >
-                          {emoji}
-                        </button>
+                  <div className="absolute bottom-12 left-0 bg-white rounded-xl shadow-xl z-20 w-[320px] max-h-[320px] flex flex-col">
+                    <div className="flex border-b px-2 pt-2 gap-1 text-xs">
+                      {[{label:'Smileys',key:'smileys'},{label:'People',key:'people'},{label:'Nature',key:'nature'},{label:'Food',key:'food'},{label:'Objects',key:'objects'},{label:'Symbols',key:'symbols'}].map(cat => (
+                        <button key={cat.key} className="px-2 py-1.5 rounded-t hover:bg-gray-100 text-gray-500 font-medium whitespace-nowrap" onClick={() => {
+                          const el = document.getElementById(`emoji-cat-${cat.key}`);
+                          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }}>{cat.label}</button>
                       ))}
+                    </div>
+                    <div className="overflow-y-auto p-2 flex-1">
+                      <p id="emoji-cat-smileys" className="text-[10px] text-gray-400 font-medium mb-1 mt-1">Smileys & Emotion</p>
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','😎','🥳','🤠','😤','😭','😱','😳','🥺','😨','😰','😥','😢'].map(emoji => (
+                          <button key={emoji} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg" onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }}>{emoji}</button>
+                        ))}
+                      </div>
+                      <p id="emoji-cat-people" className="text-[10px] text-gray-400 font-medium mb-1 mt-2">People & Gestures</p>
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💪','🦾','🫂','👤','👥','🫡','🫶'].map(emoji => (
+                          <button key={emoji} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg" onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }}>{emoji}</button>
+                        ))}
+                      </div>
+                      <p id="emoji-cat-nature" className="text-[10px] text-gray-400 font-medium mb-1 mt-2">Animals & Nature</p>
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦅','🦆','🦋','🐛','🌸','🌹','🌺','🌻','🌼','🌷','🌱','🌲','🌳','🍀'].map(emoji => (
+                          <button key={emoji} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg" onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }}>{emoji}</button>
+                        ))}
+                      </div>
+                      <p id="emoji-cat-food" className="text-[10px] text-gray-400 font-medium mb-1 mt-2">Food & Drink</p>
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {['🍎','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍒','🍑','🥭','🍍','🥥','🥝','🍔','🍕','🌮','🍜','🍣','🍦','🍩','🍪','🎂','🍫','☕','🍵','🥤','🍺'].map(emoji => (
+                          <button key={emoji} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg" onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }}>{emoji}</button>
+                        ))}
+                      </div>
+                      <p id="emoji-cat-objects" className="text-[10px] text-gray-400 font-medium mb-1 mt-2">Objects & Activities</p>
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {['⚽','🏀','🏈','⚾','🎾','🏐','🎱','🏓','🎮','🎲','🎭','🎨','🎬','🎤','🎧','🎵','🎹','🎸','🎺','📱','💻','⌨️','🖥️','📷','📹','💡','🔦','📚','✏️','📝','💼','📎'].map(emoji => (
+                          <button key={emoji} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg" onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }}>{emoji}</button>
+                        ))}
+                      </div>
+                      <p id="emoji-cat-symbols" className="text-[10px] text-gray-400 font-medium mb-1 mt-2">Symbols</p>
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💯','💢','💥','💫','💦','💨','🔥','⭐','🌟','✨','🎉','🎊','✅','❌','❓','❗','💬','🗨️','💭','🏆','🥇','🥈','🥉','🏅'].map(emoji => (
+                          <button key={emoji} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg" onClick={() => { setInputValue(prev => prev + emoji); setShowEmojiPicker(false); }}>{emoji}</button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </>
@@ -1089,9 +1176,9 @@ export function ChatArea() {
 
             {/* Text Input */}
             <div className="flex-1 relative">
-              <textarea
-                placeholder={viewOnceMode ? 'View once mode - media will disappear after viewing' : 'Type a message'}
-                className="w-full px-4 py-2.5 bg-white rounded-3xl border-0 focus:ring-2 focus:ring-[#00a884]/20 resize-none text-sm"
+                <textarea
+                  placeholder={viewOnceMode ? 'View once mode - media will disappear after viewing' : activeChat?.type === 'channel' ? 'Broadcast a message...' : activeChat?.type === 'group' ? 'Message group...' : activeChat?.type === 'community' ? 'Message community...' : 'Type a message'}
+                  className="w-full px-4 py-2.5 bg-white rounded-3xl border-0 focus:ring-2 focus:ring-[#00a884]/20 resize-none text-sm"
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
@@ -1126,7 +1213,7 @@ export function ChatArea() {
       {/* Click outside to close attach menu */}
       {showAttachMenu && (
         <div 
-          className="fixed inset-0 z-0" 
+          className="fixed inset-0 z-[5]" 
           onClick={() => setShowAttachMenu(false)}
         />
       )}
