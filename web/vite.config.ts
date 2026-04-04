@@ -30,6 +30,9 @@ export default defineConfig({
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }
+            if (id.includes('recharts') || id.includes('d3-')) {
+              return 'vendor-charts';
+            }
             if (id.includes('socket.io') || id.includes('engine.io')) {
               return 'vendor-socket';
             }

@@ -12,6 +12,7 @@ const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ defau
 const ChatSidebar = lazy(() => import('./components/ChatSidebar').then(m => ({ default: m.ChatSidebar })));
 const ChatArea = lazy(() => import('./components/ChatArea').then(m => ({ default: m.ChatArea })));
 const CallDialog = lazy(() => import('./components/CallDialog').then(m => ({ default: m.CallDialog })));
+const AdminPanel = lazy(() => import('./admin/AdminPanel'));
 
 function ResponsiveLayout() {
   const { activeChat } = useChat();
@@ -97,6 +98,19 @@ function LoadingSpinner() {
 }
 
 function App() {
+  // Check if we're on the /admin route
+  const isAdminRoute = window.location.pathname.startsWith('/admin');
+
+  if (isAdminRoute) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingSpinner />}>
+          <AdminPanel />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <ToastProvider>

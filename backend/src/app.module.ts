@@ -19,6 +19,7 @@ import { AutoRepliesModule } from './auto-replies/auto-replies.module';
 import { HealthModule } from './health/health.module';
 import { VersionModule } from './version/version.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     HealthModule,
     VersionModule,
     NotificationsModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

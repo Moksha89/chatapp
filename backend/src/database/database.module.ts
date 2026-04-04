@@ -24,6 +24,7 @@ import {
   OrderEntity,
 } from './entities';
 import { DatabaseService } from './database.service';
+import { AuditLogEntity } from '../admin/audit-log.entity';
 
 const entities = [
   UserEntity,
@@ -46,6 +47,7 @@ const entities = [
   FcmTokenEntity,
   ChatbotConfigEntity,
   OrderEntity,
+  AuditLogEntity,
 ];
 
 @Global()
