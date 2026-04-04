@@ -40,7 +40,8 @@ interface ActiveChat {
   pinnedMessageId?: string | null;
   wallpaper?: string | null;
   disappearingMessagesDuration?: number | null;
-  description?: string;
+  description?: string | null;
+  unreadCount?: number;
 }
 
 interface ChatDialogsProps {
@@ -49,6 +50,7 @@ interface ChatDialogsProps {
   user: { id: string; displayName?: string; phoneNumber?: string } | null;
   chats: ActiveChat[];
   refreshChats: () => Promise<void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   selectChat: (chat: ActiveChat | null) => void;
 
   // Edit message
