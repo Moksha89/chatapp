@@ -255,6 +255,25 @@ export class DatabaseService implements OnModuleInit {
     return this.userRepository.find() as Promise<User[]>;
   }
 
+  // Bug #9 fix: Batch fetch users by IDs in a single query
+  async findUsersByIds(ids: string[]): Promise<User[]> {
+    if (ids.length === 0) return [];
+    return this.userRepository.find({ where: { id: In(ids) } }) as Promise<User[]>;
+  }
+
+  // Bug #10 fix: Batch update messages to 'read' in a single query
+  async markMessagesReadBatch(chatId: string, senderId: string, messageIds: string[]): Promise<void> {
+    if (messageIds.length === 0) return;
+    await this.messageRepository
+      .createQueryBuilder()
+      .update()
+      .set({ status: 'read', readAt: new Date() })
+      .where('id IN (:...messageIds)', { messageIds })
+      .andWhere('chatId = :chatId', { chatId })
+      .andWhere('senderId != :senderId', { senderId })
+      .execute();
+  }
+
   // Bug #11 fix: Database LIKE query for searchByPhone instead of fetching all users
   async searchUsers(query: string): Promise<User[]> {
     if (!query.trim()) {

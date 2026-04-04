@@ -20,20 +20,21 @@ export class ChatsService {
    * Check if the sender is blocked by any recipient in the chat
    * Returns the list of recipients who have blocked the sender
    */
+  /**
+   * Bug #11 fix: Batch fetch all participant users in one query instead of N+1
+   */
   async getBlockingRecipients(chatId: string, senderId: string): Promise<string[]> {
     const participants = await this.databaseService.findChatParticipantsByChatId(chatId);
-    const blockingRecipients: string[] = [];
+    const otherParticipantIds = participants
+      .filter(p => p.userId !== senderId)
+      .map(p => p.userId);
     
-    for (const participant of participants) {
-      if (participant.userId !== senderId) {
-        const isBlocked = await this.isUserBlocked(participant.userId, senderId);
-        if (isBlocked) {
-          blockingRecipients.push(participant.userId);
-        }
-      }
-    }
+    if (otherParticipantIds.length === 0) return [];
     
-    return blockingRecipients;
+    const users = await this.databaseService.findUsersByIds(otherParticipantIds);
+    return users
+      .filter(u => u.blockedUsers && u.blockedUsers.includes(senderId))
+      .map(u => u.id);
   }
 
   /**
@@ -47,22 +48,25 @@ export class ChatsService {
 
   /**
    * Enrich participants with user data (displayName, phoneNumber, profilePhoto)
+   * Bug #9 fix: Single batch query instead of N+1 individual queries
    */
   private async enrichParticipants(participants: ChatParticipant[]) {
-    return Promise.all(
-      participants.map(async (p) => {
-        const user = await this.databaseService.findUserById(p.userId);
-        return {
-          ...p,
-          user: user ? {
-            id: user.id,
-            displayName: user.displayName,
-            phoneNumber: user.phoneNumber,
-            profilePhoto: user.profilePhoto,
-          } : undefined,
-        };
-      })
-    );
+    const userIds = participants.map(p => p.userId);
+    const users = await this.databaseService.findUsersByIds(userIds);
+    const userMap = new Map(users.map(u => [u.id, u]));
+    
+    return participants.map(p => {
+      const user = userMap.get(p.userId);
+      return {
+        ...p,
+        user: user ? {
+          id: user.id,
+          displayName: user.displayName,
+          phoneNumber: user.phoneNumber,
+          profilePhoto: user.profilePhoto,
+        } : undefined,
+      };
+    });
   }
 
   async createChat(userId: string, data: CreateChatDto): Promise<Chat & { participants: ChatParticipant[] }> {
@@ -346,25 +350,19 @@ export class ChatsService {
     return updated;
   }
 
+  /**
+   * Bug #10 fix: Single batch UPDATE instead of N individual find+update queries
+   */
   async markMessagesRead(chatId: string, userId: string, messageIds: string[]): Promise<{ shouldEmitReadReceipts: boolean }> {
     const participant = await this.databaseService.findChatParticipant(chatId, userId);
     if (!participant) {
       throw new NotFoundException('Chat not found');
     }
 
-    // Check if the reader has read receipts enabled
-    // If disabled, we still mark messages as read locally but don't emit to sender
     const readReceiptsEnabled = await this.getUserReadReceiptsEnabled(userId);
 
-    for (const messageId of messageIds) {
-      const message = await this.databaseService.findMessageById(messageId);
-      if (message && message.chatId === chatId && message.senderId !== userId) {
-        await this.databaseService.updateMessage(messageId, {
-          status: 'read',
-          readAt: new Date(),
-        });
-      }
-    }
+    // Single batch query instead of N individual queries
+    await this.databaseService.markMessagesReadBatch(chatId, userId, messageIds);
 
     await this.databaseService.updateChatParticipant(participant.id, {
       lastReadAt: new Date(),

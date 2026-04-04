@@ -99,6 +99,8 @@ export function ChatArea() {
   const [showMediaLightbox, setShowMediaLightbox] = useState<string | null>(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showContactDetails, setShowContactDetails] = useState(false);
+  const [showChannelInfo, setShowChannelInfo] = useState(false);
+  const [contactPickerUsers, setContactPickerUsers] = useState<Array<{ id: string; displayName: string; phoneNumber: string }>>([]);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [globalSearchResults, setGlobalSearchResults] = useState<Array<{ id: string; chatId: string; content: string; createdAt: string }>>([]);
@@ -542,11 +544,17 @@ export function ChatArea() {
             </div>
           ) : (() => {
             // Feature #12: Show dynamic online/offline status
-            const otherUserId = activeChat?.participants.find(p => p.userId !== user?.id)?.userId;
-            const isOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
+            if (activeChat?.type === 'channel') {
+              return <p className="text-xs text-green-200">{activeChat.participants.length} subscribers</p>;
+            }
+            if (activeChat?.type === 'community') {
+              return <p className="text-xs text-green-200">{activeChat.participants.length} members</p>;
+            }
             if (activeChat?.type === 'group') {
               return <p className="text-xs text-green-200">{activeChat.participants.length} participants</p>;
             }
+            const otherUserId = activeChat?.participants.find(p => p.userId !== user?.id)?.userId;
+            const isOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
             return <p className={`text-xs ${isOnline ? 'text-green-200' : 'text-green-300/70'}`}>{isOnline ? 'online' : 'last seen recently'}</p>;
           })()}
         </div>
@@ -560,26 +568,30 @@ export function ChatArea() {
           >
             <Search className="h-5 w-5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleVoiceCall}
-            disabled={callState !== 'idle'}
-            title="Voice Call"
-            className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
-          >
-            <Phone className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleVideoCall}
-            disabled={callState !== 'idle'}
-            title="Video Call"
-            className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
-          >
-            <Video className="h-5 w-5" />
-          </Button>
+          {activeChat?.type !== 'channel' && activeChat?.type !== 'community' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleVoiceCall}
+              disabled={callState !== 'idle'}
+              title="Voice Call"
+              className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
+          )}
+          {activeChat?.type !== 'channel' && activeChat?.type !== 'community' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleVideoCall}
+              disabled={callState !== 'idle'}
+              title="Video Call"
+              className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
+            >
+              <Video className="h-5 w-5" />
+            </Button>
+          )}
           <div className="relative">
             <Button
               variant="ghost"
@@ -622,6 +634,11 @@ export function ChatArea() {
                   {activeChat?.type === 'group' && (
                     <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGroupInfo(true); }}>
                       <Users className="h-4 w-4" /> Group info
+                    </button>
+                  )}
+                  {(activeChat?.type === 'channel' || activeChat?.type === 'community') && (
+                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowChannelInfo(true); }}>
+                      <Users className="h-4 w-4" /> {activeChat?.type === 'channel' ? 'Channel info' : 'Community info'}
                     </button>
                   )}
                   {activeChat?.type === 'direct' && (
@@ -672,12 +689,16 @@ export function ChatArea() {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="encryption-banner inline-flex items-center gap-2 mb-4">
-                  <Lock className="h-3 w-3" />
-                  Messages are end-to-end encrypted. No one outside of this chat can read them.
-                </div>
-                <p className="text-gray-500 text-sm">Send a message to start chatting</p>
+                  <div className="text-center">
+                    {(activeChat?.type === 'direct' || activeChat?.type === 'group') && (
+                      <div className="encryption-banner inline-flex items-center gap-2 mb-4">
+                        <Lock className="h-3 w-3" />
+                        Messages are end-to-end encrypted. No one outside of this chat can read them.
+                      </div>
+                    )}
+                    <p className="text-gray-500 text-sm">
+                      {activeChat?.type === 'channel' ? 'Only admins can post in this channel' : activeChat?.type === 'community' ? 'Welcome to the community' : 'Send a message to start chatting'}
+                    </p>
             </div>
           </div>
         ) : (
@@ -851,8 +872,8 @@ export function ChatArea() {
         </div>
       )}
 
-      {/* Message Input */}
-      {recordingState === 'idle' && (
+      {/* Message Input - hidden for channels where user is not admin */}
+      {recordingState === 'idle' && !(activeChat?.type === 'channel' && !activeChat.participants.find(p => p.userId === user?.id && p.role === 'admin')) && (
         <div className="px-4 py-3 bg-[#f0f2f5]">
           <div className="flex items-end gap-2">
             {/* Attach Menu */}
@@ -926,7 +947,7 @@ export function ChatArea() {
                     <span className="text-sm">Location</span>
                   </button>
                   <button
-                    onClick={() => { setShowAttachMenu(false); setShowContactPicker(true); }}
+                    onClick={() => { setShowAttachMenu(false); setShowContactPicker(true); api.getAllUsers().then(users => setContactPickerUsers(users.filter(u => u.id !== user?.id))).catch(() => {}); }}
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
                   >
                     <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
@@ -969,16 +990,18 @@ export function ChatArea() {
               onChange={(e) => handleFileSelect(e, 'file')}
             />
 
-            {/* View Once Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setViewOnceMode(!viewOnceMode)}
-              className={`rounded-full transition-colors ${viewOnceMode ? 'text-[#00a884] bg-[#00a884]/10' : 'text-gray-400 hover:text-[#00a884] hover:bg-[#00a884]/10'}`}
-              title={viewOnceMode ? 'View once: ON' : 'View once: OFF'}
-            >
-              {viewOnceMode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </Button>
+            {/* View Once Toggle - hidden for channels/communities */}
+            {activeChat?.type !== 'channel' && activeChat?.type !== 'community' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setViewOnceMode(!viewOnceMode)}
+                className={`rounded-full transition-colors ${viewOnceMode ? 'text-[#00a884] bg-[#00a884]/10' : 'text-gray-400 hover:text-[#00a884] hover:bg-[#00a884]/10'}`}
+                title={viewOnceMode ? 'View once: ON' : 'View once: OFF'}
+              >
+                {viewOnceMode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </Button>
+            )}
 
             {/* Feature #10: Emoji Picker */}
             <div className="relative">
@@ -1305,48 +1328,43 @@ export function ChatArea() {
         </div>
       )}
 
-      {/* Contact Picker Dialog */}
+      {/* Contact Picker Dialog - Bug #5 fix: Use getAllUsers() instead of chat participants */}
       {showContactPicker && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col">
             <h3 className="font-semibold mb-3">Share Contact</h3>
             <div className="flex-1 overflow-y-auto space-y-1">
-              {chats.map(chat => {
-                const otherUser = chat.participants.find(p => p.userId !== user?.id)?.user;
-                if (!otherUser) return null;
-                return (
-                  <button
-                    key={otherUser.id}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-100 rounded-lg flex items-center gap-3"
-                    onClick={() => {
-                      // Bug #6 fix: Send contact via WebSocket with correct type
-                      const contactData = JSON.stringify({
-                        name: otherUser.displayName,
-                        phoneNumber: otherUser.phoneNumber
+              {contactPickerUsers.map(contactUser => (
+                <button
+                  key={contactUser.id}
+                  className="w-full px-3 py-2 text-left hover:bg-gray-100 rounded-lg flex items-center gap-3"
+                  onClick={() => {
+                    const contactData = JSON.stringify({
+                      name: contactUser.displayName,
+                      phoneNumber: contactUser.phoneNumber
+                    });
+                    if (activeChat) {
+                      socketService.emit('message:send', {
+                        chatId: activeChat.id,
+                        content: contactData,
+                        type: 'contact',
+                        tempId: `temp-${Date.now()}`,
                       });
-                      if (activeChat) {
-                        socketService.emit('message:send', {
-                          chatId: activeChat.id,
-                          content: contactData,
-                          type: 'contact',
-                          tempId: `temp-${Date.now()}`,
-                        });
-                      }
-                      setShowContactPicker(false);
-                    }}
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-blue-500 text-white text-xs">
-                        {otherUser.displayName?.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{otherUser.displayName}</p>
-                      <p className="text-xs text-gray-500">{otherUser.phoneNumber}</p>
-                    </div>
-                  </button>
-                );
-              })}
+                    }
+                    setShowContactPicker(false);
+                  }}
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-blue-500 text-white text-xs">
+                      {contactUser.displayName?.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{contactUser.displayName}</p>
+                    <p className="text-xs text-gray-500">{contactUser.phoneNumber}</p>
+                  </div>
+                </button>
+              ))}
             </div>
             <div className="flex justify-end mt-3">
               <Button variant="outline" onClick={() => setShowContactPicker(false)}>Cancel</Button>
@@ -1733,11 +1751,87 @@ export function ChatArea() {
               {globalSearchResults.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-4">{globalSearchQuery.length >= 2 ? 'No results found' : 'Type at least 2 characters to search'}</p>
               ) : globalSearchResults.map(result => (
-                <div key={result.id} className="p-2 hover:bg-gray-50 rounded-lg cursor-pointer" onClick={() => { setShowGlobalSearch(false); setGlobalSearchQuery(''); setGlobalSearchResults([]); }}>
+                <div key={result.id} className="p-2 hover:bg-gray-50 rounded-lg cursor-pointer" onClick={() => {
+                  // Bug #6 fix: Navigate to the chat containing the message
+                  const targetChat = chats.find(c => c.id === result.chatId);
+                  if (targetChat) {
+                    selectChat(targetChat);
+                  }
+                  setShowGlobalSearch(false); setGlobalSearchQuery(''); setGlobalSearchResults([]);
+                }}>
                   <p className="text-sm truncate">{result.content}</p>
                   <p className="text-xs text-gray-400">{new Date(result.createdAt).toLocaleString()}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Channel/Community Info Panel - Bug #8 fix */}
+      {showChannelInfo && (activeChat?.type === 'channel' || activeChat?.type === 'community') && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">{activeChat?.type === 'channel' ? 'Channel Info' : 'Community Info'}</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowChannelInfo(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="mb-4">
+              <div className="flex items-center gap-3 mb-3">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="bg-[#00a884] text-white text-xl">{getChatInitials()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h4 className="font-semibold text-lg">{getChatName()}</h4>
+                  <p className="text-sm text-gray-500">
+                    {activeChat?.type === 'channel' 
+                      ? `${activeChat.participants.length} subscribers` 
+                      : `${activeChat.participants.length} members`}
+                  </p>
+                </div>
+              </div>
+              {activeChat.description && (
+                <p className="text-sm text-gray-600 mb-2">{activeChat.description}</p>
+              )}
+            </div>
+            <h5 className="font-medium text-sm text-gray-500 mb-2">
+              {activeChat?.type === 'channel' ? 'Subscribers' : 'Members'}
+            </h5>
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {activeChat.participants.map(p => (
+                <div key={p.id} className="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded-lg">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-blue-500 text-white text-xs">
+                      {(p.user?.displayName || '?').slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{p.user?.displayName || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
+                  </div>
+                  {p.role === 'admin' && <span className="text-xs text-[#00a884] font-medium">Admin</span>}
+                  {p.userId === user?.id && <span className="text-xs text-gray-400 ml-1">You</span>}
+                </div>
+              ))}
+            </div>
+            <div className="mt-3">
+              <Button
+                variant="outline"
+                className="w-full text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={async () => {
+                  if (activeChat) {
+                    try {
+                      await api.leaveGroup(activeChat.id);
+                      setShowChannelInfo(false);
+                      selectChat(null);
+                    } catch { showError(`Failed to leave ${activeChat.type}`); }
+                  }
+                }}
+              >
+                <LogOut className="h-4 w-4 mr-2" /> Leave {activeChat?.type === 'channel' ? 'Channel' : 'Community'}
+              </Button>
             </div>
           </div>
         </div>
