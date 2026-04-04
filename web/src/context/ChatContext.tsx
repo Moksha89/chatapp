@@ -315,10 +315,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const createChat = useCallback(async (userId: string): Promise<Chat> => {
     const newChat = await api.createChat({ type: 'direct', participantId: userId });
-    await refreshChats();
-    const createdChat = chats.find((c) => c.id === newChat.id);
+    const chatList = await api.getChats();
+    setChats(chatList as Chat[]);
+    const createdChat = (chatList as Chat[]).find((c) => c.id === newChat.id);
     return createdChat || (newChat as Chat);
-  }, [refreshChats, chats]);
+  }, []);
 
   const createGroupChat = useCallback(async (name: string, participantIds: string[], description?: string): Promise<Chat> => {
     const newChat = await api.createChat({ 
@@ -327,10 +328,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       participantIds,
       description,
     } as { type: 'direct' | 'group'; participantId?: string; name?: string; participantIds?: string[]; description?: string });
-    await refreshChats();
-    const createdChat = chats.find((c) => c.id === newChat.id);
+    const chatList = await api.getChats();
+    setChats(chatList as Chat[]);
+    const createdChat = (chatList as Chat[]).find((c) => c.id === newChat.id);
     return createdChat || (newChat as Chat);
-  }, [refreshChats, chats]);
+  }, []);
 
   // Message Reactions
   const addReaction = useCallback(async (messageId: string, emoji: string) => {
@@ -493,13 +495,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             }
           }
       
+          // Always add message to active chat messages
           if (activeChat?.id === chatId) {
             setMessages((prev) => {
               const exists = prev.some((m) => m.id === decryptedMessage.id);
               if (exists) return prev;
               return [...prev, decryptedMessage];
             });
-        
+            socketService.markDelivered(decryptedMessage.id);
+          }
+          // Also mark delivered for non-active chat messages
+          if (activeChat?.id !== chatId) {
             socketService.markDelivered(decryptedMessage.id);
           }
 

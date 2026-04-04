@@ -62,7 +62,7 @@ type RecordingState = 'idle' | 'recording';
 
 export function ChatArea() {
   const { user } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, onlineUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats } = useChat();
+  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, onlineUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats, refreshChats } = useChat();
   const { initiateCall, callState } = useCall();
   const { showError } = useToast();
   const [inputValue, setInputValue] = useState('');
@@ -109,6 +109,7 @@ export function ChatArea() {
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [globalSearchResults, setGlobalSearchResults] = useState<Array<{ id: string; chatId: string; content: string; createdAt: string }>>([]);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -122,21 +123,26 @@ export function ChatArea() {
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    // ScrollArea uses an internal viewport div - find it for proper scrolling
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
+      const scrollTarget = viewport || scrollRef.current;
+      scrollTarget.scrollTop = scrollTarget.scrollHeight;
       setShowScrollToBottom(false);
     }
   }, [messages]);
 
-  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     setShowScrollToBottom(distanceFromBottom > 200);
-  };
+  }, []);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
+      const scrollTarget = viewport || scrollRef.current;
+      scrollTarget.scrollTop = scrollTarget.scrollHeight;
       setShowScrollToBottom(false);
     }
   };
@@ -163,6 +169,11 @@ export function ChatArea() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
+
+    // Auto-resize textarea
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
 
     if (activeChat && !isTyping) {
       setIsTyping(true);
@@ -543,7 +554,7 @@ export function ChatArea() {
   }
 
   return (
-    <div className="flex-1 flex flex-col wa-chat-bg relative">
+    <div className={`flex-1 flex flex-col ${activeChat?.wallpaper ? '' : 'wa-chat-bg'} relative`} style={activeChat?.wallpaper ? { backgroundColor: activeChat.wallpaper } : undefined}>
       {/* Chat Header */}
       <div className="px-2 md:px-4 py-2.5 bg-[#008069] flex items-center shadow-sm">
         {/* Back button for mobile */}
@@ -561,7 +572,12 @@ export function ChatArea() {
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white truncate">{getChatName()}</h3>
+          <h3 className="font-semibold text-white truncate">
+            {getChatName()}
+            {activeChat?.disappearingMessagesDuration && <Timer className="h-3 w-3 inline ml-1 text-green-200" />}
+            {activeChat?.isLocked && <Lock className="h-3 w-3 inline ml-1 text-green-200" />}
+            {mutedChats.has(activeChat?.id || '') && <BellOff className="h-3 w-3 inline ml-1 text-green-200" />}
+          </h3>
           {isOtherTyping ? (
             <div className="flex items-center gap-1">
               <span className="text-xs text-green-200">
@@ -650,8 +666,8 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
                         <Star className="h-4 w-4" /> Starred messages
                       </button>
-                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); /* mute */ }}>
-                        <BellOff className="h-4 w-4" /> Mute notifications
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) { setMutedChats(prev => { const next = new Set(prev); if (next.has(activeChat.id)) next.delete(activeChat.id); else next.add(activeChat.id); return next; }); } }}>
+                        <BellOff className="h-4 w-4" /> {activeChat && mutedChats.has(activeChat.id) ? 'Unmute notifications' : 'Mute notifications'}
                       </button>
                     </>
                   ) : activeChat?.type === 'community' ? (
@@ -665,8 +681,8 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
                         <Star className="h-4 w-4" /> Starred messages
                       </button>
-                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); /* mute */ }}>
-                        <BellOff className="h-4 w-4" /> Mute notifications
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) { setMutedChats(prev => { const next = new Set(prev); if (next.has(activeChat.id)) next.delete(activeChat.id); else next.add(activeChat.id); return next; }); } }}>
+                        <BellOff className="h-4 w-4" /> {activeChat && mutedChats.has(activeChat.id) ? 'Unmute notifications' : 'Mute notifications'}
                       </button>
                     </>
                   ) : (
@@ -684,8 +700,8 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGlobalSearch(true); }}>
                         <Search className="h-4 w-4" /> Search messages
                       </button>
-                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); /* mute */ }}>
-                        <BellOff className="h-4 w-4" /> Mute notifications
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) { setMutedChats(prev => { const next = new Set(prev); if (next.has(activeChat.id)) next.delete(activeChat.id); else next.add(activeChat.id); return next; }); } }}>
+                        <BellOff className="h-4 w-4" /> {activeChat && mutedChats.has(activeChat.id) ? 'Unmute notifications' : 'Mute notifications'}
                       </button>
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
                         <Star className="h-4 w-4" /> Starred messages
@@ -693,14 +709,14 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
                         <Timer className="h-4 w-4" /> Disappearing messages
                       </button>
-                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); } catch { showError('Failed to toggle chat lock'); } } }}>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); await refreshChats(); } catch { showError('Failed to toggle chat lock'); } } }}>
                         <Lock className="h-4 w-4" /> {activeChat?.isLocked ? 'Unlock chat' : 'Lock chat'}
                       </button>
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowWallpaperDialog(true); }}>
                         <Image className="h-4 w-4" /> Chat wallpaper
                       </button>
                       {activeChat?.pinnedMessageId ? (
-                        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); } catch { showError('Failed to unpin message'); } } }}>
+                        <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.pinMessage(activeChat.id, null); await refreshChats(); } catch { showError('Failed to unpin message'); } } }}>
                           <Pin className="h-4 w-4" /> Unpin message
                         </button>
                       ) : null}
@@ -883,6 +899,16 @@ export function ChatArea() {
                         onReply={() => setReplyingTo(message)}
                         onStar={() => toggleStar(message.id)}
                         onForward={() => setShowForwardDialog(message.id)}
+                        onPin={async () => {
+                          if (activeChat) {
+                            try {
+                              const newPinId = activeChat.pinnedMessageId === message.id ? null : message.id;
+                              await api.pinMessage(activeChat.id, newPinId);
+                              await refreshChats();
+                            } catch { showError('Failed to pin message'); }
+                          }
+                        }}
+                        isPinned={activeChat?.pinnedMessageId === message.id}
                       />
                     )}
                   </div>
@@ -1270,6 +1296,7 @@ export function ChatArea() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-sm">
             <h3 className="font-semibold mb-3">Disappearing Messages</h3>
+            {activeChat?.disappearingMessagesDuration && <p className="text-sm text-[#00a884] mb-2 flex items-center gap-1"><Timer className="h-3 w-3" /> Currently enabled ({activeChat.disappearingMessagesDuration === 86400 ? '24 hours' : activeChat.disappearingMessagesDuration === 604800 ? '7 days' : '90 days'})</p>}
             <p className="text-sm text-gray-500 mb-4">Messages will disappear after the selected duration.</p>
             <div className="space-y-2">
               {[{label: 'Off', value: null}, {label: '24 hours', value: 86400}, {label: '7 days', value: 604800}, {label: '90 days', value: 7776000}].map(opt => (
@@ -1278,7 +1305,7 @@ export function ChatArea() {
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-lg"
                   onClick={async () => {
                     if (activeChat) {
-                      try { await api.setDisappearingMessages(activeChat.id, opt.value); } catch { showError('Failed to set disappearing messages'); }
+                      try { await api.setDisappearingMessages(activeChat.id, opt.value); await refreshChats(); } catch { showError('Failed to set disappearing messages'); }
                     }
                     setShowDisappearingDialog(false);
                   }}
@@ -1307,7 +1334,7 @@ export function ChatArea() {
                   style={{ backgroundColor: color === 'default' ? '#efeae2' : color }}
                   onClick={async () => {
                     if (activeChat) {
-                      try { await api.setChatWallpaper(activeChat.id, color === 'default' ? null : color); } catch { showError('Failed to set wallpaper'); }
+                      try { await api.setChatWallpaper(activeChat.id, color === 'default' ? null : color); await refreshChats(); } catch { showError('Failed to set wallpaper'); }
                     }
                     setShowWallpaperDialog(false);
                   }}
@@ -1746,6 +1773,35 @@ export function ChatArea() {
                 </div>
               </div>
             </div>
+            {/* Add Member button for admins */}
+            {activeChat.participants.find(p => p.userId === user?.id && p.role === 'admin') && (
+              <Button
+                variant="outline"
+                className="w-full mb-3 text-[#00a884] hover:text-[#008069] hover:bg-[#00a884]/5 border-[#00a884]/30"
+                onClick={async () => {
+                  try {
+                    const allUsers = await api.getAllUsers();
+                    const existingIds = activeChat.participants.map(p => p.userId);
+                    const availableUsers = allUsers.filter((u: { id: string }) => !existingIds.includes(u.id));
+                    if (availableUsers.length === 0) {
+                      showError('No more users to add');
+                      return;
+                    }
+                    const userName = prompt(`Add member:\n${availableUsers.map((u: { id: string; displayName: string }, i: number) => `${i + 1}. ${u.displayName}`).join('\n')}\n\nEnter number:`);
+                    if (userName) {
+                      const idx = parseInt(userName) - 1;
+                      if (idx >= 0 && idx < availableUsers.length) {
+                        await api.addParticipant(activeChat.id, availableUsers[idx].id);
+                        await refreshChats();
+                        showError('Member added successfully');
+                      }
+                    }
+                  } catch { showError('Failed to add member'); }
+                }}
+              >
+                <Users className="h-4 w-4 mr-2" /> Add Member
+              </Button>
+            )}
             <h5 className="font-medium text-sm text-gray-500 mb-2">Participants</h5>
             <div className="flex-1 overflow-y-auto space-y-1">
               {activeChat.participants.map(p => (
@@ -1760,6 +1816,23 @@ export function ChatArea() {
                     <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
                   </div>
                   {p.userId === user?.id && <span className="text-xs text-[#00a884] font-medium">You</span>}
+                  {p.role === 'admin' && p.userId !== user?.id && <span className="text-xs text-blue-500 font-medium">Admin</span>}
+                  {/* Remove button for admins (can't remove yourself) */}
+                  {activeChat.participants.find(pp => pp.userId === user?.id && pp.role === 'admin') && p.userId !== user?.id && (
+                    <button
+                      className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded"
+                      onClick={async () => {
+                        if (confirm(`Remove ${p.user?.displayName || 'this member'} from the group?`)) {
+                          try {
+                            await api.removeParticipant(activeChat.id, p.userId);
+                            await refreshChats();
+                          } catch { showError('Failed to remove member'); }
+                        }
+                      }}
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -1773,6 +1846,7 @@ export function ChatArea() {
                       await api.leaveGroup(activeChat.id);
                       setShowGroupInfo(false);
                       selectChat(null);
+                      await refreshChats();
                     } catch { showError('Failed to leave group'); }
                   }
                 }}

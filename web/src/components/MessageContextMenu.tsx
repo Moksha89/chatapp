@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   MoreVertical, 
   Smile, 
@@ -7,7 +7,8 @@ import {
   Copy, 
   Reply,
   Star,
-  Forward
+  Forward,
+  Pin
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -27,6 +28,8 @@ interface MessageContextMenuProps {
   onCopy: () => void;
   onStar?: () => void;
   onForward?: () => void;
+  onPin?: () => void;
+  isPinned?: boolean;
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -45,6 +48,8 @@ export function MessageContextMenu({
   onCopy,
   onStar,
   onForward,
+  onPin,
+  isPinned,
 }: MessageContextMenuProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
@@ -82,7 +87,7 @@ export function MessageContextMenu({
       <Button
         variant="ghost"
         size="icon"
-        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-black/10"
         onClick={() => setShowMenu(!showMenu)}
       >
         <MoreVertical className="h-4 w-4" />
@@ -175,6 +180,18 @@ export function MessageContextMenu({
             >
               <Forward className="h-4 w-4" />
               Forward
+            </button>
+
+            {/* Pin */}
+            <button
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+              onClick={() => {
+                onPin?.();
+                setShowMenu(false);
+              }}
+            >
+              <Pin className="h-4 w-4" />
+              {isPinned ? 'Unpin' : 'Pin'}
             </button>
 
             {/* Edit (only for own messages within 15 min) */}
@@ -277,6 +294,11 @@ export function EditMessageDialog({
   onCancel: () => void;
 }) {
   const [editedContent, setEditedContent] = useState(content);
+
+  // Fix Bug #6: Sync editedContent when content prop changes (different message selected)
+  useEffect(() => {
+    setEditedContent(content);
+  }, [content]);
 
   if (!isOpen) return null;
 

@@ -27,7 +27,7 @@ import { PrivacySettings } from './PrivacySettings';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
-  const { chats, activeChat, selectChat, isLoadingChats, refreshChats, typingUsers } = useChat();
+  const { chats, activeChat, selectChat, isLoadingChats, refreshChats, typingUsers, onlineUsers } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities'>('all');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -86,11 +86,30 @@ export function ChatSidebar() {
       }
     }
     if (!chat.lastMessage?.content) return 'No messages yet';
-    const content = chat.lastMessage.content;
+    const msg = chat.lastMessage;
+    const msgContent = msg.content || '';
+    const msgType = msg.type || 'text';
+    // Format special message types for sidebar preview
+    let content = msgContent;
+    if (msgType === 'poll') {
+      try { const poll = JSON.parse(msgContent); content = `\uD83D\uDCCA ${poll.question || 'Poll'}`; } catch { content = '\uD83D\uDCCA Poll'; }
+    } else if (msgType === 'location') {
+      try { const loc = JSON.parse(msgContent); content = `\uD83D\uDCCD ${loc.name || 'Location'}`; } catch { content = '\uD83D\uDCCD Location'; }
+    } else if (msgType === 'contact') {
+      try { const c = JSON.parse(msgContent); content = `\uD83D\uDC64 ${c.name || 'Contact'}`; } catch { content = '\uD83D\uDC64 Contact'; }
+    } else if (msgType === 'image' || msgType === 'gif') {
+      content = '\uD83D\uDCF7 Photo';
+    } else if (msgType === 'video' || msgType === 'video-note') {
+      content = '\uD83C\uDFA5 Video';
+    } else if (msgType === 'audio') {
+      content = '\uD83C\uDFA4 Voice message';
+    } else if (msgType === 'file') {
+      content = `\uD83D\uDCC4 ${msg.mediaName || 'Document'}`;
+    }
     if (chat.type === 'group' || chat.type === 'channel' || chat.type === 'community') {
-      const sender = chat.lastMessage.senderId === user?.id
+      const sender = msg.senderId === user?.id
         ? 'You'
-        : chat.participants.find(p => p.userId === chat.lastMessage?.senderId)?.user?.displayName || '';
+        : chat.participants.find(p => p.userId === msg.senderId)?.user?.displayName || '';
       return sender ? `${sender}: ${content}` : content;
     }
     return content;
@@ -313,11 +332,19 @@ export function ChatSidebar() {
               } border-b border-gray-100`}
               onClick={() => selectChat(chat)}
             >
-              <Avatar className="h-12 w-12 mr-3 flex-shrink-0">
-                <AvatarFallback className="bg-[#00a884] text-white font-medium">
-                  {getChatInitials(chat)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative mr-3 flex-shrink-0">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-[#00a884] text-white font-medium">
+                    {getChatInitials(chat)}
+                  </AvatarFallback>
+                </Avatar>
+                {chat.type === 'direct' && (() => {
+                  const otherUserId = chat.participants.find(p => p.userId !== user?.id)?.userId;
+                  return otherUserId && onlineUsers.has(otherUserId) ? (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                  ) : null;
+                })()}
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline">
                   <span className="font-medium truncate flex items-center gap-1">
