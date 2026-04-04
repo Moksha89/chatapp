@@ -14,7 +14,7 @@ export class AuditLogEntity {
   @Column({ type: 'text' })
   details: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   targetId: string | null;
 
   @CreateDateColumn()
