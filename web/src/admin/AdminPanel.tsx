@@ -551,12 +551,15 @@ function UsersPage({ token }: { token: string }) {
               <button onClick={() => setSelectedUser(null)} className="p-1 rounded-lg hover:bg-slate-700 text-slate-400"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3 text-sm">
-              {selectedUser.user && Object.entries(selectedUser.user as Record<string, unknown>).map(([k, v]) => (
-                <div key={k} className="flex justify-between">
-                  <span className="text-slate-400 capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>
-                  <span className="text-white text-right max-w-[60%] truncate">{v !== null ? String(v) : '-'}</span>
-                </div>
-              ))}
+              {selectedUser.user && Object.entries(selectedUser.user as Record<string, unknown>).map(([k, val]) => {
+                const display = val !== null && val !== undefined ? String(val) : '-';
+                return (
+                  <div key={k} className="flex justify-between">
+                    <span className="text-slate-400 capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>
+                    <span className="text-white text-right max-w-[60%] truncate">{display}</span>
+                  </div>
+                );
+              })}
               <hr className="border-slate-700" />
               <div className="flex justify-between"><span className="text-slate-400">Chats</span><span className="text-white">{String(selectedUser.chats)}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Messages Sent</span><span className="text-white">{String(selectedUser.messages)}</span></div>
