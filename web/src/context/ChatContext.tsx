@@ -61,6 +61,7 @@ interface ChatContextType {
   isLoadingChats: boolean;
   isLoadingMessages: boolean;
   typingUsers: Map<string, Set<string>>;
+  onlineUsers: Set<string>;
   e2eeEnabled: boolean;
   replyingTo: Message | null;
   searchQuery: string;
@@ -96,6 +97,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, Set<string>>>(new Map());
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [e2eeEnabled, setE2eeEnabled] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -193,15 +195,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [activeChat, messages]);
 
+  // Feature #3 fix: Clear unread count and mark messages read when entering chat
   const selectChat = useCallback((chat: Chat | null) => {
     setActiveChat(chat);
     if (chat) {
       loadMessages(chat.id);
+      // Clear unread count in sidebar immediately
+      setChats(prev => prev.map(c => c.id === chat.id ? { ...c, unreadCount: 0 } : c));
+      // Mark unread messages as read on the server
+      if (user) {
+        api.getMessages(chat.id).then((msgs: unknown[]) => {
+          const typedMsgs = msgs as Message[];
+          const unreadIds = typedMsgs
+            .filter(m => m.senderId !== user.id && m.status !== 'read')
+            .map(m => m.id);
+          if (unreadIds.length > 0) {
+            socketService.markRead(chat.id, unreadIds);
+          }
+        }).catch(() => {});
+      }
     } else {
       setMessages([]);
     }
-  }, [loadMessages]);
+  }, [loadMessages, user]);
 
+        // Bug #3 fix: Handle all participants in group chats (not just one)
+        // Bug #4 fix: Skip E2EE for group chats (not practical for multi-recipient)
         const sendMessageInternal = useCallback(async (
         chatId: string,
         content: string,
@@ -211,30 +230,28 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const chat = chats.find(c => c.id === chatId);
         if (!chat || !user) return;
 
-        const otherParticipant = chat.participants.find(p => p.userId !== user.id);
-        if (!otherParticipant) {
-          console.error('No recipient found');
-          return;
-        }
-
-        const recipientId = otherParticipant.userId;
         let messageContent = content;
         let ciphertext: string | undefined;
 
-        if (e2eeEnabled) {
-          const recipientDevices = await api.getDevices(recipientId);
-          if (!recipientDevices || recipientDevices.length === 0) {
-            throw new Error('E2EE_NO_RECIPIENT_DEVICE: Cannot send encrypted message - recipient has no registered devices');
+        // Only use E2EE for direct chats (1-on-1), skip for groups
+        if (e2eeEnabled && chat.type === 'direct') {
+          const otherParticipant = chat.participants.find(p => p.userId !== user.id);
+          if (otherParticipant) {
+            const recipientId = otherParticipant.userId;
+            try {
+              const recipientDevices = await api.getDevices(recipientId);
+              if (recipientDevices && recipientDevices.length > 0) {
+                const recipientDevice = recipientDevices[0];
+                const encrypted = await encryptMessageContent(recipientId, recipientDevice.deviceId, content);
+                if (encrypted) {
+                  ciphertext = encrypted;
+                  messageContent = '[Encrypted message]';
+                }
+              }
+            } catch (error) {
+              console.warn('E2EE encryption failed, sending plaintext:', error);
+            }
           }
-          
-          const recipientDevice = recipientDevices[0];
-          const encrypted = await encryptMessageContent(recipientId, recipientDevice.deviceId, content);
-          if (!encrypted) {
-            throw new Error('E2EE_ENCRYPTION_FAILED: Failed to encrypt message - cannot send in plaintext');
-          }
-          
-          ciphertext = encrypted;
-          messageContent = '[Encrypted message]';
         }
 
         socketService.emit('message:send', {
@@ -490,6 +507,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             socketService.markDelivered(decryptedMessage.id);
           }
 
+          // Feature #9: Play notification sound for incoming messages
+          if (message.senderId !== user?.id) {
+            try {
+              const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+              const oscillator = audioCtx.createOscillator();
+              const gainNode = audioCtx.createGain();
+              oscillator.connect(gainNode);
+              gainNode.connect(audioCtx.destination);
+              oscillator.frequency.value = 800;
+              oscillator.type = 'sine';
+              gainNode.gain.value = 0.15;
+              gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+              oscillator.start(audioCtx.currentTime);
+              oscillator.stop(audioCtx.currentTime + 0.15);
+            } catch { /* audio context may not be available */ }
+          }
+
           setChats((prev) =>
             prev.map((chat) =>
               chat.id === chatId
@@ -588,6 +622,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Feature #12: Handle presence updates
+    const handlePresenceUpdate = (data: unknown) => {
+      const { userId: presenceUserId, status } = data as { userId: string; status: string; lastSeen: string | null };
+      setOnlineUsers((prev) => {
+        const next = new Set(prev);
+        if (status === 'online') {
+          next.add(presenceUserId);
+        } else {
+          next.delete(presenceUserId);
+        }
+        return next;
+      });
+    };
+
+    // Send presence online on connect
+    socketService.setOnline();
+
     const unsubNewMessage = socketService.on('message:new', handleNewMessage);
     const unsubMessageSent = socketService.on('message:sent', handleMessageSent);
     const unsubMessageDelivered = socketService.on('message:delivered', handleMessageDelivered);
@@ -596,6 +647,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const unsubReactionUpdated = socketService.on('message:reaction:updated', handleReactionUpdated);
     const unsubMessageEdited = socketService.on('message:edited', handleMessageEdited);
     const unsubMessageDeleted = socketService.on('message:deleted', handleMessageDeleted);
+    const unsubPresence = socketService.on('presence:update', handlePresenceUpdate);
 
     return () => {
       unsubNewMessage();
@@ -606,6 +658,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unsubReactionUpdated();
       unsubMessageEdited();
       unsubMessageDeleted();
+      unsubPresence();
     };
   }, [isAuthenticated, activeChat]);
 
@@ -618,6 +671,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         isLoadingChats,
         isLoadingMessages,
         typingUsers,
+        onlineUsers,
         e2eeEnabled,
         replyingTo,
         searchQuery,

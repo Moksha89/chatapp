@@ -57,14 +57,9 @@ export class UsersService {
     await this.databaseService.updateUser(id, { lastSeen: new Date() });
   }
 
+  // Bug #11 fix: Use database LIKE query instead of fetching all users
   async searchByPhone(phoneNumber: string): Promise<User[]> {
-    const users = await this.databaseService.getAllUsers();
-    const query = phoneNumber.toLowerCase();
-    return users.filter(
-      (u) =>
-        u.phoneNumber.includes(phoneNumber) ||
-        (u.displayName && u.displayName.toLowerCase().includes(query)),
-    );
+    return this.databaseService.searchUsers(phoneNumber);
   }
 
   async getPublicProfile(id: string): Promise<{

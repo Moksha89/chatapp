@@ -847,6 +847,14 @@ export class ChatsService {
     const messages = await this.databaseService.getMessagesForExport(chatId);
     const chatName = chat.name || 'Chat';
 
+    // Bug #12 fix: Build a sender name lookup map
+    const senderNames: Record<string, string> = {};
+    const participants = await this.databaseService.findChatParticipantsByChatId(chatId);
+    for (const p of participants) {
+      const u = await this.databaseService.findUserById(p.userId);
+      if (u) senderNames[p.userId] = u.displayName || u.phoneNumber;
+    }
+
     if (format === 'text') {
       let text = `WhatsApp Chat Backup - ${chatName}\n`;
       text += `Exported on: ${new Date().toISOString()}\n`;
@@ -855,7 +863,7 @@ export class ChatsService {
 
       for (const msg of messages) {
         const date = new Date(msg.createdAt).toLocaleString();
-        const sender = msg.senderId;
+        const sender = senderNames[msg.senderId] || msg.senderId;
         if (msg.isDeleted) {
           text += `[${date}] ${sender}: <This message was deleted>\n`;
         } else if (msg.type === 'image' || msg.type === 'video' || msg.type === 'audio' || msg.type === 'document') {
@@ -880,9 +888,9 @@ export class ChatsService {
         chatId,
         exportedAt: new Date().toISOString(),
         messageCount: messages.length,
-        messages: messages.map(m => ({
-          id: m.id,
-          sender: m.senderId,
+          messages: messages.map(m => ({
+            id: m.id,
+            sender: senderNames[m.senderId] || m.senderId,
           content: m.isDeleted ? '<deleted>' : m.content,
           type: m.type,
           mediaUrl: m.mediaUrl,
@@ -896,9 +904,7 @@ export class ChatsService {
     };
   }
 
-  // In-memory chatbot configurations (keyed by chatId)
-  private chatbotConfigs: Map<string, { enabled: boolean; rules: Array<{ trigger: string; response: string }> }> = new Map();
-
+  // Bug #1 fix: Chatbot configs now persisted to PostgreSQL
   // Configure chatbot auto-reply
   async configureChatbot(chatId: string, userId: string, config: { enabled: boolean; rules: Array<{ trigger: string; response: string }> }): Promise<{ chatId: string; enabled: boolean; rules: Array<{ trigger: string; response: string }> }> {
     const participant = await this.databaseService.findChatParticipant(chatId, userId);
@@ -906,7 +912,7 @@ export class ChatsService {
       throw new NotFoundException('Chat not found');
     }
 
-    this.chatbotConfigs.set(chatId, config);
+    await this.databaseService.saveChatbotConfig(chatId, config.enabled, config.rules);
     return { chatId, ...config };
   }
 
@@ -917,19 +923,26 @@ export class ChatsService {
       throw new NotFoundException('Chat not found');
     }
 
-    const config = this.chatbotConfigs.get(chatId) || { enabled: false, rules: [] };
+    const dbConfig = await this.databaseService.findChatbotConfig(chatId);
+    const config = dbConfig 
+      ? { enabled: dbConfig.enabled, rules: JSON.parse(dbConfig.rules) as Array<{ trigger: string; response: string }> }
+      : { enabled: false, rules: [] };
     return { chatId, ...config };
   }
 
   // Process incoming message for chatbot auto-reply
   async processChatbotReply(chatId: string, message: Message): Promise<Message | null> {
-    const config = this.chatbotConfigs.get(chatId);
-    if (!config || !config.enabled || config.rules.length === 0) {
+    const dbConfig = await this.databaseService.findChatbotConfig(chatId);
+    if (!dbConfig || !dbConfig.enabled) {
+      return null;
+    }
+    const rules = JSON.parse(dbConfig.rules) as Array<{ trigger: string; response: string }>;
+    if (rules.length === 0) {
       return null;
     }
 
     const content = message.content.toLowerCase();
-    for (const rule of config.rules) {
+    for (const rule of rules) {
       if (content.includes(rule.trigger.toLowerCase())) {
         // Send auto-reply
         const reply = await this.databaseService.createMessage({
@@ -1007,18 +1020,7 @@ export class ChatsService {
     return responseMessage;
   }
 
-  // In-memory orders store
-  private orders: Map<string, Array<{
-    id: string;
-    chatId: string;
-    userId: string;
-    items: Array<{ productId: string; name: string; price: number; quantity: number }>;
-    total: number;
-    status: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }>> = new Map();
-
+  // Bug #1 fix: Orders now persisted to PostgreSQL
   // Create an order from catalog products
   async createOrder(chatId: string, userId: string, items: Array<{ productId: string; name: string; price: number; quantity: number }>): Promise<{
     id: string;
@@ -1040,20 +1042,13 @@ export class ChatsService {
     }
 
     const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const order = {
-      id: `order-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+    const order = await this.databaseService.createOrder({
       chatId,
       userId,
-      items,
+      items: JSON.stringify(items),
       total,
       status: 'pending',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const chatOrders = this.orders.get(chatId) || [];
-    chatOrders.push(order);
-    this.orders.set(chatId, chatOrders);
+    });
 
     // Send order message in chat
     await this.databaseService.createMessage({
@@ -1083,7 +1078,16 @@ export class ChatsService {
       isViewed: false,
     });
 
-    return order;
+    return {
+      id: order.id,
+      chatId: order.chatId,
+      userId: order.userId,
+      items,
+      total: Number(order.total),
+      status: order.status,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
   }
 
   // Get orders for a chat
@@ -1102,7 +1106,17 @@ export class ChatsService {
       throw new NotFoundException('Chat not found');
     }
 
-    return this.orders.get(chatId) || [];
+    const dbOrders = await this.databaseService.findOrdersByChatId(chatId);
+    return dbOrders.map(o => ({
+      id: o.id,
+      chatId: o.chatId,
+      userId: o.userId,
+      items: JSON.parse(o.items) as Array<{ productId: string; name: string; price: number; quantity: number }>,
+      total: Number(o.total),
+      status: o.status,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+    }));
   }
 
   // Update order status
@@ -1121,20 +1135,30 @@ export class ChatsService {
       throw new NotFoundException('Chat not found');
     }
 
-    const chatOrders = this.orders.get(chatId) || [];
-    const order = chatOrders.find(o => o.id === orderId);
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
     const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
       throw new BadRequestException(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
 
-    order.status = status;
-    order.updatedAt = new Date();
+    const updated = await this.databaseService.updateOrderStatus(orderId, status);
+    if (!updated) {
+      throw new NotFoundException('Order not found');
+    }
 
-    return order;
+    return {
+      id: updated.id,
+      chatId: updated.chatId,
+      userId: updated.userId,
+      items: JSON.parse(updated.items) as Array<{ productId: string; name: string; price: number; quantity: number }>,
+      total: Number(updated.total),
+      status: updated.status,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    };
+  }
+
+  // Bug #5 fix: Delete expired disappearing messages
+  async cleanupExpiredMessages(): Promise<number> {
+    return this.databaseService.deleteExpiredMessages();
   }
 }

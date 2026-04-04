@@ -39,7 +39,17 @@ import {
   Bot,
   ShoppingCart,
   FileDown,
-  Smile
+  Smile,
+  Upload,
+  Users,
+  Shield,
+  LogOut,
+  UserPlus,
+  UserMinus,
+  ChevronLeft,
+  ChevronRight,
+  Volume2,
+  ZoomIn
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -55,7 +65,7 @@ type RecordingState = 'idle' | 'recording';
 
 export function ChatArea() {
   const { user } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats } = useChat();
+  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, onlineUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats } = useChat();
   const { initiateCall, callState } = useCall();
   const { showError } = useToast();
   const [inputValue, setInputValue] = useState('');
@@ -92,6 +102,15 @@ export function ChatArea() {
   const [orderItems, setOrderItems] = useState<Array<{ productId: string; name: string; price: number; quantity: number }>>([{ productId: '', name: '', price: 0, quantity: 1 }]);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [viewOnceMode, setViewOnceMode] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showMediaLightbox, setShowMediaLightbox] = useState<string | null>(null);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showContactDetails, setShowContactDetails] = useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [globalSearchResults, setGlobalSearchResults] = useState<Array<{ id: string; chatId: string; content: string; createdAt: string }>>([]);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -395,6 +414,26 @@ export function ChatArea() {
     }
   };
 
+  // Feature #8: Format date separator
+  const formatDateSeparator = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
+  // Feature #8: Check if date separator should show
+  const shouldShowDateSeparator = (index: number, msgs: Array<{ createdAt: string }>) => {
+    if (index === 0) return true;
+    const curr = new Date(msgs[index].createdAt).toDateString();
+    const prev = new Date(msgs[index - 1].createdAt).toDateString();
+    return curr !== prev;
+  };
+
   const renderMediaContent = (message: {
     type: string;
     content?: string;
@@ -414,7 +453,7 @@ export function ChatArea() {
               src={mediaUrl} 
               alt={message.mediaName || 'Image'} 
               className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => window.open(mediaUrl, '_blank')}
+              onClick={() => setShowMediaLightbox(mediaUrl)}
             />
           </div>
         );
@@ -509,9 +548,15 @@ export function ChatArea() {
               <span className="text-xs text-green-200">typing</span>
               <div className="typing-dots"><span></span><span></span><span></span></div>
             </div>
-          ) : (
-            <p className="text-xs text-green-200">online</p>
-          )}
+          ) : (() => {
+            // Feature #12: Show dynamic online/offline status
+            const otherUserId = activeChat?.participants.find(p => p.userId !== user?.id)?.userId;
+            const isOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
+            if (activeChat?.type === 'group') {
+              return <p className="text-xs text-green-200">{activeChat.participants.length} participants</p>;
+            }
+            return <p className={`text-xs ${isOnline ? 'text-green-200' : 'text-green-300/70'}`}>{isOnline ? 'online' : 'last seen recently'}</p>;
+          })()}
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -582,6 +627,19 @@ export function ChatArea() {
                   <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowOrderDialog(true); }}>
                     <ShoppingCart className="h-4 w-4" /> Create order
                   </button>
+                  {activeChat?.type === 'group' && (
+                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGroupInfo(true); }}>
+                      <Users className="h-4 w-4" /> Group info
+                    </button>
+                  )}
+                  {activeChat?.type === 'direct' && (
+                    <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowContactDetails(true); }}>
+                      <User className="h-4 w-4" /> Contact info
+                    </button>
+                  )}
+                  <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGlobalSearch(true); }}>
+                    <Search className="h-4 w-4" /> Search messages
+                  </button>
                 </div>
               </>
             )}
@@ -632,13 +690,21 @@ export function ChatArea() {
           </div>
         ) : (
           <div className="space-y-2">
-            {(chatSearchQuery ? messages.filter(m => m.content?.toLowerCase().includes(chatSearchQuery.toLowerCase())) : messages).map((message) => {
+            {(chatSearchQuery ? messages.filter(m => m.content?.toLowerCase().includes(chatSearchQuery.toLowerCase())) : messages).map((message, msgIndex, filteredMsgs) => {
               const isOwn = message.senderId === user?.id;
               const isMedia = ['image', 'video', 'audio', 'video-note', 'file', 'poll', 'location', 'contact'].includes(message.type);
               const replyToMsg = message.replyToMessageId ? messages.find(m => m.id === message.replyToMessageId) : null;
               return (
+                <div key={message.id}>
+                  {/* Feature #8: Date separators */}
+                  {shouldShowDateSeparator(msgIndex, filteredMsgs) && (
+                    <div className="flex items-center justify-center my-3">
+                      <div className="bg-white/80 text-gray-500 text-xs px-3 py-1 rounded-lg shadow-sm">
+                        {formatDateSeparator(message.createdAt)}
+                      </div>
+                    </div>
+                  )}
                 <div
-                  key={message.id}
                   className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group msg-enter`}
                 >
                   <div className={`flex items-start gap-1 ${isOwn ? 'flex-row-reverse' : ''}`}>
@@ -716,6 +782,7 @@ export function ChatArea() {
                       />
                     )}
                   </div>
+                </div>
                 </div>
               );
             })}
@@ -920,6 +987,39 @@ export function ChatArea() {
             >
               {viewOnceMode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </Button>
+
+            {/* Feature #10: Emoji Picker */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="text-gray-500 hover:text-[#00a884] hover:bg-[#00a884]/10 rounded-full transition-colors"
+              >
+                <Smile className="h-5 w-5" />
+              </Button>
+              {showEmojiPicker && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
+                  <div className="absolute bottom-12 left-0 bg-white rounded-xl shadow-xl p-3 z-20 w-[280px]">
+                    <div className="grid grid-cols-8 gap-1">
+                      {['\uD83D\uDE00','\uD83D\uDE02','\uD83D\uDE0D','\uD83E\uDD23','\uD83D\uDE4F','\uD83D\uDC4D','\u2764\uFE0F','\uD83D\uDD25','\uD83C\uDF89','\uD83D\uDE22','\uD83D\uDE31','\uD83D\uDE0E','\uD83E\uDD14','\uD83D\uDE18','\uD83D\uDE4C','\uD83D\uDCAF','\uD83C\uDF1F','\uD83D\uDC4C','\uD83D\uDE09','\uD83D\uDE01','\uD83D\uDE14','\uD83D\uDE33','\uD83D\uDC4B','\uD83D\uDE80','\uD83C\uDF38','\uD83D\uDCA5','\uD83C\uDF08','\uD83C\uDF82','\u2705','\u274C','\uD83D\uDCAC','\uD83C\uDFC6'].map(emoji => (
+                        <button
+                          key={emoji}
+                          className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg"
+                          onClick={() => {
+                            setInputValue(prev => prev + emoji);
+                            setShowEmojiPicker(false);
+                          }}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Text Input */}
             <div className="flex-1 relative">
@@ -1137,11 +1237,19 @@ export function ChatArea() {
                 className="bg-[#00a884] hover:bg-[#008069]"
                 disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
                 onClick={() => {
+                  // Bug #6 fix: Send poll via WebSocket with correct type
                   const pollData = JSON.stringify({
                     question: pollQuestion,
                     options: pollOptions.filter(o => o.trim()).map(text => ({ text, votes: 0, voters: [] }))
                   });
-                  sendMessage(pollData);
+                  if (activeChat) {
+                    socketService.emit('message:send', {
+                      chatId: activeChat.id,
+                      content: pollData,
+                      type: 'poll',
+                      tempId: `temp-${Date.now()}`,
+                    });
+                  }
                   setShowPollCreator(false);
                   setPollQuestion('');
                   setPollOptions(['', '']);
@@ -1161,6 +1269,7 @@ export function ChatArea() {
             <Button
               className="w-full bg-[#00a884] hover:bg-[#008069] mb-3"
               onClick={() => {
+                // Bug #6 fix: Send location via WebSocket with correct type
                 if (navigator.geolocation) {
                   navigator.geolocation.getCurrentPosition(
                     (pos) => {
@@ -1169,12 +1278,26 @@ export function ChatArea() {
                         longitude: pos.coords.longitude,
                         name: 'My Location'
                       });
-                      sendMessage(locData);
+                      if (activeChat) {
+                        socketService.emit('message:send', {
+                          chatId: activeChat.id,
+                          content: locData,
+                          type: 'location',
+                          tempId: `temp-${Date.now()}`,
+                        });
+                      }
                       setShowLocationPicker(false);
                     },
                     () => {
                       const locData = JSON.stringify({ latitude: 0, longitude: 0, name: 'Location (permission denied)' });
-                      sendMessage(locData);
+                      if (activeChat) {
+                        socketService.emit('message:send', {
+                          chatId: activeChat.id,
+                          content: locData,
+                          type: 'location',
+                          tempId: `temp-${Date.now()}`,
+                        });
+                      }
                       setShowLocationPicker(false);
                     }
                   );
@@ -1204,11 +1327,19 @@ export function ChatArea() {
                     key={otherUser.id}
                     className="w-full px-3 py-2 text-left hover:bg-gray-100 rounded-lg flex items-center gap-3"
                     onClick={() => {
+                      // Bug #6 fix: Send contact via WebSocket with correct type
                       const contactData = JSON.stringify({
                         name: otherUser.displayName,
                         phoneNumber: otherUser.phoneNumber
                       });
-                      sendMessage(contactData);
+                      if (activeChat) {
+                        socketService.emit('message:send', {
+                          chatId: activeChat.id,
+                          content: contactData,
+                          type: 'contact',
+                          tempId: `temp-${Date.now()}`,
+                        });
+                      }
                       setShowContactPicker(false);
                     }}
                   >
@@ -1273,17 +1404,15 @@ export function ChatArea() {
                       key={gif.id}
                       className="aspect-square overflow-hidden rounded-lg hover:opacity-80 transition-opacity"
                       onClick={() => {
+                        // Bug #7 fix: Send GIF via WebSocket instead of REST
                         const gifUrl = gif.media_formats?.gif?.url || gif.media_formats?.tinygif?.url || '';
                         if (activeChat && gifUrl) {
-                          api.sendMediaMessage(activeChat.id, {
-                            content: gif.title || 'GIF',
+                          socketService.emit('message:send', {
+                            chatId: activeChat.id,
+                            content: gifUrl,
                             type: 'image',
-                            mediaUrl: gifUrl,
-                            mediaType: 'image/gif',
-                            mediaName: `${gif.title || 'gif'}.gif`,
-                            mediaSize: 0,
                             tempId: `temp-${Date.now()}`,
-                          }).catch(() => {});
+                          });
                         }
                         setShowGifPicker(false);
                         setGifSearchQuery('');
@@ -1422,6 +1551,206 @@ export function ChatArea() {
         </div>
       )}
 
+      {/* Feature #13: Media Lightbox */}
+      {showMediaLightbox && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60]" onClick={() => setShowMediaLightbox(null)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full z-10"
+            onClick={() => setShowMediaLightbox(null)}
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          <img
+            src={showMediaLightbox}
+            alt="Media"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <a
+            href={showMediaLightbox}
+            download
+            className="absolute bottom-4 right-4 text-white bg-white/20 hover:bg-white/30 rounded-full p-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Download className="h-5 w-5" />
+          </a>
+        </div>
+      )}
+
+      {/* Feature #6: Group Info Panel */}
+      {showGroupInfo && activeChat?.type === 'group' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Group Info</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowGroupInfo(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="mb-4">
+              <div className="flex items-center gap-3 mb-3">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="bg-[#00a884] text-white text-xl">{getChatInitials()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h4 className="font-semibold text-lg">{getChatName()}</h4>
+                  <p className="text-sm text-gray-500">{activeChat.participants.length} participants</p>
+                </div>
+              </div>
+            </div>
+            <h5 className="font-medium text-sm text-gray-500 mb-2">Participants</h5>
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {activeChat.participants.map(p => (
+                <div key={p.id} className="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded-lg">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-blue-500 text-white text-xs">
+                      {(p.user?.displayName || '?').slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{p.user?.displayName || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
+                  </div>
+                  {p.userId === user?.id && <span className="text-xs text-[#00a884] font-medium">You</span>}
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 space-y-2">
+              <Button
+                variant="outline"
+                className="w-full text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={async () => {
+                  if (activeChat) {
+                    try {
+                      await api.leaveGroup(activeChat.id);
+                      setShowGroupInfo(false);
+                      selectChat(null);
+                    } catch { showError('Failed to leave group'); }
+                  }
+                }}
+              >
+                <LogOut className="h-4 w-4 mr-2" /> Leave Group
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feature #7: Contact Details Panel + Feature #5: Profile Photo Upload */}
+      {showContactDetails && activeChat?.type === 'direct' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Contact Info</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowContactDetails(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {(() => {
+              const otherUser = activeChat.participants.find(p => p.userId !== user?.id)?.user;
+              const isSelf = !otherUser;
+              const displayUser = otherUser || { displayName: user?.displayName || 'You', phoneNumber: user?.phoneNumber || '' };
+              return (
+                <div className="text-center">
+                  <div className="relative inline-block mb-3">
+                    <Avatar className="h-20 w-20">
+                      <AvatarFallback className="bg-[#00a884] text-white text-2xl">
+                        {(displayUser.displayName || '?').slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Feature #5: Profile photo upload button (only for own profile) */}
+                    {isSelf && (
+                      <>
+                        <button
+                          className="absolute bottom-0 right-0 bg-[#00a884] text-white rounded-full p-1.5 shadow-lg hover:bg-[#008069] transition-colors"
+                          onClick={() => profilePhotoInputRef.current?.click()}
+                          title="Change profile photo"
+                        >
+                          <Upload className="h-3 w-3" />
+                        </button>
+                        <input
+                          ref={profilePhotoInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const result = await api.uploadMedia(file);
+                                await api.updateProfile({ profilePhoto: result.url });
+                                setProfilePhotoFile(null);
+                              } catch {
+                                showError('Failed to upload profile photo');
+                              }
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                      </>
+                    )}
+                  </div>
+                  <h4 className="font-semibold text-lg">{displayUser.displayName}</h4>
+                  <p className="text-sm text-gray-500 mb-4">{displayUser.phoneNumber}</p>
+                  <div className="flex justify-center gap-4">
+                    <Button variant="outline" size="icon" className="rounded-full" onClick={handleVoiceCall}>
+                      <Phone className="h-5 w-5 text-[#00a884]" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="rounded-full" onClick={handleVideoCall}>
+                      <Video className="h-5 w-5 text-[#00a884]" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Feature #11: Global Message Search */}
+      {showGlobalSearch && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Search Messages</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setShowGlobalSearch(false); setGlobalSearchQuery(''); setGlobalSearchResults([]); }}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Search className="h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search across all chats..."
+                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#00a884]/20"
+                value={globalSearchQuery}
+                onChange={(e) => {
+                  setGlobalSearchQuery(e.target.value);
+                  if (e.target.value.trim().length >= 2) {
+                    api.searchMessages(e.target.value).then(r => setGlobalSearchResults(r as typeof globalSearchResults)).catch(() => {});
+                  } else {
+                    setGlobalSearchResults([]);
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {globalSearchResults.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">{globalSearchQuery.length >= 2 ? 'No results found' : 'Type at least 2 characters to search'}</p>
+              ) : globalSearchResults.map(result => (
+                <div key={result.id} className="p-2 hover:bg-gray-50 rounded-lg cursor-pointer" onClick={() => { setShowGlobalSearch(false); setGlobalSearchQuery(''); setGlobalSearchResults([]); }}>
+                  <p className="text-sm truncate">{result.content}</p>
+                  <p className="text-xs text-gray-400">{new Date(result.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Order Dialog */}
       {showOrderDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
@@ -1492,26 +1821,42 @@ export function ChatArea() {
 }
 
 // Render poll content
-function renderPollContent(message: { content?: string }) {
+function renderPollContent(message: { id?: string; content?: string; chatId?: string }) {
   try {
     const poll = JSON.parse(message.content || '{}');
+    // Bug #9 fix: Calculate total votes for percentage-based bar width
+    const totalVotes = poll.options?.reduce((sum: number, opt: { votes: number }) => sum + (opt.votes || 0), 0) || 0;
     return (
       <div className="min-w-[200px]">
         <div className="flex items-center gap-2 mb-2">
           <BarChart3 className="h-4 w-4 text-[#00a884]" />
           <span className="font-medium text-sm">{poll.question}</span>
         </div>
-        {poll.options?.map((opt: { text: string; votes: number }, i: number) => (
-          <div key={i} className="mb-1">
-            <div className="flex justify-between text-xs text-gray-600 mb-0.5">
-              <span>{opt.text}</span>
-              <span>{opt.votes || 0}</span>
+        {poll.options?.map((opt: { text: string; votes: number; voters?: string[] }, i: number) => {
+          const pct = totalVotes > 0 ? Math.round(((opt.votes || 0) / totalVotes) * 100) : 0;
+          return (
+            <div key={i} className="mb-1.5">
+              {/* Bug #8 fix: Add vote button for each poll option */}
+              <button
+                className="w-full text-left hover:bg-[#00a884]/5 rounded px-1 py-0.5 transition-colors"
+                onClick={() => {
+                  if (message.id && message.chatId) {
+                    api.votePoll(message.chatId, message.id, i).catch(() => {});
+                  }
+                }}
+              >
+                <div className="flex justify-between text-xs text-gray-600 mb-0.5">
+                  <span>{opt.text}</span>
+                  <span>{opt.votes || 0} {totalVotes > 0 ? `(${pct}%)` : ''}</span>
+                </div>
+                <div className="h-1.5 bg-gray-200 rounded-full">
+                  <div className="h-full bg-[#00a884] rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                </div>
+              </button>
             </div>
-            <div className="h-1.5 bg-gray-200 rounded-full">
-              <div className="h-full bg-[#00a884] rounded-full" style={{ width: `${Math.min(100, (opt.votes || 0) * 20)}%` }} />
-            </div>
-          </div>
-        ))}
+          );
+        })}
+        {totalVotes > 0 && <p className="text-[10px] text-gray-400 mt-1">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>}
       </div>
     );
   } catch {

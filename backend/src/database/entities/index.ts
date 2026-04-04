@@ -16,3 +16,5 @@ export { BroadcastEntity } from './broadcast.entity';
 export { ProductEntity } from './product.entity';
 export { AutoReplyEntity } from './auto-reply.entity';
 export { FcmTokenEntity } from './fcm-token.entity';
+export { ChatbotConfigEntity } from './chatbot-config.entity';
+export { OrderEntity } from './order.entity';

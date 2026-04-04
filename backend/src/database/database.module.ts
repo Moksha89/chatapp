@@ -20,6 +20,8 @@ import {
   ProductEntity,
   AutoReplyEntity,
   FcmTokenEntity,
+  ChatbotConfigEntity,
+  OrderEntity,
 } from './entities';
 import { DatabaseService } from './database.service';
 
@@ -42,6 +44,8 @@ const entities = [
   ProductEntity,
   AutoReplyEntity,
   FcmTokenEntity,
+  ChatbotConfigEntity,
+  OrderEntity,
 ];
 
 @Global()

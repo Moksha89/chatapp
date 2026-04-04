@@ -138,9 +138,8 @@ export class AuthService {
     };
   }
 
+  // Bug #15 fix: Removed useless bcrypt.hash() call - tokenHash was computed but never used
   async refreshTokens(refreshTokenDto: RefreshTokenDto): Promise<AuthTokens> {
-    const tokenHash = await bcrypt.hash(refreshTokenDto.refreshToken, 10);
-    
     try {
       const payload = this.jwtService.verify(refreshTokenDto.refreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET') || 'refresh-secret-key',

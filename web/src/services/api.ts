@@ -686,6 +686,7 @@ class ApiService {
     });
   }
 
+  // Bug #13 fix: Add 401 retry logic to uploadMedia
   async uploadMedia(file: File): Promise<{
     id: string;
     filename: string;
@@ -701,11 +702,26 @@ class ApiService {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    const response = await fetch(`${API_URL}/media/upload`, {
+    let response = await fetch(`${API_URL}/media/upload`, {
       method: 'POST',
       headers,
       body: formData,
     });
+
+    // Retry on 401 with refreshed token
+    if (response.status === 401 && this.accessToken) {
+      const newToken = await this.refreshAccessToken();
+      if (newToken) {
+        headers['Authorization'] = `Bearer ${newToken}`;
+        const retryFormData = new FormData();
+        retryFormData.append('file', file);
+        response = await fetch(`${API_URL}/media/upload`, {
+          method: 'POST',
+          headers,
+          body: retryFormData,
+        });
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Upload failed' }));

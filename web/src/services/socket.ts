@@ -35,11 +35,13 @@ class SocketService {
     });
   }
 
+    // Bug #16 fix: Clear listeners Map on disconnect to prevent memory leaks
     disconnect() {
       if (this.socket) {
         this.socket.disconnect();
         this.socket = null;
       }
+      this.listeners.clear();
     }
 
     isConnected(): boolean {
@@ -96,6 +98,15 @@ class SocketService {
 
   stopTyping(chatId: string) {
     this.emit('typing:stop', { chatId });
+  }
+
+  // Feature #12: Send presence online/offline
+  setOnline() {
+    this.emit('presence:online', {});
+  }
+
+  setOffline() {
+    this.emit('presence:offline', {});
   }
 }
 

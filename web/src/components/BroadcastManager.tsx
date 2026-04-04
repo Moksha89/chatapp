@@ -128,16 +128,20 @@ export function BroadcastManager({ isOpen, onClose }: BroadcastManagerProps) {
       const broadcast = broadcasts.find(b => b.id === broadcastId);
       if (!broadcast) return;
 
-      for (const recipientId of broadcast.recipientIds) {
-        // Create or get existing chat with each recipient
-        const chat = await api.createChat({ type: 'direct', participantId: recipientId });
-        // Send message
-        await api.sendMessage(chat.id, { content: broadcastMessage, type: 'text' });
-      }
+      // Bug #18 fix: Use Promise.allSettled for broadcast send (parallel, non-blocking)
+      const results = await Promise.allSettled(
+        broadcast.recipientIds.map(async (recipientId) => {
+          const chat = await api.createChat({ type: 'direct', participantId: recipientId });
+          await api.sendMessage(chat.id, { content: broadcastMessage, type: 'text' });
+        })
+      );
+
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
 
       setBroadcastMessage('');
       setSendingTo(null);
-      alert(`Message sent to ${broadcast.recipientIds.length} recipients!`);
+      alert(`Message sent to ${succeeded} recipients!${failed > 0 ? ` (${failed} failed)` : ''}`);
     } catch (error) {
       console.error('Failed to send broadcast:', error);
     }

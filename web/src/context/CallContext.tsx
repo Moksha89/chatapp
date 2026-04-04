@@ -29,27 +29,29 @@ interface CallContextType {
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
 
-// ICE servers configuration with STUN and TURN for reliable connectivity
-// TURN servers help when users are behind strict NAT/firewalls
+// Bug #20 fix: Use environment variables for TURN server credentials instead of hardcoding
+const TURN_URL = import.meta.env.VITE_TURN_URL || 'turn:openrelay.metered.ca';
+const TURN_USERNAME = import.meta.env.VITE_TURN_USERNAME || 'openrelayproject';
+const TURN_CREDENTIAL = import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject';
+
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
-  // Free TURN servers from Open Relay Project (for production, consider self-hosted or paid TURN)
   {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
+    urls: `${TURN_URL}:80`,
+    username: TURN_USERNAME,
+    credential: TURN_CREDENTIAL,
   },
   {
-    urls: 'turn:openrelay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
+    urls: `${TURN_URL}:443`,
+    username: TURN_USERNAME,
+    credential: TURN_CREDENTIAL,
   },
   {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
+    urls: `${TURN_URL}:443?transport=tcp`,
+    username: TURN_USERNAME,
+    credential: TURN_CREDENTIAL,
   },
 ];
 
@@ -64,9 +66,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
 
+  // Bug #17 fix: Use ref for localStream to avoid stale closure
+  const localStreamRef = useRef<MediaStream | null>(null);
+
   const cleanup = useCallback(() => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
+    // Use ref to always get current localStream value (avoids stale closure)
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
       setLocalStream(null);
     }
     if (peerConnectionRef.current) {
@@ -79,7 +86,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setIsMuted(false);
     setIsVideoOff(false);
     pendingOfferRef.current = null;
-  }, [localStream]);
+  }, []);
 
   const createPeerConnection = useCallback((targetUserId: string, callId: string) => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
@@ -118,6 +125,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         audio: true,
         video: callType === 'video',
       });
+      localStreamRef.current = stream;
       setLocalStream(stream);
       return stream;
     } catch (error) {

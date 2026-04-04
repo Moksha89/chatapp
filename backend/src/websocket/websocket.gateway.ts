@@ -10,10 +10,12 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { Inject, forwardRef } from '@nestjs/common';
+import { Inject, forwardRef, Logger } from '@nestjs/common';
+import { Interval } from '@nestjs/schedule';
 import { WebsocketService } from './websocket.service';
 import { ChatsService } from '../chats/chats.service';
 import { UsersService } from '../users/users.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -33,12 +35,15 @@ export class WebsocketGateway
   @WebSocketServer()
   server: Server;
 
+  private readonly logger = new Logger(WebsocketGateway.name);
+
   constructor(
     private readonly websocketService: WebsocketService,
     private readonly jwtService: JwtService,
     @Inject(forwardRef(() => ChatsService))
     private readonly chatsService: ChatsService,
     private readonly usersService: UsersService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   afterInit(server: Server) {
@@ -117,11 +122,26 @@ export class WebsocketGateway
 
       const participants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
       
+      // Bug #2 fix: Send push notifications to offline participants
+      const sender = await this.usersService.findById(client.userId);
+      const senderName = sender?.displayName || sender?.phoneNumber || 'Unknown';
+
       for (const participantId of participants) {
         this.websocketService.emitToUser(participantId, 'message:new', {
           message,
           chatId: data.chatId,
         });
+
+        // Send push notification if user is not currently connected
+        if (!this.websocketService.isUserOnline(participantId)) {
+          this.notificationsService.sendMessageNotification(
+            participantId,
+            senderName,
+            data.content,
+            data.chatId,
+            data.type || 'text',
+          ).catch(err => this.logger.warn(`Push notification failed: ${err.message}`));
+        }
       }
 
       return { success: true, messageId: message.id };
@@ -539,6 +559,19 @@ export class WebsocketGateway
     }
 
     return { success: true };
+  }
+
+  // Bug #5 fix: Cron job to delete expired disappearing messages (runs every 60 seconds)
+  @Interval(60000)
+  async handleDisappearingMessagesCron() {
+    try {
+      const deleted = await this.chatsService.cleanupExpiredMessages();
+      if (deleted > 0) {
+        this.logger.log(`Cleaned up ${deleted} expired disappearing messages`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to cleanup expired messages:', error);
+    }
   }
 
   // Proxy Support for Calls

@@ -16,6 +16,8 @@ import {
   OneTimePrekeyEntity,
   RefreshTokenEntity,
   WebSessionEntity,
+  ChatbotConfigEntity,
+  OrderEntity,
 } from './entities';
 
 export interface User {
@@ -212,6 +214,10 @@ export class DatabaseService implements OnModuleInit {
     private refreshTokenRepository: Repository<RefreshTokenEntity>,
     @InjectRepository(WebSessionEntity)
     private webSessionRepository: Repository<WebSessionEntity>,
+    @InjectRepository(ChatbotConfigEntity)
+    private chatbotConfigRepository: Repository<ChatbotConfigEntity>,
+    @InjectRepository(OrderEntity)
+    private orderRepository: Repository<OrderEntity>,
   ) {}
 
   async onModuleInit() {
@@ -247,6 +253,19 @@ export class DatabaseService implements OnModuleInit {
 
   async getAllUsers(): Promise<User[]> {
     return this.userRepository.find() as Promise<User[]>;
+  }
+
+  // Bug #11 fix: Database LIKE query for searchByPhone instead of fetching all users
+  async searchUsers(query: string): Promise<User[]> {
+    if (!query.trim()) {
+      return this.userRepository.find() as Promise<User[]>;
+    }
+    return this.userRepository.find({
+      where: [
+        { phoneNumber: Like(`%${query}%`) },
+        { displayName: Like(`%${query}%`) },
+      ],
+    }) as Promise<User[]>;
   }
 
   async createDevice(data: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Promise<Device> {
@@ -366,20 +385,14 @@ export class DatabaseService implements OnModuleInit {
   }
 
   async findDirectChatBetweenUsers(userId1: string, userId2: string): Promise<Chat | undefined> {
-    const chats = await this.chatRepository.find({ where: { type: 'direct' } });
-    
-    for (const chat of chats) {
-      const participants = await this.chatParticipantRepository.find({
-        where: { chatId: chat.id },
-      });
-      if (participants.length === 2) {
-        const userIds = participants.map((p) => p.userId);
-        if (userIds.includes(userId1) && userIds.includes(userId2)) {
-          return chat as Chat;
-        }
-      }
-    }
-    return undefined;
+    // Bug #10 fix: Single JOIN query instead of O(n²) loop
+    const result = await this.chatRepository
+      .createQueryBuilder('chat')
+      .innerJoin('chat_participants', 'p1', 'p1."chatId" = chat.id AND p1."userId" = :userId1', { userId1 })
+      .innerJoin('chat_participants', 'p2', 'p2."chatId" = chat.id AND p2."userId" = :userId2', { userId2 })
+      .where('chat.type = :type', { type: 'direct' })
+      .getOne();
+    return (result as Chat) || undefined;
   }
 
   async updateChat(id: string, data: Partial<Chat>): Promise<Chat | undefined> {
@@ -699,5 +712,46 @@ export class DatabaseService implements OnModuleInit {
       where: { chatId },
       order: { createdAt: 'ASC' },
     }) as Promise<Message[]>;
+  }
+
+  // Chatbot config CRUD (Bug #1 fix: persisted to DB)
+  async findChatbotConfig(chatId: string): Promise<ChatbotConfigEntity | undefined> {
+    const config = await this.chatbotConfigRepository.findOne({ where: { chatId } });
+    return config || undefined;
+  }
+
+  async saveChatbotConfig(chatId: string, enabled: boolean, rules: Array<{ trigger: string; response: string }>): Promise<ChatbotConfigEntity> {
+    let config = await this.chatbotConfigRepository.findOne({ where: { chatId } });
+    if (config) {
+      config.enabled = enabled;
+      config.rules = JSON.stringify(rules);
+      return this.chatbotConfigRepository.save(config);
+    }
+    config = this.chatbotConfigRepository.create({
+      chatId,
+      enabled,
+      rules: JSON.stringify(rules),
+    });
+    return this.chatbotConfigRepository.save(config);
+  }
+
+  // Order CRUD (Bug #1 fix: persisted to DB)
+  async createOrder(data: { chatId: string; userId: string; items: string; total: number; status: string }): Promise<OrderEntity> {
+    const order = this.orderRepository.create(data);
+    return this.orderRepository.save(order);
+  }
+
+  async findOrderById(id: string): Promise<OrderEntity | undefined> {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    return order || undefined;
+  }
+
+  async findOrdersByChatId(chatId: string): Promise<OrderEntity[]> {
+    return this.orderRepository.find({ where: { chatId }, order: { createdAt: 'DESC' } });
+  }
+
+  async updateOrderStatus(id: string, status: string): Promise<OrderEntity | undefined> {
+    await this.orderRepository.update(id, { status });
+    return this.findOrderById(id);
   }
 }
