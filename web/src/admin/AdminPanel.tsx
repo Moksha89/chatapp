@@ -1,14 +1,13 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useCallback, createContext } from 'react';
 import {
   LayoutDashboard, Users, MessageSquare, MessagesSquare, Radio, Bot, ShoppingCart,
   Tags, Reply, HardDrive, Bell, Shield, BarChart3, Settings, FileText, Webhook,
   LogOut, Menu, X, ChevronLeft, ChevronRight, Search, RefreshCw, Download,
-  Trash2, Ban, Eye, EyeOff, UserX, MoreVertical, Filter, Calendar,
-  ArrowUpDown, Check, AlertTriangle, Server, Cpu, MemoryStick, Clock,
-  TrendingUp, Activity, PieChart, Globe, Smartphone, Monitor, Lock, Unlock,
+  Trash2, Ban, Check, AlertTriangle, Server,
+  TrendingUp, Activity, Smartphone, Lock, Unlock,
 } from 'lucide-react';
 import {
-  LineChart, Line, BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
+  BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
 
@@ -30,10 +29,6 @@ const AdminContext = createContext<AdminContextType>({
   logout: () => {},
   isAuthenticated: false,
 });
-
-function useAdmin() {
-  return useContext(AdminContext);
-}
 
 async function adminFetch(path: string, token: string, options?: RequestInit) {
   const res = await fetch(`${API_BASE}/admin${path}`, {
@@ -1265,23 +1260,6 @@ function APIPage() {
         </p>
       </div>
     </div>
-  );
-}
-
-// ========== BUSINESS PROFILES ==========
-function BusinessProfilesPage({ token }: { token: string }) {
-  return (
-    <GenericListPage
-      token={token} title="Business Profiles" endpoint="/business-profiles"
-      columns={[
-        { key: 'businessName', label: 'Business Name', render: (v) => <span className="font-medium text-white">{String(v || '-')}</span> },
-        { key: 'category', label: 'Category' },
-        { key: 'description', label: 'Description', render: (v) => <span className="max-w-[300px] truncate block">{String(v || '-')}</span> },
-        { key: 'email', label: 'Email' },
-        { key: 'website', label: 'Website' },
-        { key: 'createdAt', label: 'Created', render: (v) => <span>{v ? new Date(String(v)).toLocaleDateString() : '-'}</span> },
-      ]}
-    />
   );
 }
 
