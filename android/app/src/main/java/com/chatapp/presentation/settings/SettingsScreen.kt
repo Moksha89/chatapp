@@ -25,6 +25,12 @@ fun SettingsScreen(
     onLinkedDevices: () -> Unit,
     onPrivacy: () -> Unit,
     onLogout: () -> Unit,
+    onLabels: () -> Unit = {},
+    onQuickReplies: () -> Unit = {},
+    onProducts: () -> Unit = {},
+    onAutoReplies: () -> Unit = {},
+    onOrders: () -> Unit = {},
+    onBroadcasts: () -> Unit = {},
     userName: String = "User",
     phoneNumber: String = ""
 ) {
@@ -131,7 +137,7 @@ fun SettingsScreen(
                     icon = Icons.Default.Label,
                     title = "Labels",
                     subtitle = "Organize chats with labels",
-                    onClick = { }
+                    onClick = onLabels
                 )
             }
 
@@ -140,7 +146,7 @@ fun SettingsScreen(
                     icon = Icons.Default.Reply,
                     title = "Quick Replies",
                     subtitle = "Create message shortcuts",
-                    onClick = { }
+                    onClick = onQuickReplies
                 )
             }
 
@@ -149,7 +155,7 @@ fun SettingsScreen(
                     icon = Icons.Default.Inventory,
                     title = "Product Catalog",
                     subtitle = "Manage your products",
-                    onClick = { }
+                    onClick = onProducts
                 )
             }
 
@@ -158,7 +164,25 @@ fun SettingsScreen(
                     icon = Icons.Default.Schedule,
                     title = "Auto-Reply Messages",
                     subtitle = "Set up greeting and away messages",
-                    onClick = { }
+                    onClick = onAutoReplies
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.ShoppingCart,
+                    title = "Orders",
+                    subtitle = "View and manage customer orders",
+                    onClick = onOrders
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Campaign,
+                    title = "Broadcast Lists",
+                    subtitle = "Send messages to multiple contacts",
+                    onClick = onBroadcasts
                 )
             }
 

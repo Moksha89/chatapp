@@ -115,4 +115,121 @@ interface ApiService {
 
     @DELETE("devices/{deviceId}")
     suspend fun removeDevice(@Path("deviceId") deviceId: String): RemoveDeviceResponse
+
+    // Group/Channel Management
+    @POST("chats")
+    suspend fun createGroupChat(@Body request: CreateGroupChatRequest): ChatResponse
+
+    @POST("chats/{chatId}/participants")
+    suspend fun addParticipant(
+        @Path("chatId") chatId: String,
+        @Body request: AddParticipantRequest
+    ): ChatResponse
+
+    @DELETE("chats/{chatId}/participants/{userId}")
+    suspend fun removeParticipant(
+        @Path("chatId") chatId: String,
+        @Path("userId") userId: String
+    )
+
+    @DELETE("chats/{chatId}")
+    suspend fun deleteChat(@Path("chatId") chatId: String)
+
+    // Products
+    @GET("products")
+    suspend fun getProducts(): List<ProductResponse>
+
+    @POST("products")
+    suspend fun createProduct(@Body request: CreateProductRequest): ProductResponse
+
+    @PUT("products/{id}")
+    suspend fun updateProduct(
+        @Path("id") id: String,
+        @Body request: CreateProductRequest
+    ): ProductResponse
+
+    @DELETE("products/{id}")
+    suspend fun deleteProduct(@Path("id") id: String)
+
+    // Orders
+    @GET("orders")
+    suspend fun getOrders(): List<OrderResponse>
+
+    @POST("orders")
+    suspend fun createOrder(@Body request: CreateOrderRequest): OrderResponse
+
+    @PATCH("orders/{id}/status")
+    suspend fun updateOrderStatus(
+        @Path("id") id: String,
+        @Body request: UpdateOrderStatusRequest
+    ): OrderResponse
+
+    // Labels
+    @GET("labels")
+    suspend fun getLabels(): List<LabelResponse>
+
+    @POST("labels")
+    suspend fun createLabel(@Body request: CreateLabelRequest): LabelResponse
+
+    @DELETE("labels/{id}")
+    suspend fun deleteLabel(@Path("id") id: String)
+
+    // Quick Replies
+    @GET("quick-replies")
+    suspend fun getQuickReplies(): List<QuickReplyResponse>
+
+    @POST("quick-replies")
+    suspend fun createQuickReply(@Body request: CreateQuickReplyRequest): QuickReplyResponse
+
+    @DELETE("quick-replies/{id}")
+    suspend fun deleteQuickReply(@Path("id") id: String)
+
+    // Broadcasts
+    @GET("broadcasts")
+    suspend fun getBroadcasts(): List<BroadcastResponse>
+
+    @POST("broadcasts")
+    suspend fun createBroadcast(@Body request: CreateBroadcastRequest): BroadcastResponse
+
+    // Auto-Replies
+    @GET("auto-replies")
+    suspend fun getAutoReplies(): List<AutoReplyResponse>
+
+    @POST("auto-replies")
+    suspend fun createAutoReply(@Body request: CreateAutoReplyRequest): AutoReplyResponse
+
+    @DELETE("auto-replies/{id}")
+    suspend fun deleteAutoReply(@Path("id") id: String)
+
+    // Business Profile
+    @GET("business/profile")
+    suspend fun getBusinessProfile(): BusinessProfileResponse
+
+    @PATCH("business/profile")
+    suspend fun updateBusinessProfile(@Body request: UpdateBusinessProfileRequest): BusinessProfileResponse
+
+    // Contacts
+    @GET("contacts")
+    suspend fun getContacts(): List<ContactResponse>
+
+    @POST("contacts/sync")
+    suspend fun syncContacts(@Body request: SyncContactsRequest): List<ContactResponse>
+
+    // Media
+    @Multipart
+    @POST("media/upload")
+    suspend fun uploadMedia(
+        @Part file: okhttp3.MultipartBody.Part
+    ): MediaUploadResponse
+
+    // Chat Backup
+    @GET("chats/{chatId}/export")
+    suspend fun exportChat(
+        @Path("chatId") chatId: String,
+        @Query("format") format: String = "json"
+    ): ChatExportResponse
+
+    // FCM Token
+    @POST("notifications/fcm-token")
+    suspend fun registerFcmToken(@Body request: RegisterFcmTokenRequest)
 }

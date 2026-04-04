@@ -27,6 +27,8 @@ fun ChatListScreen(
     onScanQr: () -> Unit = {},
     onSettings: () -> Unit = {},
     onNewChat: () -> Unit = {},
+    onCreateGroup: (String) -> Unit = {},
+    onSearch: () -> Unit = {},
     viewModel: ChatListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -51,14 +53,43 @@ fun ChatListScreen(
                     titleContentColor = Color.White
                 ),
                                 actions = {
-                                    IconButton(onClick = { }) {
+                                    IconButton(onClick = onSearch) {
                                         Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
                                     }
                                     IconButton(onClick = onScanQr) {
                                         Icon(Icons.Default.QrCodeScanner, contentDescription = "Link Device", tint = Color.White)
                                     }
-                                    IconButton(onClick = onSettings) {
-                                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                                    var showMenu by remember { mutableStateOf(false) }
+                                    Box {
+                                        IconButton(onClick = { showMenu = true }) {
+                                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.White)
+                                        }
+                                        DropdownMenu(
+                                            expanded = showMenu,
+                                            onDismissRequest = { showMenu = false }
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("New Group") },
+                                                onClick = { showMenu = false; onCreateGroup("group") },
+                                                leadingIcon = { Icon(Icons.Default.Group, contentDescription = null) }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("New Channel") },
+                                                onClick = { showMenu = false; onCreateGroup("channel") },
+                                                leadingIcon = { Icon(Icons.Default.Campaign, contentDescription = null) }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("New Community") },
+                                                onClick = { showMenu = false; onCreateGroup("community") },
+                                                leadingIcon = { Icon(Icons.Default.People, contentDescription = null) }
+                                            )
+                                            Divider()
+                                            DropdownMenuItem(
+                                                text = { Text("Settings") },
+                                                onClick = { showMenu = false; onSettings() },
+                                                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                                            )
+                                        }
                                     }
                                 }
             )

@@ -13,7 +13,9 @@ data class Chat(
 
 enum class ChatType {
     DIRECT,
-    GROUP
+    GROUP,
+    CHANNEL,
+    COMMUNITY
 }
 
 data class ChatParticipant(

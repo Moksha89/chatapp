@@ -43,7 +43,12 @@ val QUICK_REACTIONS = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
 fun ChatScreen(
     chatId: String,
     onBack: () -> Unit,
+    onCall: (String) -> Unit = {},
+    onVideoCall: (String) -> Unit = {},
     currentUserId: String = "current-user",
+    chatName: String = "Chat",
+    isOnline: Boolean = false,
+    isTyping: Boolean = false,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -55,6 +60,8 @@ fun ChatScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var editingContent by remember { mutableStateOf("") }
     var replyToMessage by remember { mutableStateOf<Message?>(null) }
+    var showEmojiPicker by remember { mutableStateOf(false) }
+    var showAttachMenu by remember { mutableStateOf(false) }
 
     // Load messages when screen opens
     LaunchedEffect(chatId) {
@@ -140,24 +147,42 @@ fun ChatScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape),
-                            color = Color(0xFF25D366)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = "J",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
+                        Box {
+                            Surface(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape),
+                                color = Color(0xFF25D366)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = chatName.firstOrNull()?.toString() ?: "?",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            if (isOnline) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .background(Color(0xFF25D366), CircleShape)
+                                        .align(Alignment.BottomEnd)
                                 )
                             }
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("John Doe", fontSize = 16.sp)
-                            Text("online", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+                            Text(chatName, fontSize = 16.sp)
+                            Text(
+                                text = when {
+                                    isTyping -> "typing..."
+                                    isOnline -> "online"
+                                    else -> "offline"
+                                },
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
                         }
                     }
                 },
@@ -169,7 +194,15 @@ fun ChatScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF128C7E),
                     titleContentColor = Color.White
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { onVideoCall(chatId) }) {
+                        Icon(Icons.Default.Videocam, contentDescription = "Video Call", tint = Color.White)
+                    }
+                    IconButton(onClick = { onCall(chatId) }) {
+                        Icon(Icons.Default.Call, contentDescription = "Voice Call", tint = Color.White)
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -266,6 +299,27 @@ fun ChatScreen(
                 }
             }
 
+            // Attachment menu
+            if (showAttachMenu) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFF5F5F5)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        AttachmentOption(Icons.Default.Image, "Gallery", Color(0xFF4CAF50)) { showAttachMenu = false }
+                        AttachmentOption(Icons.Default.CameraAlt, "Camera", Color(0xFF2196F3)) { showAttachMenu = false }
+                        AttachmentOption(Icons.Default.InsertDriveFile, "Document", Color(0xFF9C27B0)) { showAttachMenu = false }
+                        AttachmentOption(Icons.Default.LocationOn, "Location", Color(0xFFFF5722)) { showAttachMenu = false }
+                        AttachmentOption(Icons.Default.Person, "Contact", Color(0xFF607D8B)) { showAttachMenu = false }
+                    }
+                }
+            }
+
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = Color(0xFFF0F0F0)
@@ -276,6 +330,14 @@ fun ChatScreen(
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = { showEmojiPicker = !showEmojiPicker; showAttachMenu = false }) {
+                        Icon(
+                            if (showEmojiPicker) Icons.Default.Keyboard else Icons.Default.EmojiEmotions,
+                            contentDescription = "Emoji",
+                            tint = Color.Gray
+                        )
+                    }
+
                     TextField(
                         value = messageText,
                         onValueChange = { messageText = it },
@@ -291,7 +353,9 @@ fun ChatScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = { showAttachMenu = !showAttachMenu; showEmojiPicker = false }) {
+                        Icon(Icons.Default.AttachFile, contentDescription = "Attach", tint = Color.Gray)
+                    }
 
                     FloatingActionButton(
                         onClick = { 
@@ -299,6 +363,7 @@ fun ChatScreen(
                                 viewModel.sendMessage(messageText, replyToMessage?.id)
                                 messageText = ""
                                 replyToMessage = null
+                                showEmojiPicker = false
                             }
                         },
                         containerColor = Color(0xFF25D366),
@@ -312,7 +377,36 @@ fun ChatScreen(
                     }
                 }
             }
+
+            // Emoji picker
+            if (showEmojiPicker) {
+                EmojiPickerView(
+                    onEmojiSelected = { emoji -> messageText += emoji },
+                    onDismiss = { showEmojiPicker = false }
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun AttachmentOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier
+                .size(48.dp)
+                .background(color, CircleShape)
+        ) {
+            Icon(icon, contentDescription = label, tint = Color.White)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(label, fontSize = 11.sp, color = Color.Gray)
     }
 }
 

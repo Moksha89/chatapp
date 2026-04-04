@@ -24,7 +24,13 @@ enum class MessageType {
     TEXT,
     IMAGE,
     FILE,
-    AUDIO
+    AUDIO,
+    VIDEO,
+    GIF,
+    STICKER,
+    LOCATION,
+    CONTACT,
+    DOCUMENT
 }
 
 enum class MessageStatus {
