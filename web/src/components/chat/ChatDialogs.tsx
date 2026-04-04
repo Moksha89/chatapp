@@ -19,39 +19,14 @@ import { socketService } from '../../services/socket';
 import { useToast } from '../Toast';
 import { EditMessageDialog } from '../MessageContextMenu';
 
-interface Participant {
-  id: string;
-  userId: string;
-  role?: string;
-  user?: {
-    id: string;
-    displayName?: string;
-    phoneNumber?: string;
-    profilePhoto?: string;
-  };
-}
-
-interface ActiveChat {
-  id: string;
-  name?: string;
-  type: string;
-  participants: Participant[];
-  isLocked?: boolean;
-  pinnedMessageId?: string | null;
-  wallpaper?: string | null;
-  disappearingMessagesDuration?: number | null;
-  description?: string | null;
-  unreadCount?: number;
-  lastMessage?: unknown;
-}
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface ChatDialogsProps {
-  activeChat: ActiveChat;
+  activeChat: any;
   userId: string;
   user: { id: string; displayName?: string; phoneNumber?: string } | null;
-  chats: ActiveChat[];
+  chats: any[];
   refreshChats: () => Promise<void>;
-  selectChat: (chat: ActiveChat | null) => void;
+  selectChat: (chat: any) => void;
 
   // Edit message
   editingMessage: { id: string; content: string } | null;
@@ -203,7 +178,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
             <h3 className="font-semibold mb-3">Forward to...</h3>
             <div className="flex-1 overflow-y-auto space-y-1">
               {chats.filter(c => c.id !== activeChat?.id).map(chat => {
-                const chatName = chat.name || chat.participants.find(p => p.userId !== userId)?.user?.displayName || 'Unknown';
+                const chatName = chat.name || chat.participants.find((p: any) => p.userId !== userId)?.user?.displayName || 'Unknown';
                 return (
                   <button
                     key={chat.id}
@@ -711,14 +686,14 @@ export function ChatDialogs(props: ChatDialogsProps) {
                 </div>
               </div>
             </div>
-            {activeChat.participants.find(p => p.userId === userId && p.role === 'admin') && (
-              <Button
+            {            activeChat.participants.find((p: any) => p.userId === userId && p.role === 'admin') && (
+                          <Button
                 variant="outline"
                 className="w-full mb-3 text-[#00a884] hover:text-[#008069] hover:bg-[#00a884]/5 border-[#00a884]/30"
                 onClick={async () => {
                   try {
                     const allUsers = await api.getAllUsers();
-                    const existingIds = activeChat.participants.map(p => p.userId);
+                    const existingIds = activeChat.participants.map((p: any) => p.userId);
                     const available = allUsers.filter((u: { id: string }) => !existingIds.includes(u.id));
                     if (available.length === 0) {
                       showError('No more users to add');
@@ -734,20 +709,20 @@ export function ChatDialogs(props: ChatDialogsProps) {
             )}
             <h5 className="font-medium text-sm text-gray-500 mb-2">Participants</h5>
             <div className="flex-1 overflow-y-auto space-y-1">
-              {activeChat.participants.map(p => (
-                <div key={p.id} className="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded-lg">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-blue-500 text-white text-xs">
-                      {(p.user?.displayName || '?').slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{p.user?.displayName || 'Unknown'}</p>
-                    <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
-                  </div>
-                  {p.userId === userId && <span className="text-xs text-[#00a884] font-medium">You</span>}
-                  {p.role === 'admin' && p.userId !== userId && <span className="text-xs text-blue-500 font-medium">Admin</span>}
-                  {activeChat.participants.find(pp => pp.userId === userId && pp.role === 'admin') && p.userId !== userId && (
+                            {activeChat.participants.map((p: any) => (
+                              <div key={p.id} className="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded-lg">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarFallback className="bg-blue-500 text-white text-xs">
+                                    {(p.user?.displayName || '?').slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{p.user?.displayName || 'Unknown'}</p>
+                                  <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
+                                </div>
+                                {p.userId === userId && <span className="text-xs text-[#00a884] font-medium">You</span>}
+                                {p.role === 'admin' && p.userId !== userId && <span className="text-xs text-blue-500 font-medium">Admin</span>}
+                                {activeChat.participants.find((pp: any) => pp.userId === userId && pp.role === 'admin') && p.userId !== userId && (
                     <button
                       className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded"
                       onClick={async () => {
@@ -798,7 +773,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
               </Button>
             </div>
             {(() => {
-              const otherUser = activeChat.participants.find(p => p.userId !== userId)?.user;
+              const otherUser = activeChat.participants.find((p: any) => p.userId !== userId)?.user;
               const isSelf = !otherUser;
               const displayUser = otherUser || { displayName: user?.displayName || 'You', phoneNumber: user?.phoneNumber || '' };
               return (
@@ -895,7 +870,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
                   }
                   setShowGlobalSearch(false); setGlobalSearchQuery(''); setGlobalSearchResults([]);
                 }}>
-                  <p className="text-xs font-medium text-[#008069] mb-0.5">{chats.find(c => c.id === result.chatId)?.name || chats.find(c => c.id === result.chatId)?.participants.find(p => p.userId !== userId)?.user?.displayName || 'Chat'}</p>
+                  <p className="text-xs font-medium text-[#008069] mb-0.5">{chats.find(c => c.id === result.chatId)?.name || chats.find(c => c.id === result.chatId)?.participants.find((p: any) => p.userId !== userId)?.user?.displayName || 'Chat'}</p>
                   <p className="text-sm truncate">{result.content}</p>
                   <p className="text-xs text-gray-400">{new Date(result.createdAt).toLocaleString()}</p>
                 </div>
@@ -937,19 +912,19 @@ export function ChatDialogs(props: ChatDialogsProps) {
               {activeChat?.type === 'channel' ? 'Subscribers' : 'Members'}
             </h5>
             <div className="flex-1 overflow-y-auto space-y-1">
-              {activeChat.participants.map(p => (
-                <div key={p.id} className="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded-lg">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-blue-500 text-white text-xs">
-                      {(p.user?.displayName || '?').slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{p.user?.displayName || 'Unknown'}</p>
-                    <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
-                  </div>
-                  {p.role === 'admin' && <span className="text-xs text-[#00a884] font-medium">Admin</span>}
-                  {p.userId === userId && <span className="text-xs text-gray-400 ml-1">You</span>}
+                            {activeChat.participants.map((p: any) => (
+                              <div key={p.id} className="flex items-center gap-3 px-2 py-2 hover:bg-gray-50 rounded-lg">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarFallback className="bg-blue-500 text-white text-xs">
+                                    {(p.user?.displayName || '?').slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{p.user?.displayName || 'Unknown'}</p>
+                                  <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
+                                </div>
+                                {p.role === 'admin' && <span className="text-xs text-[#00a884] font-medium">Admin</span>}
+                                {p.userId === userId && <span className="text-xs text-gray-400 ml-1">You</span>}
                 </div>
               ))}
             </div>
