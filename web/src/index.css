@@ -127,10 +127,76 @@
 
   /* Send button hover/active */
   .send-btn {
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, background-color 0.15s ease;
   }
   .send-btn:hover { transform: scale(1.08); }
   .send-btn:active { transform: scale(0.95); }
+
+  /* Smooth page transitions */
+  .page-transition {
+    animation: pageSlideIn 0.3s ease-out;
+  }
+  @keyframes pageSlideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Button ripple effect */
+  .btn-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-ripple::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(255,255,255,0.3) 10%, transparent 10.01%);
+    transform: scale(10);
+    opacity: 0;
+    transition: transform 0.4s, opacity 0.5s;
+  }
+  .btn-ripple:active::after {
+    transform: scale(0);
+    opacity: 1;
+    transition: 0s;
+  }
+
+  /* Smooth sidebar chat list transitions */
+  .chat-list-item {
+    transition: background-color 0.15s ease, transform 0.1s ease;
+  }
+  .chat-list-item:active {
+    transform: scale(0.98);
+  }
+
+  /* Toast notification slide-in */
+  .toast-enter {
+    animation: toastSlideIn 0.3s ease-out;
+  }
+  @keyframes toastSlideIn {
+    from { opacity: 0; transform: translateY(-16px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Smooth avatar presence indicator */
+  .presence-dot {
+    transition: background-color 0.3s ease;
+    box-shadow: 0 0 0 2px white;
+  }
+  .presence-dot.online {
+    background-color: #22c55e;
+  }
+
+  /* Image loading placeholder */
+  .img-loading {
+    background: linear-gradient(135deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 200%;
+    animation: imgShimmer 1.5s ease-in-out infinite;
+  }
+  @keyframes imgShimmer {
+    0% { background-position: 200% 200%; }
+    100% { background-position: 0% 0%; }
+  }
 
   /* Recording pulse */
   .recording-pulse {
@@ -210,6 +276,49 @@
   }
   .chat-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgba(0,0,0,0.25);
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .mobile-full-height {
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    }
+    
+    /* Larger touch targets on mobile */
+    .mobile-touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Remove hover states on touch devices */
+    @media (hover: none) {
+      .chat-item:hover {
+        background-color: transparent;
+      }
+    }
+
+    /* Better input handling on mobile */
+    input, textarea {
+      font-size: 16px !important; /* Prevents iOS zoom on focus */
+    }
+  }
+
+  /* Smooth scroll behavior */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Focus visible styles for accessibility */
+  .focus-ring:focus-visible {
+    outline: 2px solid #00a884;
+    outline-offset: 2px;
+  }
+
+  /* Upload progress bar */
+  .upload-progress {
+    transition: width 0.3s ease;
   }
 }
 
