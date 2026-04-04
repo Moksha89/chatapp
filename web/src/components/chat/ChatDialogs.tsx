@@ -8,23 +8,11 @@ import {
   FileDown,
   Download,
   Timer,
-  Lock,
-  Bot,
-  ShoppingCart,
   Phone,
   Video,
   Upload,
   Users,
   LogOut,
-  Star,
-  Hash,
-  Globe,
-  Smile,
-  BellOff,
-  User,
-  Image,
-  Pin,
-  BarChart3,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { socketService } from '../../services/socket';
