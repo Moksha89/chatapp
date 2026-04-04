@@ -57,7 +57,7 @@ export function BroadcastManager({ isOpen, onClose }: BroadcastManagerProps) {
     try {
       const [broadcastList, users] = await Promise.all([
         api.getBroadcasts(),
-        api.searchUsers(''),
+        api.getAllUsers(),
       ]);
       setBroadcasts(broadcastList);
       setAllUsers(users.filter((u: User) => u.id !== user?.id));

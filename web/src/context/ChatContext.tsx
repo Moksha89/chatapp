@@ -265,6 +265,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
         setMessages((prev) => [...prev, tempMessage]);
 
+        // Update sidebar last message preview immediately
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === activeChat.id
+              ? { ...chat, lastMessage: tempMessage }
+              : chat
+          )
+        );
+
         const isOnline = offlineQueue.getOnlineStatus() && socketService.isConnected();
 
         if (isOnline) {

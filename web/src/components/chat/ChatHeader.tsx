@@ -63,24 +63,24 @@ export function ChatHeader({
   onShowOrder,
 }: ChatHeaderProps) {
   return (
-    <div className="px-2 md:px-4 py-3 bg-[#f0f2f5] flex items-center border-b border-gray-200 shadow-sm">
+    <div className="px-2 md:px-4 py-3 bg-[#008069] flex items-center border-b border-gray-200 shadow-sm">
       <Button
         variant="ghost"
         size="icon"
         onClick={onBack}
-        className="md:hidden text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full mr-1"
+        className="md:hidden text-white/90 hover:text-white hover:bg-white/10 rounded-full mr-1"
       >
         <ArrowLeft className="h-5 w-5" />
       </Button>
-      <Avatar className="h-10 w-10 mr-3 ring-2 ring-green-500/20">
-        <AvatarFallback className="bg-gradient-to-br from-green-400 to-green-600 text-white font-medium">
+      <Avatar className="h-10 w-10 mr-3 ring-2 ring-white/20">
+        <AvatarFallback className="bg-[#00a884] text-white font-medium">
           {chatInitials}
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-gray-900 truncate">{chatName}</h3>
+        <h3 className="font-semibold text-white truncate">{chatName}</h3>
         {isTyping && (
-          <p className="text-xs text-green-600 font-medium">typing...</p>
+          <p className="text-xs text-green-200 font-medium">typing...</p>
         )}
       </div>
       <div className="flex items-center gap-1">
@@ -89,7 +89,7 @@ export function ChatHeader({
           size="icon"
           onClick={onToggleSearch}
           title="Search"
-          className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+          className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
         >
           <Search className="h-5 w-5" />
         </Button>
@@ -99,7 +99,7 @@ export function ChatHeader({
           onClick={onVoiceCall}
           disabled={callState !== 'idle'}
           title="Voice Call"
-          className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+          className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
         >
           <Phone className="h-5 w-5" />
         </Button>
@@ -109,7 +109,7 @@ export function ChatHeader({
           onClick={onVideoCall}
           disabled={callState !== 'idle'}
           title="Video Call"
-          className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+          className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
         >
           <Video className="h-5 w-5" />
         </Button>
@@ -118,7 +118,7 @@ export function ChatHeader({
             variant="ghost"
             size="icon"
             onClick={onToggleChatMenu}
-            className="text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
+            className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
           >
             <MoreVertical className="h-5 w-5" />
           </Button>
