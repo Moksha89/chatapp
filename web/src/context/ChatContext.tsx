@@ -174,18 +174,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated]);
 
-  const loadMessages = useCallback(async (chatId: string) => {
-    setIsLoadingMessages(true);
-    try {
-      const messageList = await api.getMessages(chatId);
-      setMessages(messageList as Message[]);
-    } catch (error) {
-      console.error('Failed to load messages:', error);
-    } finally {
-      setIsLoadingMessages(false);
-    }
-  }, []);
-
   const loadMoreMessages = useCallback(async () => {
     if (!activeChat || messages.length === 0) return;
     const oldestMessage = messages[0];
@@ -201,25 +189,31 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const selectChat = useCallback((chat: Chat | null) => {
     setActiveChat(chat);
     if (chat) {
-      loadMessages(chat.id);
       // Clear unread count in sidebar immediately
       setChats(prev => prev.map(c => c.id === chat.id ? { ...c, unreadCount: 0 } : c));
-      // Mark unread messages as read on the server
-      if (user) {
-        api.getMessages(chat.id).then((msgs: unknown[]) => {
-          const typedMsgs = msgs as Message[];
+      // Load messages and mark unread as read in a single API call
+      setIsLoadingMessages(true);
+      api.getMessages(chat.id).then((msgs: unknown[]) => {
+        const typedMsgs = msgs as Message[];
+        setMessages(typedMsgs);
+        // Mark unread messages as read on the server
+        if (user) {
           const unreadIds = typedMsgs
             .filter(m => m.senderId !== user.id && m.status !== 'read')
             .map(m => m.id);
           if (unreadIds.length > 0) {
             socketService.markRead(chat.id, unreadIds);
           }
-        }).catch(() => {});
-      }
+        }
+      }).catch((error) => {
+        console.error('Failed to load messages:', error);
+      }).finally(() => {
+        setIsLoadingMessages(false);
+      });
     } else {
       setMessages([]);
     }
-  }, [loadMessages, user]);
+  }, [user]);
 
         // Bug #3 fix: Handle all participants in group chats (not just one)
         // Bug #4 fix: Skip E2EE for group chats (not practical for multi-recipient)

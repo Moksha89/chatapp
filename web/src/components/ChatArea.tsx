@@ -42,7 +42,8 @@ import {
   Smile,
   Upload,
   Users,
-  LogOut
+  LogOut,
+  ArrowDown
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -104,6 +105,7 @@ export function ChatArea() {
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [globalSearchResults, setGlobalSearchResults] = useState<Array<{ id: string; chatId: string; content: string; createdAt: string }>>([]);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -119,8 +121,28 @@ export function ChatArea() {
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setShowScrollToBottom(false);
     }
   }, [messages]);
+
+  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollToBottom(distanceFromBottom > 200);
+  };
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setShowScrollToBottom(false);
+    }
+  };
+
+  const getSenderName = (senderId: string): string => {
+    if (senderId === user?.id) return 'You';
+    const participant = activeChat?.participants.find(p => p.userId === senderId);
+    return participant?.user?.displayName || participant?.user?.phoneNumber || 'Unknown';
+  };
 
   useEffect(() => {
     return () => {
@@ -518,7 +540,7 @@ export function ChatArea() {
   }
 
   return (
-    <div className="flex-1 flex flex-col wa-chat-bg">
+    <div className="flex-1 flex flex-col wa-chat-bg relative">
       {/* Chat Header */}
       <div className="px-2 md:px-4 py-2.5 bg-[#008069] flex items-center shadow-sm">
         {/* Back button for mobile */}
@@ -539,19 +561,27 @@ export function ChatArea() {
           <h3 className="font-semibold text-white truncate">{getChatName()}</h3>
           {isOtherTyping ? (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-green-200">typing</span>
+              <span className="text-xs text-green-200">
+                {(activeChat?.type === 'group' || activeChat?.type === 'community') ? (() => {
+                  const typingUserIds = Array.from(chatTypingUsers || []);
+                  const names = typingUserIds.map(id => getSenderName(id)).filter(n => n !== 'You');
+                  return names.length > 0 ? `${names.join(', ')} typing` : 'typing';
+                })() : 'typing'}
+              </span>
               <div className="typing-dots"><span></span><span></span><span></span></div>
             </div>
           ) : (() => {
-            // Feature #12: Show dynamic online/offline status
             if (activeChat?.type === 'channel') {
-              return <p className="text-xs text-green-200">{activeChat.participants.length} subscribers</p>;
+              const count = activeChat.participants.length;
+              return <p className="text-xs text-green-200">{count} subscriber{count !== 1 ? 's' : ''}</p>;
             }
             if (activeChat?.type === 'community') {
-              return <p className="text-xs text-green-200">{activeChat.participants.length} members</p>;
+              const count = activeChat.participants.length;
+              return <p className="text-xs text-green-200">{count} member{count !== 1 ? 's' : ''}</p>;
             }
             if (activeChat?.type === 'group') {
-              return <p className="text-xs text-green-200">{activeChat.participants.length} participants</p>;
+              const count = activeChat.participants.length;
+              return <p className="text-xs text-green-200">{count} participant{count !== 1 ? 's' : ''}</p>;
             }
             const otherUserId = activeChat?.participants.find(p => p.userId !== user?.id)?.userId;
             const isOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
@@ -675,7 +705,7 @@ export function ChatArea() {
       )}
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 p-4" ref={scrollRef} onScroll={handleMessagesScroll}>
         {isLoadingMessages ? (
           <div className="flex flex-col gap-3 p-4">
             {[1, 2, 3].map((i) => (
@@ -690,14 +720,18 @@ export function ChatArea() {
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    {(activeChat?.type === 'direct' || activeChat?.type === 'group') && (
+                    {activeChat?.type === 'direct' && (
                       <div className="encryption-banner inline-flex items-center gap-2 mb-4">
                         <Lock className="h-3 w-3" />
                         Messages are end-to-end encrypted. No one outside of this chat can read them.
                       </div>
                     )}
                     <p className="text-gray-500 text-sm">
-                      {activeChat?.type === 'channel' ? 'Only admins can post in this channel' : activeChat?.type === 'community' ? 'Welcome to the community' : 'Send a message to start chatting'}
+                      {activeChat?.type === 'channel' 
+                        ? (activeChat.participants.find(p => p.userId === user?.id && p.role === 'admin') 
+                          ? 'Post the first message to this channel' 
+                          : 'Only admins can post in this channel')
+                        : activeChat?.type === 'community' ? 'Welcome to the community' : 'Send a message to start chatting'}
                     </p>
             </div>
           </div>
@@ -728,11 +762,15 @@ export function ChatArea() {
                           : 'bg-white rounded-tl-none'
                       } ${message.isDeleted ? 'opacity-60 italic' : ''}`}
                     >
+                      {/* Sender name in group messages */}
+                      {!isOwn && !message.isDeleted && (activeChat?.type === 'group' || activeChat?.type === 'community' || activeChat?.type === 'channel') && (
+                        <p className="text-xs font-medium text-[#00a884] mb-0.5">{getSenderName(message.senderId)}</p>
+                      )}
                       {/* Reply preview */}
                       {replyToMsg && !message.isDeleted && (
                         <div className="border-l-4 border-[#00a884] bg-black/5 rounded px-2 py-1 mb-1 text-xs">
                           <p className="font-medium text-[#008069] truncate">
-                            {replyToMsg.senderId === user?.id ? 'You' : 'Them'}
+                            {getSenderName(replyToMsg.senderId)}
                           </p>
                           <p className="text-gray-600 truncate">{replyToMsg.content}</p>
                         </div>
@@ -802,6 +840,19 @@ export function ChatArea() {
           </div>
         )}
       </ScrollArea>
+
+      {/* Scroll to bottom button */}
+      {showScrollToBottom && (
+        <div className="absolute bottom-24 right-6 z-10">
+          <Button
+            onClick={scrollToBottom}
+            className="rounded-full bg-white shadow-lg hover:bg-gray-50 text-gray-600 h-10 w-10 p-0"
+            size="icon"
+          >
+            <ArrowDown className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
 
       {/* Upload Progress */}
       {isUploading && (
@@ -1759,6 +1810,7 @@ export function ChatArea() {
                   }
                   setShowGlobalSearch(false); setGlobalSearchQuery(''); setGlobalSearchResults([]);
                 }}>
+                  <p className="text-xs font-medium text-[#008069] mb-0.5">{chats.find(c => c.id === result.chatId)?.name || chats.find(c => c.id === result.chatId)?.participants.find(p => p.userId !== user?.id)?.user?.displayName || 'Chat'}</p>
                   <p className="text-sm truncate">{result.content}</p>
                   <p className="text-xs text-gray-400">{new Date(result.createdAt).toLocaleString()}</p>
                 </div>
@@ -1787,8 +1839,8 @@ export function ChatArea() {
                   <h4 className="font-semibold text-lg">{getChatName()}</h4>
                   <p className="text-sm text-gray-500">
                     {activeChat?.type === 'channel' 
-                      ? `${activeChat.participants.length} subscribers` 
-                      : `${activeChat.participants.length} members`}
+                      ? `${activeChat.participants.length} subscriber${activeChat.participants.length !== 1 ? 's' : ''}` 
+                      : `${activeChat.participants.length} member${activeChat.participants.length !== 1 ? 's' : ''}`}
                   </p>
                 </div>
               </div>

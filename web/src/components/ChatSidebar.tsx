@@ -57,7 +57,32 @@ export function ChatSidebar() {
     if (chatFilter === 'channels') return chat.type === 'channel';
     if (chatFilter === 'communities') return chat.type === 'community';
     return true;
+  }).sort((a, b) => {
+    const aTime = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : 0;
+    const bTime = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
+    return bTime - aTime;
   });
+
+  const getChatTypeIcon = (type: string) => {
+    switch (type) {
+      case 'group': return <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />;
+      case 'channel': return <Hash className="h-3 w-3 text-gray-400 flex-shrink-0" />;
+      case 'community': return <Globe className="h-3 w-3 text-gray-400 flex-shrink-0" />;
+      default: return null;
+    }
+  };
+
+  const getLastMessagePreview = (chat: typeof chats[0]) => {
+    if (!chat.lastMessage?.content) return 'No messages yet';
+    const content = chat.lastMessage.content;
+    if (chat.type === 'group' || chat.type === 'channel' || chat.type === 'community') {
+      const sender = chat.lastMessage.senderId === user?.id
+        ? 'You'
+        : chat.participants.find(p => p.userId === chat.lastMessage?.senderId)?.user?.displayName || '';
+      return sender ? `${sender}: ${content}` : content;
+    }
+    return content;
+  };
 
   const getChatName = (chat: typeof chats[0]) => {
     if (chat.name) return chat.name;
@@ -266,14 +291,17 @@ export function ChatSidebar() {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline">
-                  <span className="font-medium truncate">{getChatName(chat)}</span>
+                  <span className="font-medium truncate flex items-center gap-1">
+                    {getChatTypeIcon(chat.type)}
+                    {getChatName(chat)}
+                  </span>
                   <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
                     {formatTime(chat.lastMessage?.createdAt)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500 truncate">
-                    {chat.lastMessage?.content || 'No messages yet'}
+                    {getLastMessagePreview(chat)}
                   </span>
                   {chat.unreadCount > 0 && (
                     <span className="unread-badge bg-[#00a884] text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 ml-2">
