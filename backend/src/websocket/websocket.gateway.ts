@@ -724,7 +724,7 @@ export class WebsocketGateway
       return { success: true, message };
     } catch (error) {
       console.error('Edit message error:', error);
-      return { error: error.message || 'Failed to edit message' };
+      return { error: error instanceof Error ? error.message : 'Failed to edit message' };
     }
   }
 
@@ -757,7 +757,7 @@ export class WebsocketGateway
       return { success: true };
     } catch (error) {
       console.error('Delete message error:', error);
-      return { error: error.message || 'Failed to delete message' };
+      return { error: error instanceof Error ? error.message : 'Failed to delete message' };
     }
   }
 }
