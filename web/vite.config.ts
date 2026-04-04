@@ -12,20 +12,24 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-radix': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-scroll-area',
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-toast',
-            '@radix-ui/react-tooltip',
-          ],
-          'vendor-icons': ['lucide-react'],
-          'vendor-socket': ['socket.io-client'],
-          'vendor-crypto': ['@noble/ciphers', '@noble/curves', '@noble/hashes'],
+        manualChunks(id: string) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-dom') || id.includes('/react/')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@radix-ui')) {
+              return 'vendor-radix';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('socket.io')) {
+              return 'vendor-socket';
+            }
+            if (id.includes('@noble')) {
+              return 'vendor-crypto';
+            }
+          }
         },
       },
     },
