@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WhatsAppBusinessChat"
+rootProject.name = "EChatBusiness"
 include(":app")
