@@ -1066,6 +1066,155 @@ class ApiService {
     const data = await response.json();
     return data.results as Array<{ id: string; title: string; media_formats: { gif: { url: string }; tinygif: { url: string } } }>;
   }
+
+  // ========== CHAT UX (ChitChat features) ==========
+  async pinConversation(chatId: string, isPinned: boolean) {
+    return this.request<{ id: string; isPinned: boolean }>(`/chats/${chatId}/pin`, {
+      method: 'PUT',
+      body: JSON.stringify({ isPinned }),
+    });
+  }
+
+  async muteConversation(chatId: string, muted: boolean, duration?: '1h' | '8h' | '1w' | 'forever') {
+    return this.request<{ id: string; isMuted: boolean; mutedUntil: string | null }>(`/chats/${chatId}/mute`, {
+      method: 'PUT',
+      body: JSON.stringify({ muted, duration }),
+    });
+  }
+
+  async archiveConversation(chatId: string, isArchived: boolean) {
+    return this.request<{ id: string; isArchived: boolean }>(`/chats/${chatId}/archive`, {
+      method: 'PUT',
+      body: JSON.stringify({ isArchived }),
+    });
+  }
+
+  async favoriteConversation(chatId: string, isFavorite: boolean) {
+    return this.request<{ id: string; isFavorite: boolean }>(`/chats/${chatId}/favorite`, {
+      method: 'PUT',
+      body: JSON.stringify({ isFavorite }),
+    });
+  }
+
+  async clearChatHistory(chatId: string) {
+    return this.request<{ id: string; clearChatBefore: string }>(`/chats/${chatId}/clear`, {
+      method: 'POST',
+    });
+  }
+
+  async reportContact(chatId: string, reason: string, details?: string) {
+    return this.request<{ message: string }>(`/chats/${chatId}/report`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, details }),
+    });
+  }
+
+  // ========== FRIENDS (ChitChat features) ==========
+  async getFriends() {
+    return this.request<Array<{ id: string; userId: string; friendId: string; status: string; createdAt: string }>>('/friends');
+  }
+
+  async getFriendRequests() {
+    return this.request<Array<{ id: string; userId: string; friendId: string; status: string; createdAt: string }>>('/friends/requests');
+  }
+
+  async getFriendSuggestions() {
+    return this.request<Array<{ id: string; displayName: string; phoneNumber: string }>>('/friends/suggestions');
+  }
+
+  async sendFriendRequest(friendId: string) {
+    return this.request<{ id: string; status: string }>('/friends/request', {
+      method: 'POST',
+      body: JSON.stringify({ friendId }),
+    });
+  }
+
+  async acceptFriendRequest(requestId: string) {
+    return this.request<{ id: string; status: string }>(`/friends/${requestId}/accept`, {
+      method: 'POST',
+    });
+  }
+
+  async declineFriendRequest(requestId: string) {
+    return this.request<{ id: string; status: string }>(`/friends/${requestId}/decline`, {
+      method: 'POST',
+    });
+  }
+
+  async blockFriend(friendId: string) {
+    return this.request<{ id: string; status: string }>(`/friends/${friendId}/block`, {
+      method: 'POST',
+    });
+  }
+
+  async unblockFriend(friendId: string) {
+    return this.request<{ id: string; status: string }>(`/friends/${friendId}/unblock`, {
+      method: 'POST',
+    });
+  }
+
+  // ========== CALLS (ChitChat features) ==========
+  async getCallHistory() {
+    return this.request<Array<{
+      id: string;
+      initiatorId: string;
+      receiverId: string;
+      chatId: string;
+      type: string;
+      mode: string;
+      status: string;
+      startedAt: string;
+      endedAt: string | null;
+      duration: number | null;
+    }>>('/calls/history');
+  }
+
+  async initiateCall(receiverId: string, chatId: string, type: 'audio' | 'video') {
+    return this.request<{ id: string; status: string }>('/calls/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ receiverId, chatId, type }),
+    });
+  }
+
+  async answerCallApi(callId: string) {
+    return this.request<{ id: string; status: string }>(`/calls/${callId}/answer`, {
+      method: 'POST',
+    });
+  }
+
+  async declineCallApi(callId: string) {
+    return this.request<{ id: string; status: string }>(`/calls/${callId}/decline`, {
+      method: 'POST',
+    });
+  }
+
+  async endCallApi(callId: string) {
+    return this.request<{ id: string; status: string; duration: number }>(`/calls/${callId}/end`, {
+      method: 'POST',
+    });
+  }
+
+  // ========== STICKERS (ChitChat features) ==========
+  async getStickers() {
+    return this.request<Array<{
+      id: string;
+      packName: string;
+      imageUrl: string;
+      emoji: string | null;
+      isActive: boolean;
+    }>>('/admin/stickers');
+  }
+
+  // ========== BACKUP (ChitChat features) ==========
+  async exportChatBackup(chatId: string, format: 'json' | 'text' = 'text', includeMedia = false) {
+    return this.request<{ filename: string; content: string; mimeType: string }>(
+      `/backup/chats/${chatId}/export?format=${format}&includeMedia=${includeMedia}`
+    );
+  }
+
+  async getGoogleDriveAuthUrl() {
+    return this.request<{ authUrl?: string; error?: string }>('/backup/google/auth');
+  }
 }
 
 export const api = new ApiService();

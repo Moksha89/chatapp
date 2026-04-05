@@ -5,6 +5,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 class SocketService {
   private socket: Socket | null = null;
   private listeners: Map<string, Set<(data: unknown) => void>> = new Map();
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
   connect(token: string) {
     if (this.socket?.connected) {
@@ -19,11 +20,13 @@ class SocketService {
     this.socket.on('connect', () => {
       console.log('Socket connected');
       this.notifyListeners('_connection', { connected: true });
+      this.startHeartbeat();
     });
 
     this.socket.on('disconnect', () => {
       console.log('Socket disconnected');
       this.notifyListeners('_connection', { connected: false });
+      this.stopHeartbeat();
     });
 
     this.socket.on('error', (error) => {
@@ -107,6 +110,52 @@ class SocketService {
 
   setOffline() {
     this.emit('presence:offline', {});
+  }
+
+  // ChitChat: Heartbeat-based presence (30s interval, 60s timeout on server)
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatInterval = setInterval(() => {
+      this.emit('heartbeat', { timestamp: Date.now() });
+    }, 30000);
+    // Send initial heartbeat
+    this.emit('heartbeat', { timestamp: Date.now() });
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  // ChitChat: Call signaling
+  initiateCall(data: { receiverId: string; chatId: string; callType: 'audio' | 'video'; offer?: unknown }) {
+    this.emit('call:initiate', data);
+  }
+
+  answerCall(data: { callerId: string; chatId: string; answer?: unknown }) {
+    this.emit('call:answer', data);
+  }
+
+  declineCall(data: { callerId: string; chatId: string }) {
+    this.emit('call:decline', data);
+  }
+
+  endCall(data: { peerId: string; chatId: string }) {
+    this.emit('call:end', data);
+  }
+
+  sendIceCandidate(data: { peerId: string; candidate: unknown }) {
+    this.emit('call:ice-candidate', data);
+  }
+
+  toggleCallMute(data: { callId: string; isMuted: boolean }) {
+    this.emit('call:mute', data);
+  }
+
+  toggleCallVideo(data: { callId: string; isVideoOff: boolean }) {
+    this.emit('call:video-toggle', data);
   }
 }
 

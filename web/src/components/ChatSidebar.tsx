@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2, UserPlus, Phone } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +47,7 @@ export function ChatSidebar() {
   const [channelDesc, setChannelDesc] = useState('');
   const [communityName, setCommunityName] = useState('');
   const [communityDesc, setCommunityDesc] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
 
   const filteredChats = chats.filter((chat) => {
     const chatName = chat.name || chat.participants.find((p) => p.userId !== user?.id)?.user?.displayName || '';
@@ -58,10 +59,34 @@ export function ChatSidebar() {
     if (chatFilter === 'communities') return chat.type === 'community';
     return true;
   }).sort((a, b) => {
+    // Pinned chats first
+    const aPinned = (a as Record<string, unknown>).isPinned ? 1 : 0;
+    const bPinned = (b as Record<string, unknown>).isPinned ? 1 : 0;
+    if (bPinned !== aPinned) return bPinned - aPinned;
     const aTime = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : 0;
     const bTime = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
     return bTime - aTime;
   });
+
+  const handleChatContextMenu = async (action: string, chatId: string) => {
+    try {
+      const { api } = await import('../services/api');
+      switch (action) {
+        case 'pin': await api.pinConversation(chatId, true); break;
+        case 'unpin': await api.pinConversation(chatId, false); break;
+        case 'mute': await api.muteConversation(chatId, true, 'forever'); break;
+        case 'unmute': await api.muteConversation(chatId, false); break;
+        case 'archive': await api.archiveConversation(chatId, true); break;
+        case 'favorite': await api.favoriteConversation(chatId, true); break;
+        case 'unfavorite': await api.favoriteConversation(chatId, false); break;
+        case 'clear': await api.clearChatHistory(chatId); break;
+      }
+      await refreshChats();
+    } catch (err) {
+      console.error('Chat action failed:', err);
+    }
+    setContextMenu(null);
+  };
 
   const getChatTypeIcon = (type: string) => {
     switch (type) {
@@ -331,6 +356,10 @@ export function ChatSidebar() {
                 activeChat?.id === chat.id ? 'bg-[#E8F0FE]' : 'hover:bg-[#F7F8FC]'
               } mx-1 mb-0.5`}
               onClick={() => selectChat(chat)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setContextMenu({ x: e.clientX, y: e.clientY, chatId: chat.id });
+              }}
             >
               <div className="relative mr-3 flex-shrink-0">
                 <Avatar className="h-12 w-12">
@@ -360,11 +389,15 @@ export function ChatSidebar() {
                     {!isTypingInChat(chat) && getMessageStatusIcon(chat)}
                     {getLastMessagePreview(chat)}
                   </span>
-                  {chat.unreadCount > 0 && (
-                    <span className="unread-badge bg-[#246BFD] text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 ml-2 shadow-sm shadow-blue-500/20">
-                      {chat.unreadCount}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1 ml-2">
+                    {(chat as Record<string, unknown>).isPinned && <Pin className="h-3 w-3 text-gray-400" />}
+                    {(chat as Record<string, unknown>).isMuted && <BellOff className="h-3 w-3 text-gray-400" />}
+                    {chat.unreadCount > 0 && (
+                      <span className="unread-badge bg-[#246BFD] text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-sm shadow-blue-500/20">
+                        {chat.unreadCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -383,6 +416,34 @@ export function ChatSidebar() {
       <ProductCatalog isOpen={showProducts} onClose={() => setShowProducts(false)} />
       <AutoReplySettings isOpen={showAutoReply} onClose={() => setShowAutoReply(false)} />
       <PrivacySettings isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
+
+      {/* Chat Context Menu */}
+      {contextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
+          <div
+            className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[180px]"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('pin', contextMenu.chatId)}>
+              <Pin className="h-4 w-4 text-gray-500" /> Pin conversation
+            </button>
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('mute', contextMenu.chatId)}>
+              <BellOff className="h-4 w-4 text-gray-500" /> Mute notifications
+            </button>
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('archive', contextMenu.chatId)}>
+              <Archive className="h-4 w-4 text-gray-500" /> Archive chat
+            </button>
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('favorite', contextMenu.chatId)}>
+              <Star className="h-4 w-4 text-gray-500" /> Mark as favorite
+            </button>
+            <div className="border-t border-gray-100 my-1" />
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2 text-red-500" onClick={() => handleChatContextMenu('clear', contextMenu.chatId)}>
+              <Trash2 className="h-4 w-4" /> Clear chat
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Create Channel Dialog */}
       {showChannelDialog && (
