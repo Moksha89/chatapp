@@ -394,13 +394,11 @@ export class AdminController {
 
   // ========== INSTALL WIZARD ==========
   @Get('setup/status')
-  @UseGuards(AdminAuthGuard)
   async getSetupStatus() {
     return this.adminService.getSetupStatus();
   }
 
   @Post('setup/run')
-  @UseGuards(AdminAuthGuard)
   async runSetupWizard(
     @Body() body: { appName?: string; adminPassword?: string; seedDefaults?: boolean },
   ) {

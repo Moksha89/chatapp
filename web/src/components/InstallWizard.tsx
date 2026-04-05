@@ -65,7 +65,7 @@ export function InstallWizard({ onComplete }: { onComplete: () => void }) {
         }),
       });
       const data = await res.json() as { success: boolean; steps: StepResult[] };
-      setResults(data.steps);
+      setResults(data.steps || []);
       setStep(3);
     } catch {
       setError('Setup failed. Please check server logs.');

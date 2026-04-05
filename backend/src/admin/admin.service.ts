@@ -645,7 +645,22 @@ export class AdminService {
 
   async isSetupCompleted(): Promise<boolean> {
     const setting = await this.appSettingRepository.findOne({ where: { key: 'setup_completed' } });
-    return setting?.value === 'true';
+    // If no setup_completed setting exists, check if the app has users — if so, it's already set up
+    if (!setting) {
+      try {
+        const userCount = await this.userRepository.count();
+        if (userCount > 0) {
+          // App has users, mark setup as completed automatically
+          await this.setAppSetting('setup_completed', 'true', 'system', 'Whether initial setup has been completed');
+          return true;
+        }
+      } catch {
+        // DB error — treat as setup completed to avoid blocking users
+        return true;
+      }
+      return false;
+    }
+    return setting.value === 'true';
   }
 
   async getSetupStatus(): Promise<{
