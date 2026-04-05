@@ -620,29 +620,32 @@ export class AdminService {
     return (result.affected ?? 0) > 0;
   }
 
-  // ========== MAINTENANCE MODE ==========
-  private maintenanceMode = false;
-  private maintenanceMessage = 'We are currently performing maintenance. Please try again later.';
+  // ========== MAINTENANCE MODE (persisted to app_settings) ==========
 
-  isMaintenanceMode(): boolean {
-    return this.maintenanceMode;
+  async isMaintenanceMode(): Promise<boolean> {
+    const setting = await this.appSettingRepository.findOne({ where: { key: 'maintenance_mode' } });
+    return setting?.value === 'true';
   }
 
-  getMaintenanceMessage(): string {
-    return this.maintenanceMessage;
+  async getMaintenanceMessage(): Promise<string> {
+    const setting = await this.appSettingRepository.findOne({ where: { key: 'maintenance_message' } });
+    return setting?.value || 'We are currently performing maintenance. Please try again later.';
   }
 
-  setMaintenanceMode(enabled: boolean, message?: string): { maintenanceMode: boolean; message: string } {
-    this.maintenanceMode = enabled;
-    if (message) this.maintenanceMessage = message;
-    return { maintenanceMode: this.maintenanceMode, message: this.maintenanceMessage };
+  async setMaintenanceMode(enabled: boolean, message?: string): Promise<{ maintenanceMode: boolean; message: string }> {
+    await this.setAppSetting('maintenance_mode', String(enabled), 'system', 'Whether maintenance mode is active');
+    if (message) {
+      await this.setAppSetting('maintenance_message', message, 'system', 'Maintenance mode message');
+    }
+    const currentMessage = await this.getMaintenanceMessage();
+    return { maintenanceMode: enabled, message: currentMessage };
   }
 
-  // ========== INSTALL WIZARD (First-time Setup) ==========
-  private setupCompleted = false;
+  // ========== INSTALL WIZARD (persisted to app_settings) ==========
 
-  isSetupCompleted(): boolean {
-    return this.setupCompleted;
+  async isSetupCompleted(): Promise<boolean> {
+    const setting = await this.appSettingRepository.findOne({ where: { key: 'setup_completed' } });
+    return setting?.value === 'true';
   }
 
   async getSetupStatus(): Promise<{
@@ -678,7 +681,7 @@ export class AdminService {
     }
 
     return {
-      isSetupCompleted: this.setupCompleted,
+      isSetupCompleted: await this.isSetupCompleted(),
       hasAdmin: true, // Always true since admin is in-memory
       hasUsers,
       hasDefaultSettings,
@@ -739,7 +742,7 @@ export class AdminService {
       }
     }
 
-    this.setupCompleted = true;
+    await this.setAppSetting('setup_completed', 'true', 'system', 'Whether initial setup has been completed');
     steps.push({ step: 'Mark setup complete', status: 'completed' });
 
     return { success: steps.every(s => s.status === 'completed'), steps };

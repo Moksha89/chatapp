@@ -59,6 +59,13 @@ function ResponsiveLayout() {
 function ChatApp() {
   const { isAuthenticated, isLoading } = useAuth();
 
+  // Request notification permission on first authenticated load
+  useEffect(() => {
+    if (isAuthenticated && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, [isAuthenticated]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F8FC]">

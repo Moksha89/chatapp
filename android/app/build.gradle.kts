@@ -93,6 +93,7 @@ dependencies {
     kapt("androidx.room:room-compiler:2.6.1")
 
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.biometric:biometric:1.1.0")
 
         implementation("io.coil-kt:coil-compose:2.5.0")
 

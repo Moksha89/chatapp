@@ -523,8 +523,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             socketService.markDelivered(decryptedMessage.id);
           }
 
-          // Feature #9: Play notification sound for incoming messages
-          // Only play sound when NOT viewing the active chat or window is hidden
+          // Feature #9: Play notification sound + browser push notification
+          // Only notify when NOT viewing the active chat or window is hidden
           if (message.senderId !== user?.id && (activeChat?.id !== chatId || document.hidden)) {
             try {
               const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
@@ -538,9 +538,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
               oscillator.start(audioCtx.currentTime);
               oscillator.stop(audioCtx.currentTime + 0.15);
-              // Bug #4 fix: Close AudioContext after sound finishes to prevent resource leak
               oscillator.onended = () => { audioCtx.close(); };
             } catch { /* audio context may not be available */ }
+
+            // Browser push notification (requires permission)
+            if ('Notification' in window && Notification.permission === 'granted') {
+              const senderName = chats.find(c => c.id === chatId)
+                ?.participants.find(p => p.userId === message.senderId)?.user?.displayName || 'New message';
+              const notification = new Notification(senderName, {
+                body: decryptedMessage.content || 'Sent a media file',
+                icon: '/logo192.png',
+                tag: `msg-${message.id}`,
+                silent: true,
+              });
+              notification.onclick = () => {
+                window.focus();
+                const chat = chats.find(c => c.id === chatId);
+                if (chat) selectChat(chat);
+                notification.close();
+              };
+              setTimeout(() => notification.close(), 5000);
+            }
           }
 
           // Only increment unread count for chats that are NOT currently active

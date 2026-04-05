@@ -362,9 +362,9 @@ export class AdminController {
   @Get('status')
   async getPublicStatus() {
     return {
-      maintenanceMode: this.adminService.isMaintenanceMode(),
-      maintenanceMessage: this.adminService.getMaintenanceMessage(),
-      setupCompleted: this.adminService.isSetupCompleted(),
+      maintenanceMode: await this.adminService.isMaintenanceMode(),
+      maintenanceMessage: await this.adminService.getMaintenanceMessage(),
+      setupCompleted: await this.adminService.isSetupCompleted(),
     };
   }
 
@@ -373,8 +373,8 @@ export class AdminController {
   @UseGuards(AdminAuthGuard)
   async getMaintenanceMode() {
     return {
-      maintenanceMode: this.adminService.isMaintenanceMode(),
-      message: this.adminService.getMaintenanceMessage(),
+      maintenanceMode: await this.adminService.isMaintenanceMode(),
+      message: await this.adminService.getMaintenanceMessage(),
     };
   }
 

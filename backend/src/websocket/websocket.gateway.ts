@@ -10,7 +10,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { Inject, forwardRef, Logger } from '@nestjs/common';
+import { Inject, forwardRef, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { WebsocketService } from './websocket.service';
 import { ChatsService } from '../chats/chats.service';
@@ -32,7 +33,7 @@ interface AuthenticatedSocket extends Socket {
   namespace: '/chat',
 })
 export class WebsocketGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleInit
 {
   @WebSocketServer()
   server: Server;
@@ -48,11 +49,28 @@ export class WebsocketGateway
     private readonly notificationsService: NotificationsService,
     private readonly callsService: CallsService,
     private readonly databaseService: DatabaseService,
+    private readonly configService: ConfigService,
   ) {}
+
+  async onModuleInit() {
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+    if (redisUrl) {
+      try {
+        const { createAdapter } = await import('@socket.io/redis-adapter');
+        const { Redis } = await import('ioredis');
+        const pubClient = new Redis(redisUrl);
+        const subClient = pubClient.duplicate();
+        this.server?.adapter(createAdapter(pubClient, subClient) as never);
+        this.logger.log('Redis adapter configured for Socket.IO scaling');
+      } catch (err) {
+        this.logger.warn(`Redis adapter not available, using in-memory: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+  }
 
   afterInit(server: Server) {
     this.websocketService.setServer(server);
-    console.log('WebSocket Gateway initialized');
+    this.logger.log('WebSocket Gateway initialized');
   }
 
   async handleConnection(client: AuthenticatedSocket) {

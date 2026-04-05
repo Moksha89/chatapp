@@ -14,8 +14,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
+import com.chatapp.presentation.biometric.BiometricHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +42,9 @@ fun SettingsScreen(
     userName: String = "User",
     phoneNumber: String = ""
 ) {
-    var biometricLockEnabled by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val biometricAvailable = remember { BiometricHelper.isBiometricAvailable(context) }
+    var biometricLockEnabled by remember { mutableStateOf(BiometricHelper.isBiometricEnabled(context)) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -248,7 +253,28 @@ fun SettingsScreen(
                     }
                     Switch(
                         checked = biometricLockEnabled,
-                        onCheckedChange = { biometricLockEnabled = it },
+                        enabled = biometricAvailable,
+                        onCheckedChange = { newValue ->
+                            if (newValue) {
+                                // Authenticate before enabling
+                                val activity = context as? FragmentActivity
+                                if (activity != null) {
+                                    BiometricHelper.authenticate(
+                                        activity = activity,
+                                        title = "Enable Fingerprint Lock",
+                                        subtitle = "Verify your identity to enable fingerprint lock",
+                                        onSuccess = {
+                                            biometricLockEnabled = true
+                                            BiometricHelper.setBiometricEnabled(context, true)
+                                        },
+                                        onError = { /* User cancelled or error */ }
+                                    )
+                                }
+                            } else {
+                                biometricLockEnabled = false
+                                BiometricHelper.setBiometricEnabled(context, false)
+                            }
+                        },
                         colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF1A56DB))
                     )
                 }
