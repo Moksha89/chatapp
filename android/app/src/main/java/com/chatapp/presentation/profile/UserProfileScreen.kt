@@ -138,7 +138,7 @@ fun UserProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Hey there! I'm using Abhi",
+                        text = "Hey there! I'm using Abhi Chat",
                         fontSize = 16.sp,
                         color = Color(0xFF1A1A2E)
                     )

@@ -47,7 +47,7 @@ fun ChatListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Abhi") },
+                title = { Text("Abhi Chat") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White

@@ -71,7 +71,7 @@ export class TwilioOtpProvider implements OtpProvider {
       }
 
       await this.twilioClient.messages.create({
-        body: `Your Abhi verification code is: ${otp}. It expires in 5 minutes.`,
+        body: `Your Abhi Chat verification code is: ${otp}. It expires in 5 minutes.`,
         from: twilioPhoneNumber,
         to: normalizedPhone,
       });

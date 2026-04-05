@@ -544,7 +544,7 @@ export function ChatArea() {
           <div className="abhi-gradient p-8 rounded-full inline-block mb-6 shadow-lg shadow-blue-500/20">
             <MessageCircle className="h-20 w-20 text-white" />
           </div>
-          <h2 className="text-3xl font-light text-gray-700 mb-3">Abhi</h2>
+          <h2 className="text-3xl font-light text-gray-700 mb-3">Abhi Chat</h2>
           <p className="text-gray-500 text-base mb-6">Send and receive messages without keeping your phone online.</p>
           <p className="text-gray-400 text-sm">Use on up to 4 linked devices and 1 phone at the same time.</p>
           <a

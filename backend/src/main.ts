@@ -32,8 +32,8 @@ async function bootstrap() {
   app.useGlobalGuards(rateLimitGuard);
 
   const config = new DocumentBuilder()
-    .setTitle('Abhi API')
-    .setDescription('API documentation for Abhi chat application')
+    .setTitle('Abhi Chat API')
+    .setDescription('API documentation for Abhi Chat application')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

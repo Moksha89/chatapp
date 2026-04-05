@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Abhi"
+rootProject.name = "AbhiChat"
 include(":app")

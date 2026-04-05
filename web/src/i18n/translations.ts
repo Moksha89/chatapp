@@ -21,7 +21,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'Login',
     'auth.logout': 'Logout',
     'auth.scanQr': 'Scan QR Code',
-    'auth.scanInstructions': 'Open Abhi on your phone and scan this QR code',
+    'auth.scanInstructions': 'Open Abhi Chat on your phone and scan this QR code',
     
     // Chat
     'chat.newChat': 'New Chat',
@@ -82,7 +82,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'Iniciar sesion',
     'auth.logout': 'Cerrar sesion',
     'auth.scanQr': 'Escanear codigo QR',
-    'auth.scanInstructions': 'Abre Abhi en tu teléfono y escanea este código QR',
+    'auth.scanInstructions': 'Abre Abhi Chat en tu teléfono y escanea este código QR',
     
     // Chat
     'chat.newChat': 'Nuevo chat',
@@ -143,7 +143,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'Connexion',
     'auth.logout': 'Deconnexion',
     'auth.scanQr': 'Scanner le code QR',
-    'auth.scanInstructions': 'Ouvrez Abhi sur votre téléphone et scannez ce code QR',
+    'auth.scanInstructions': 'Ouvrez Abhi Chat sur votre téléphone et scannez ce code QR',
     
     // Chat
     'chat.newChat': 'Nouvelle discussion',
@@ -204,7 +204,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'Anmelden',
     'auth.logout': 'Abmelden',
     'auth.scanQr': 'QR-Code scannen',
-    'auth.scanInstructions': 'Öffne Abhi auf deinem Handy und scanne diesen QR-Code',
+    'auth.scanInstructions': 'Öffne Abhi Chat auf deinem Handy und scanne diesen QR-Code',
     
     // Chat
     'chat.newChat': 'Neuer Chat',
@@ -265,7 +265,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'Entrar',
     'auth.logout': 'Sair',
     'auth.scanQr': 'Escanear codigo QR',
-    'auth.scanInstructions': 'Abra o Abhi no seu celular e escaneie este código QR',
+    'auth.scanInstructions': 'Abra o Abhi Chat no seu celular e escaneie este código QR',
     
     // Chat
     'chat.newChat': 'Nova conversa',
@@ -326,7 +326,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'लॉगिन करें',
     'auth.logout': 'लॉगआउट करें',
     'auth.scanQr': 'QR कोड स्कैन करें',
-    'auth.scanInstructions': 'अपने फोन पर Abhi खोलें और इस QR कोड को स्कैन करें',
+    'auth.scanInstructions': 'अपने फोन पर Abhi Chat खोलें और इस QR कोड को स्कैन करें',
     
     // Chat
     'chat.newChat': 'नई चैट',
@@ -384,7 +384,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'تسجيل الدخول',
     'auth.logout': 'تسجيل الخروج',
     'auth.scanQr': 'مسح رمز QR',
-    'auth.scanInstructions': 'افتح Abhi على هاتفك وامسح رمز QR هذا',
+    'auth.scanInstructions': 'افتح Abhi Chat على هاتفك وامسح رمز QR هذا',
     'chat.newChat': 'محادثة جديدة',
     'chat.noMessages': 'لا توجد رسائل بعد',
     'chat.startConversation': 'ابدأ المحادثة!',
@@ -434,7 +434,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'Giriş Yap',
     'auth.logout': 'Çıkış Yap',
     'auth.scanQr': 'QR Kodu Tara',
-    'auth.scanInstructions': 'Telefonunuzda Abhi açın ve bu QR kodunu tarayın',
+    'auth.scanInstructions': 'Telefonunuzda Abhi Chat açın ve bu QR kodunu tarayın',
     'chat.newChat': 'Yeni Sohbet',
     'chat.noMessages': 'Henüz mesaj yok',
     'chat.startConversation': 'Sohbeti başlat!',
@@ -484,7 +484,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': 'Войти',
     'auth.logout': 'Выйти',
     'auth.scanQr': 'Сканировать QR-код',
-    'auth.scanInstructions': 'Откройте Abhi на телефоне и отсканируйте этот QR-код',
+    'auth.scanInstructions': 'Откройте Abhi Chat на телефоне и отсканируйте этот QR-код',
     'chat.newChat': 'Новый чат',
     'chat.noMessages': 'Сообщений пока нет',
     'chat.startConversation': 'Начните разговор!',
@@ -534,7 +534,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'auth.login': '登录',
     'auth.logout': '退出',
     'auth.scanQr': '扫描二维码',
-    'auth.scanInstructions': '在手机上打开Abhi并扫描此二维码',
+    'auth.scanInstructions': '在手机上打开Abhi Chat并扫描此二维码',
     'chat.newChat': '新聊天',
     'chat.noMessages': '暂无消息',
     'chat.startConversation': '开始对话！',

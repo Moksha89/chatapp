@@ -25,7 +25,7 @@ export class VersionController {
     return {
       version: '1.9.0',
       versionCode: 10,
-      name: 'Abhi',
+      name: 'Abhi Chat',
       buildDate: '2026-04-05',
     };
   }

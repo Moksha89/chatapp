@@ -68,7 +68,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Abhi",
+                    text = "Abhi Chat",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )

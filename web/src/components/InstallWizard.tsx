@@ -20,7 +20,7 @@ interface StepResult {
 
 export function InstallWizard({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0); // 0=welcome, 1=config, 2=running, 3=done
-  const [appName, setAppName] = useState('Abhi');
+  const [appName, setAppName] = useState('Abhi Chat');
   const [adminPassword, setAdminPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [seedDefaults, setSeedDefaults] = useState(true);
@@ -85,7 +85,7 @@ export function InstallWizard({ onComplete }: { onComplete: () => void }) {
             </div>
             <h1 className="text-xl font-bold">Install Wizard</h1>
           </div>
-          <p className="text-white/80 text-sm">Set up your Abhi application</p>
+          <p className="text-white/80 text-sm">Set up your Abhi Chat application</p>
           {/* Step indicators */}
           <div className="flex gap-2 mt-4">
             {['Welcome', 'Configure', 'Install', 'Complete'].map((label, i) => (
@@ -112,7 +112,7 @@ export function InstallWizard({ onComplete }: { onComplete: () => void }) {
               <div className="w-16 h-16 bg-[#246BFD]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Settings className="w-8 h-8 text-[#246BFD]" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Welcome to Abhi</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Welcome to Abhi Chat</h2>
               <p className="text-gray-500 text-sm mb-6">
                 This wizard will help you configure your application for the first time.
                 It will set up default settings, report categories, and page content.
@@ -157,7 +157,7 @@ export function InstallWizard({ onComplete }: { onComplete: () => void }) {
                     value={appName}
                     onChange={e => setAppName(e.target.value)}
                     className="w-full px-3 py-2.5 bg-[#F7F8FC] border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD]"
-                    placeholder="Abhi"
+                    placeholder="Abhi Chat"
                   />
                 </div>
 
