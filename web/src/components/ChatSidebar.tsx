@@ -60,8 +60,8 @@ export function ChatSidebar() {
     return true;
   }).sort((a, b) => {
     // Pinned chats first
-    const aPinned = (a as Record<string, unknown>).isPinned ? 1 : 0;
-    const bPinned = (b as Record<string, unknown>).isPinned ? 1 : 0;
+    const aPinned = a.isPinned ? 1 : 0;
+    const bPinned = b.isPinned ? 1 : 0;
     if (bPinned !== aPinned) return bPinned - aPinned;
     const aTime = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : 0;
     const bTime = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
@@ -390,8 +390,8 @@ export function ChatSidebar() {
                     {getLastMessagePreview(chat)}
                   </span>
                   <div className="flex items-center gap-1 ml-2">
-                    {(chat as Record<string, unknown>).isPinned && <Pin className="h-3 w-3 text-gray-400" />}
-                    {(chat as Record<string, unknown>).isMuted && <BellOff className="h-3 w-3 text-gray-400" />}
+                    {chat.isPinned && <Pin className="h-3 w-3 text-gray-400" />}
+                    {chat.isMuted && <BellOff className="h-3 w-3 text-gray-400" />}
                     {chat.unreadCount > 0 && (
                       <span className="unread-badge bg-[#246BFD] text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-sm shadow-blue-500/20">
                         {chat.unreadCount}

@@ -54,6 +54,8 @@ interface Chat {
   isLocked?: boolean;
   pinnedMessageId?: string | null;
   disappearingMessagesDuration?: number | null;
+  isPinned?: boolean;
+  isMuted?: boolean;
 }
 
 interface ChatContextType {
