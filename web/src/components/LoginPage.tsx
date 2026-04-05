@@ -108,6 +108,7 @@ export function LoginPage() {
               </label>
               <input
                 type="tel"
+                autoComplete="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="+1234567890"
@@ -127,9 +128,11 @@ export function LoginPage() {
                 'Send OTP'
               )}
             </Button>
-            <p className="text-xs text-gray-400 text-center">
-              Use code <strong>123456</strong> for testing
-            </p>
+            {process.env.NODE_ENV === 'development' && (
+              <p className="text-xs text-gray-400 text-center">
+                Use code <strong>123456</strong> for testing
+              </p>
+            )}
           </div>
         )}
 

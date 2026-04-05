@@ -18,6 +18,18 @@ interface AppVersion {
 @ApiTags('version')
 @Controller('version')
 export class VersionController {
+  @Get()
+  @ApiOperation({ summary: 'Get current app version' })
+  @ApiResponse({ status: 200, description: 'Current version returned' })
+  getVersion() {
+    return {
+      version: '1.9.0',
+      versionCode: 10,
+      name: 'E-Chat Business',
+      buildDate: '2026-04-05',
+    };
+  }
+
   @Get('check')
   @ApiOperation({ summary: 'Check for app updates' })
   @ApiResponse({ status: 200, description: 'Version information returned' })

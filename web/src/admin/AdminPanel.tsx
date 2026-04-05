@@ -76,7 +76,7 @@ function AdminLogin({ onLogin }: { onLogin: (u: string, p: string) => Promise<bo
             <Shield className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-          <p className="text-slate-400 mt-1">WhatsApp Business Management</p>
+          <p className="text-slate-400 mt-1">E-Chat Business Management</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-8 shadow-2xl">
           {error && (

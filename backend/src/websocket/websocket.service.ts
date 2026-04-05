@@ -181,7 +181,7 @@ export class WebsocketService {
 
     for (const socketId of user.sockets) {
       this.socketToUser.delete(socketId);
-      if (this.server) {
+      if (this.server?.sockets?.sockets) {
         const socket = this.server.sockets.sockets.get(socketId);
         if (socket) {
           socket.disconnect(true);
