@@ -1609,7 +1609,7 @@ function AppSettingsPage({ token }: { token: string }) {
           <div key={s.key as string} className="flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <label className="block text-sm font-medium text-slate-300">{(s.key as string).replace(/_/g, ' ').replace(/^(media|email|user) /, '')}</label>
-              {s.description && <p className="text-xs text-slate-500 mt-0.5">{String(s.description)}</p>}
+              {typeof s.description === 'string' && <p className="text-xs text-slate-500 mt-0.5">{s.description}</p>}
             </div>
             <input
               value={editValues[s.key as string] || ''}
