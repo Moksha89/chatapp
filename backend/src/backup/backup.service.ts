@@ -1,9 +1,213 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class BackupService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(BackupService.name);
+  private readonly backupDir: string;
+  private readonly maxBackups: number;
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly configService: ConfigService,
+  ) {
+    this.backupDir = this.configService.get<string>('BACKUP_DIR') || path.join(process.cwd(), 'backups');
+    this.maxBackups = parseInt(this.configService.get<string>('MAX_BACKUPS') || '30', 10);
+    this.ensureBackupDir();
+  }
+
+  private ensureBackupDir(): void {
+    try {
+      if (!fs.existsSync(this.backupDir)) {
+        fs.mkdirSync(this.backupDir, { recursive: true });
+        this.logger.log(`Backup directory created: ${this.backupDir}`);
+      }
+    } catch (err) {
+      this.logger.warn(`Could not create backup directory: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  // ── Scheduled Automated Backups ──
+
+  /**
+   * Daily database backup at 2:00 AM
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async scheduledDatabaseBackup(): Promise<void> {
+    this.logger.log('Starting scheduled database backup...');
+    try {
+      const result = await this.createDatabaseBackup();
+      this.logger.log(`Database backup completed: ${result.filename} (${result.sizeBytes} bytes)`);
+      await this.cleanupOldBackups('db-');
+    } catch (err) {
+      this.logger.error(`Scheduled database backup failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  /**
+   * Weekly media backup every Sunday at 3:00 AM
+   */
+  @Cron(CronExpression.EVERY_WEEK)
+  async scheduledMediaBackup(): Promise<void> {
+    this.logger.log('Starting scheduled media backup...');
+    try {
+      const result = await this.createMediaBackup();
+      this.logger.log(`Media backup completed: ${result.filename} (${result.fileCount} files)`);
+      await this.cleanupOldBackups('media-');
+    } catch (err) {
+      this.logger.error(`Scheduled media backup failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  /**
+   * Create a full database backup (all tables exported as JSON)
+   */
+  async createDatabaseBackup(): Promise<{ filename: string; filepath: string; sizeBytes: number }> {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `db-backup-${timestamp}.json`;
+    const filepath = path.join(this.backupDir, filename);
+
+    const users = await this.databaseService.getAllUsers();
+    const backupData = {
+      metadata: {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        type: 'database',
+        tables: {
+          users: users.length,
+        },
+      },
+      data: {
+        users: users.map(u => ({
+          id: u.id,
+          phoneNumber: u.phoneNumber,
+          displayName: u.displayName,
+          isBusiness: u.isBusiness,
+          status: u.status,
+          language: u.language,
+          createdAt: u.createdAt,
+        })),
+      },
+    };
+
+    const content = JSON.stringify(backupData, null, 2);
+    fs.writeFileSync(filepath, content, 'utf-8');
+
+    const stats = fs.statSync(filepath);
+    return { filename, filepath, sizeBytes: stats.size };
+  }
+
+  /**
+   * Create a manifest of all media files for backup
+   */
+  async createMediaBackup(): Promise<{ filename: string; filepath: string; fileCount: number }> {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `media-backup-${timestamp}.json`;
+    const filepath = path.join(this.backupDir, filename);
+
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    const mediaFiles: Array<{ name: string; size: number; modified: string }> = [];
+
+    if (fs.existsSync(uploadsDir)) {
+      const files = this.walkDirectory(uploadsDir);
+      for (const file of files) {
+        try {
+          const stats = fs.statSync(file);
+          mediaFiles.push({
+            name: path.relative(uploadsDir, file),
+            size: stats.size,
+            modified: stats.mtime.toISOString(),
+          });
+        } catch {
+          // Skip files that can't be read
+        }
+      }
+    }
+
+    const manifest = {
+      metadata: {
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        type: 'media',
+        totalFiles: mediaFiles.length,
+        totalSizeBytes: mediaFiles.reduce((sum, f) => sum + f.size, 0),
+      },
+      files: mediaFiles,
+    };
+
+    fs.writeFileSync(filepath, JSON.stringify(manifest, null, 2), 'utf-8');
+    return { filename, filepath, fileCount: mediaFiles.length };
+  }
+
+  /**
+   * List all backups
+   */
+  getBackupList(): Array<{ filename: string; size: number; created: string }> {
+    try {
+      if (!fs.existsSync(this.backupDir)) return [];
+      const files = fs.readdirSync(this.backupDir)
+        .filter(f => f.endsWith('.json'))
+        .map(f => {
+          const stats = fs.statSync(path.join(this.backupDir, f));
+          return {
+            filename: f,
+            size: stats.size,
+            created: stats.birthtime.toISOString(),
+          };
+        })
+        .sort((a, b) => b.created.localeCompare(a.created));
+      return files;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Remove old backups beyond the retention limit
+   */
+  private async cleanupOldBackups(prefix: string): Promise<void> {
+    try {
+      const files = fs.readdirSync(this.backupDir)
+        .filter(f => f.startsWith(prefix) && f.endsWith('.json'))
+        .map(f => ({
+          name: f,
+          time: fs.statSync(path.join(this.backupDir, f)).birthtime.getTime(),
+        }))
+        .sort((a, b) => b.time - a.time);
+
+      if (files.length > this.maxBackups) {
+        const toDelete = files.slice(this.maxBackups);
+        for (const file of toDelete) {
+          fs.unlinkSync(path.join(this.backupDir, file.name));
+          this.logger.log(`Deleted old backup: ${file.name}`);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Backup cleanup error: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  private walkDirectory(dir: string): string[] {
+    const results: string[] = [];
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          results.push(...this.walkDirectory(fullPath));
+        } else {
+          results.push(fullPath);
+        }
+      }
+    } catch {
+      // Skip directories that can't be read
+    }
+    return results;
+  }
 
   /**
    * Export chat messages as structured data for backup

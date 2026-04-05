@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { RedisService } from '../redis/redis.service';
 
 interface ConnectedUser {
   userId: string;
@@ -10,12 +11,15 @@ interface ConnectedUser {
 
 @Injectable()
 export class WebsocketService {
+  private readonly logger = new Logger(WebsocketService.name);
   private server: Server | null = null;
   private connectedUsers: Map<string, ConnectedUser> = new Map();
   private socketToUser: Map<string, string> = new Map();
   private typingUsers: Map<string, Set<string>> = new Map();
   private pendingMessages: Map<string, Array<{ event: string; data: unknown }>> = new Map();
   private readonly HEARTBEAT_TIMEOUT = 60000; // 60 seconds
+
+  constructor(@Optional() @Inject(RedisService) private readonly redisService?: RedisService) {}
 
   setServer(server: Server) {
     this.server = server;
@@ -33,6 +37,16 @@ export class WebsocketService {
       user.deviceIds.set(socketId, deviceId);
     }
     this.socketToUser.set(socketId, userId);
+
+    // Track presence in Redis for distributed scaling
+    if (this.redisService?.connected) {
+      this.redisService.setUserOnline(userId, socketId, deviceId).catch(() => {});
+      this.redisService.setSession(userId, {
+        connectedAt: new Date().toISOString(),
+        socketId,
+        deviceId: deviceId || null,
+      }).catch(() => {});
+    }
 
     // Deliver pending messages
     const pending = this.pendingMessages.get(userId);
@@ -56,6 +70,14 @@ export class WebsocketService {
         }
       }
       this.socketToUser.delete(socketId);
+
+      // Update Redis presence
+      if (this.redisService?.connected) {
+        this.redisService.setUserOffline(userId, socketId).catch(() => {});
+        if (!this.isUserOnline(userId)) {
+          this.redisService.deleteSession(userId).catch(() => {});
+        }
+      }
     }
   }
 

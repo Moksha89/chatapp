@@ -23,6 +23,7 @@ import { AdminModule } from './admin/admin.module';
 import { CallsModule } from './calls/calls.module';
 import { FriendsModule } from './friends/friends.module';
 import { BackupModule } from './backup/backup.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { BackupModule } from './backup/backup.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    RedisModule,
     DatabaseModule,
     AuthModule,
     UsersModule,

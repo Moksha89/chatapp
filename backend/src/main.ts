@@ -1,7 +1,9 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,6 +23,13 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Global rate limiting on all API endpoints (Redis-backed when REDIS_URL is set)
+  const reflector = app.get(Reflector);
+  const configService = app.get(ConfigService);
+  const rateLimitGuard = new RateLimitGuard(reflector, configService);
+  await rateLimitGuard.onModuleInit();
+  app.useGlobalGuards(rateLimitGuard);
 
   const config = new DocumentBuilder()
     .setTitle('WhatsApp Business Chat API')

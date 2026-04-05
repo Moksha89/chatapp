@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { BackupService } from './backup.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserData } from '../common/decorators';
+import { RateLimit } from '../common/guards/rate-limit.guard';
 
 @ApiTags('Backup')
 @Controller('backup')
@@ -10,6 +11,29 @@ import { CurrentUser, CurrentUserData } from '../common/decorators';
 @ApiBearerAuth()
 export class BackupController {
   constructor(private readonly backupService: BackupService) {}
+
+  @Get('list')
+  @ApiOperation({ summary: 'List all automated backups' })
+  @ApiResponse({ status: 200, description: 'Backup list returned' })
+  listBackups() {
+    return this.backupService.getBackupList();
+  }
+
+  @Post('database')
+  @ApiOperation({ summary: 'Trigger a manual database backup' })
+  @ApiResponse({ status: 201, description: 'Database backup created' })
+  @RateLimit({ windowMs: 300000, maxRequests: 3 })
+  async triggerDatabaseBackup() {
+    return this.backupService.createDatabaseBackup();
+  }
+
+  @Post('media')
+  @ApiOperation({ summary: 'Trigger a manual media backup' })
+  @ApiResponse({ status: 201, description: 'Media backup created' })
+  @RateLimit({ windowMs: 300000, maxRequests: 3 })
+  async triggerMediaBackup() {
+    return this.backupService.createMediaBackup();
+  }
 
   @Get('chats/:chatId/export')
   @ApiOperation({ summary: 'Export chat data for backup' })
