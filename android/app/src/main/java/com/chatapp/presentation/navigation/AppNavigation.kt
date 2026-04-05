@@ -38,6 +38,7 @@ import com.chatapp.presentation.contacts.ContactSyncScreen
 import com.chatapp.presentation.settings.NotificationsScreen
 import com.chatapp.presentation.settings.StorageDataScreen
 import com.chatapp.presentation.settings.HelpScreen
+import com.chatapp.presentation.profile.UserProfileScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -61,11 +62,14 @@ sealed class Screen(val route: String) {
     object Broadcasts : Screen("broadcasts")
     object AutoReplies : Screen("auto_replies")
     object ChatSearch : Screen("chat_search")
-    object VoiceCall : Screen("voice_call/{chatId}/{callerName}") {
-        fun createRoute(chatId: String, callerName: String) = "voice_call/$chatId/$callerName"
+    object VoiceCall : Screen("voice_call/{chatId}?callerName={callerName}") {
+        fun createRoute(chatId: String, callerName: String) = "voice_call/$chatId?callerName=${Uri.encode(callerName)}"
     }
-    object VideoCall : Screen("video_call/{chatId}/{callerName}") {
-        fun createRoute(chatId: String, callerName: String) = "video_call/$chatId/$callerName"
+    object VideoCall : Screen("video_call/{chatId}?callerName={callerName}") {
+        fun createRoute(chatId: String, callerName: String) = "video_call/$chatId?callerName=${Uri.encode(callerName)}"
+    }
+    object UserProfile : Screen("user_profile/{chatId}?name={name}") {
+        fun createRoute(chatId: String, name: String = "User") = "user_profile/$chatId?name=${Uri.encode(name)}"
     }
     object ChatBackup : Screen("chat_backup")
     object ContactSync : Screen("contact_sync")
@@ -145,6 +149,9 @@ fun AppNavigation() {
                 },
                 onVideoCall = { id ->
                     navController.navigate(Screen.VideoCall.createRoute(id, chatName))
+                },
+                onProfileClick = { id ->
+                    navController.navigate(Screen.UserProfile.createRoute(id, chatName))
                 }
             )
         }
@@ -317,10 +324,32 @@ fun AppNavigation() {
         }
 
         composable(
+            route = Screen.UserProfile.route,
+            arguments = listOf(
+                navArgument("chatId") { type = NavType.StringType },
+                navArgument("name") { type = NavType.StringType; defaultValue = "User" }
+            )
+        ) { backStackEntry ->
+            val profileChatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            val profileName = backStackEntry.arguments?.getString("name") ?: "User"
+            UserProfileScreen(
+                chatId = profileChatId,
+                chatName = profileName,
+                onBack = { navController.popBackStack() },
+                onVoiceCall = {
+                    navController.navigate(Screen.VoiceCall.createRoute(profileChatId, profileName))
+                },
+                onVideoCall = {
+                    navController.navigate(Screen.VideoCall.createRoute(profileChatId, profileName))
+                }
+            )
+        }
+
+        composable(
             route = Screen.VoiceCall.route,
             arguments = listOf(
                 navArgument("chatId") { type = NavType.StringType },
-                navArgument("callerName") { type = NavType.StringType }
+                navArgument("callerName") { type = NavType.StringType; defaultValue = "Unknown" }
             )
         ) { backStackEntry ->
             val callerName = backStackEntry.arguments?.getString("callerName") ?: "Unknown"
@@ -335,7 +364,7 @@ fun AppNavigation() {
             route = Screen.VideoCall.route,
             arguments = listOf(
                 navArgument("chatId") { type = NavType.StringType },
-                navArgument("callerName") { type = NavType.StringType }
+                navArgument("callerName") { type = NavType.StringType; defaultValue = "Unknown" }
             )
         ) { backStackEntry ->
             val callerName = backStackEntry.arguments?.getString("callerName") ?: "Unknown"

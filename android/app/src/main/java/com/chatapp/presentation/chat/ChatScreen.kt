@@ -55,6 +55,7 @@ fun ChatScreen(
     onBack: () -> Unit,
     onCall: (String) -> Unit = {},
     onVideoCall: (String) -> Unit = {},
+    onProfileClick: (String) -> Unit = {},
     currentUserId: String = "current-user",
     chatName: String = "Chat",
     isOnline: Boolean = false,
@@ -200,7 +201,10 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { onProfileClick(chatId) }
+                    ) {
                         Box {
                             Surface(
                                 modifier = Modifier
@@ -434,6 +438,9 @@ fun ChatScreen(
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            cursorColor = Color(0xFF246BFD),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         )
