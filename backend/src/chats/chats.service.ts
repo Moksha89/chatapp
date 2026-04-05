@@ -1160,4 +1160,103 @@ export class ChatsService {
   async cleanupExpiredMessages(): Promise<number> {
     return this.databaseService.deleteExpiredMessages();
   }
+
+  // ==================== CHAT UX FEATURES ====================
+
+  // Pin/unpin a conversation (per-user)
+  async pinConversation(chatId: string, userId: string, isPinned: boolean): Promise<ChatParticipant> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+    const updated = await this.databaseService.updateChatParticipant(participant.id, { isPinned });
+    if (!updated) throw new NotFoundException('Failed to update');
+    return updated;
+  }
+
+  // Mute/unmute a conversation with expiry (per-user)
+  async muteConversation(
+    chatId: string,
+    userId: string,
+    muted: boolean,
+    duration?: '1h' | '8h' | '1w' | 'forever',
+  ): Promise<ChatParticipant> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+
+    let mutedUntil: Date | null = null;
+    if (muted && duration) {
+      const now = new Date();
+      switch (duration) {
+        case '1h':
+          mutedUntil = new Date(now.getTime() + 60 * 60 * 1000);
+          break;
+        case '8h':
+          mutedUntil = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+          break;
+        case '1w':
+          mutedUntil = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'forever':
+          mutedUntil = new Date('2099-12-31T23:59:59Z');
+          break;
+      }
+    }
+
+    const updated = await this.databaseService.updateChatParticipant(participant.id, {
+      isMuted: muted,
+      mutedUntil,
+    });
+    if (!updated) throw new NotFoundException('Failed to update');
+    return updated;
+  }
+
+  // Archive/unarchive a conversation (per-user)
+  async archiveConversation(chatId: string, userId: string, isArchived: boolean): Promise<ChatParticipant> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+    const updated = await this.databaseService.updateChatParticipant(participant.id, { isArchived });
+    if (!updated) throw new NotFoundException('Failed to update');
+    return updated;
+  }
+
+  // Mark/unmark a conversation as favorite (per-user)
+  async favoriteConversation(chatId: string, userId: string, isFavorite: boolean): Promise<ChatParticipant> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+    const updated = await this.databaseService.updateChatParticipant(participant.id, { isFavorite });
+    if (!updated) throw new NotFoundException('Failed to update');
+    return updated;
+  }
+
+  // Clear chat history (per-user) — sets a timestamp, messages before this are hidden
+  async clearChat(chatId: string, userId: string): Promise<ChatParticipant> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+    const updated = await this.databaseService.updateChatParticipant(participant.id, {
+      clearChatBefore: new Date(),
+    });
+    if (!updated) throw new NotFoundException('Failed to update');
+    return updated;
+  }
+
+  // Report a contact with reason
+  async reportContact(chatId: string, userId: string, reason: string, details?: string): Promise<{ message: string }> {
+    const participant = await this.databaseService.findChatParticipant(chatId, userId);
+    if (!participant) {
+      throw new NotFoundException('Chat not found');
+    }
+    // In a production system, this would save to a reports table
+    // For now, log the report
+    console.log(`Report from ${userId} on chat ${chatId}: ${reason} - ${details || 'No details'}`);
+    return { message: 'Report submitted successfully' };
+  }
 }

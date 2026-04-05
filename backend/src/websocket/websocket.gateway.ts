@@ -16,6 +16,8 @@ import { WebsocketService } from './websocket.service';
 import { ChatsService } from '../chats/chats.service';
 import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CallsService } from '../calls/calls.service';
+import { DatabaseService } from '../database/database.service';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -44,6 +46,8 @@ export class WebsocketGateway
     private readonly chatsService: ChatsService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
+    private readonly callsService: CallsService,
+    private readonly databaseService: DatabaseService,
   ) {}
 
   afterInit(server: Server) {
@@ -69,6 +73,9 @@ export class WebsocketGateway
         this.websocketService.addConnection(client.userId, client.id, client.deviceId);
         await this.usersService.updateLastSeen(client.userId);
         this.broadcastPresence(client.userId, true);
+
+        // Deliver any pending messages queued while the user was offline
+        // (handled automatically by addConnection in websocketService)
       }
 
       console.log(`Client connected: ${client.id} (User: ${client.userId})`);
@@ -276,6 +283,28 @@ export class WebsocketGateway
     return { success: true };
   }
 
+  // Heartbeat handler — client sends this periodically to stay "alive"
+  @SubscribeMessage('presence:heartbeat')
+  handleHeartbeat(@ConnectedSocket() client: AuthenticatedSocket) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+    this.websocketService.updateHeartbeat(client.userId);
+    return { success: true };
+  }
+
+  // Heartbeat check — runs every 30 seconds, disconnects stale users (no heartbeat in 60s)
+  @Interval(30000)
+  async handleHeartbeatCheck() {
+    const staleUsers = this.websocketService.getStaleUsers();
+    for (const userId of staleUsers) {
+      this.websocketService.removeAllConnectionsForUser(userId);
+      this.broadcastPresence(userId, false);
+      await this.usersService.updateLastSeen(userId);
+      this.logger.log(`Disconnected stale user: ${userId}`);
+    }
+  }
+
   private broadcastPresence(userId: string, isOnline: boolean) {
     this.server.emit('presence:update', {
       userId,
@@ -284,36 +313,50 @@ export class WebsocketGateway
     });
   }
 
-  // WebRTC Signaling for Voice/Video Calls
+  // ==================== ENHANCED CALLING SYSTEM (with DB records) ====================
+
   @SubscribeMessage('call:initiate')
   async handleCallInitiate(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { targetUserId: string; callType: 'audio' | 'video'; offer: RTCSessionDescriptionInit },
+    @MessageBody() data: { targetUserId: string; callType: 'audio' | 'video'; offer: RTCSessionDescriptionInit; chatId?: string },
   ) {
     if (!client.userId) {
       return { error: 'Not authenticated' };
     }
 
-    // Check if caller is blocked by target user
-    const isBlocked = await this.chatsService.isUserBlocked(data.targetUserId, client.userId);
-    if (isBlocked) {
-      return { error: 'Cannot call this user' };
+    try {
+      // Check if caller is blocked by target user
+      const isBlocked = await this.chatsService.isUserBlocked(data.targetUserId, client.userId);
+      if (isBlocked) {
+        return { error: 'Cannot call this user' };
+      }
+
+      // Create call record in DB with participant tracking
+      const call = await this.callsService.initiateCall(client.userId, {
+        receiverId: data.targetUserId,
+        chatId: data.chatId,
+        callType: data.callType,
+        callMode: 'direct',
+      });
+
+      const caller = await this.usersService.findById(client.userId);
+
+      // Send call offer to target user
+      this.websocketService.emitToUser(data.targetUserId, 'call:incoming', {
+        callId: call.id,
+        callerId: client.userId,
+        callerName: caller?.displayName || 'Unknown',
+        callerPhoto: caller?.profilePhoto || null,
+        callType: data.callType,
+        offer: data.offer,
+      });
+
+      this.logger.log(`Call initiated: ${call.id} from ${client.userId} to ${data.targetUserId}`);
+      return { success: true, callId: call.id };
+    } catch (error) {
+      this.logger.error('Call initiate error:', error);
+      return { error: error instanceof Error ? error.message : 'Failed to initiate call' };
     }
-
-    const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const caller = await this.usersService.findById(client.userId);
-
-    // Send call offer to target user
-    this.websocketService.emitToUser(data.targetUserId, 'call:incoming', {
-      callId,
-      callerId: client.userId,
-      callerName: caller?.displayName || 'Unknown',
-      callType: data.callType,
-      offer: data.offer,
-    });
-
-    console.log(`Call initiated: ${callId} from ${client.userId} to ${data.targetUserId}`);
-    return { success: true, callId };
   }
 
   @SubscribeMessage('call:answer')
@@ -325,14 +368,20 @@ export class WebsocketGateway
       return { error: 'Not authenticated' };
     }
 
-    // Send answer back to caller
-    this.websocketService.emitToUser(data.targetUserId, 'call:answered', {
-      callId: data.callId,
-      answer: data.answer,
-    });
+    try {
+      await this.callsService.answerCall(data.callId, client.userId);
 
-    console.log(`Call answered: ${data.callId}`);
-    return { success: true };
+      this.websocketService.emitToUser(data.targetUserId, 'call:answered', {
+        callId: data.callId,
+        answer: data.answer,
+      });
+
+      this.logger.log(`Call answered: ${data.callId}`);
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Call answer error:', error);
+      return { error: error instanceof Error ? error.message : 'Failed to answer call' };
+    }
   }
 
   @SubscribeMessage('call:reject')
@@ -344,13 +393,26 @@ export class WebsocketGateway
       return { error: 'Not authenticated' };
     }
 
-    this.websocketService.emitToUser(data.targetUserId, 'call:rejected', {
-      callId: data.callId,
-      reason: data.reason || 'Call rejected',
-    });
+    try {
+      const call = await this.callsService.declineCall(data.callId, client.userId);
 
-    console.log(`Call rejected: ${data.callId}`);
-    return { success: true };
+      this.websocketService.emitToUser(data.targetUserId, 'call:rejected', {
+        callId: data.callId,
+        reason: data.reason || 'Call rejected',
+      });
+
+      // Create call message in chat if chatId exists
+      if (call.chatId) {
+        const callMsg = `${call.callType === 'video' ? 'Video call' : 'Voice call'} - Declined`;
+        await this.callsService.createCallMessage(call.id, call.chatId, call.initiatorId, callMsg);
+      }
+
+      this.logger.log(`Call rejected: ${data.callId}`);
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Call reject error:', error);
+      return { error: error instanceof Error ? error.message : 'Failed to reject call' };
+    }
   }
 
   @SubscribeMessage('call:end')
@@ -362,12 +424,88 @@ export class WebsocketGateway
       return { error: 'Not authenticated' };
     }
 
-    this.websocketService.emitToUser(data.targetUserId, 'call:ended', {
-      callId: data.callId,
-    });
+    try {
+      const result = await this.callsService.endCall(data.callId, client.userId);
 
-    console.log(`Call ended: ${data.callId}`);
-    return { success: true };
+      this.websocketService.emitToUser(data.targetUserId, 'call:ended', {
+        callId: data.callId,
+        duration: result.duration,
+        callMessage: result.callMessage,
+      });
+
+      // Create call message in chat
+      if (result.chatId) {
+        await this.callsService.createCallMessage(result.id, result.chatId, result.initiatorId, result.callMessage);
+
+        // Notify chat participants about the call message
+        const chatParticipants = await this.chatsService.getOtherParticipants(result.chatId, client.userId);
+        for (const pid of chatParticipants) {
+          this.websocketService.emitToUser(pid, 'message:new', {
+            chatId: result.chatId,
+            message: { type: 'call', content: result.callMessage },
+          });
+        }
+      }
+
+      this.logger.log(`Call ended: ${data.callId} (duration: ${result.duration}s)`);
+      return { success: true, duration: result.duration, callMessage: result.callMessage };
+    } catch (error) {
+      this.logger.error('Call end error:', error);
+      return { error: error instanceof Error ? error.message : 'Failed to end call' };
+    }
+  }
+
+  // Mute/unmute audio during call
+  @SubscribeMessage('call:mute')
+  async handleCallMute(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string },
+  ) {
+    if (!client.userId) return { error: 'Not authenticated' };
+
+    try {
+      const participant = await this.callsService.toggleMute(data.callId, client.userId);
+      // Notify all other call participants
+      const callParticipants = await this.databaseService.getActiveCallParticipants(data.callId);
+      for (const cp of callParticipants) {
+        if (cp.userId !== client.userId) {
+          this.websocketService.emitToUser(cp.userId, 'call:participant:muted', {
+            callId: data.callId,
+            userId: client.userId,
+            isMuted: participant.isMuted,
+          });
+        }
+      }
+      return { success: true, isMuted: participant.isMuted };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Failed to toggle mute' };
+    }
+  }
+
+  // Toggle video during call
+  @SubscribeMessage('call:video:toggle')
+  async handleCallVideoToggle(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string },
+  ) {
+    if (!client.userId) return { error: 'Not authenticated' };
+
+    try {
+      const participant = await this.callsService.toggleVideo(data.callId, client.userId);
+      const callParticipants = await this.databaseService.getActiveCallParticipants(data.callId);
+      for (const cp of callParticipants) {
+        if (cp.userId !== client.userId) {
+          this.websocketService.emitToUser(cp.userId, 'call:participant:video', {
+            callId: data.callId,
+            userId: client.userId,
+            isVideoEnabled: participant.isVideoEnabled,
+          });
+        }
+      }
+      return { success: true, isVideoEnabled: participant.isVideoEnabled };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Failed to toggle video' };
+    }
   }
 
   @SubscribeMessage('call:ice-candidate')
@@ -387,12 +525,13 @@ export class WebsocketGateway
     return { success: true };
   }
 
-  // Group Call Support — server-side tracking for mesh networking
+  // Group Call Support — DB-backed tracking + mesh networking
   private activeGroupCalls: Map<string, {
     chatId: string;
     callType: 'audio' | 'video';
     initiatorId: string;
     participants: Set<string>;
+    dbCallId: string;
     createdAt: Date;
   }> = new Map();
 
@@ -405,33 +544,44 @@ export class WebsocketGateway
       return { error: 'Not authenticated' };
     }
 
-    const callId = `gcall_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const caller = await this.usersService.findById(client.userId);
-    const chatParticipants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
-
-    // Track active group call with initiator as first participant
-    this.activeGroupCalls.set(callId, {
-      chatId: data.chatId,
-      callType: data.callType,
-      initiatorId: client.userId,
-      participants: new Set([client.userId]),
-      createdAt: new Date(),
-    });
-
-    // Notify all other chat members about the incoming group call
-    for (const participantId of chatParticipants) {
-      this.websocketService.emitToUser(participantId, 'call:group:incoming', {
-        callId,
+    try {
+      // Create call record in DB
+      const call = await this.callsService.initiateCall(client.userId, {
         chatId: data.chatId,
-        callerId: client.userId,
-        callerName: caller?.displayName || 'Unknown',
         callType: data.callType,
-        participants: [client.userId, ...chatParticipants],
+        callMode: 'group',
       });
-    }
 
-    console.log(`Group call initiated: ${callId} in chat ${data.chatId} by ${client.userId}`);
-    return { success: true, callId, participants: [client.userId, ...chatParticipants] };
+      const caller = await this.usersService.findById(client.userId);
+      const chatParticipants = await this.chatsService.getOtherParticipants(data.chatId, client.userId);
+
+      this.activeGroupCalls.set(call.id, {
+        chatId: data.chatId,
+        callType: data.callType,
+        initiatorId: client.userId,
+        participants: new Set([client.userId]),
+        dbCallId: call.id,
+        createdAt: new Date(),
+      });
+
+      for (const participantId of chatParticipants) {
+        this.websocketService.emitToUser(participantId, 'call:group:incoming', {
+          callId: call.id,
+          chatId: data.chatId,
+          callerId: client.userId,
+          callerName: caller?.displayName || 'Unknown',
+          callerPhoto: caller?.profilePhoto || null,
+          callType: data.callType,
+          participants: [client.userId, ...chatParticipants],
+        });
+      }
+
+      this.logger.log(`Group call initiated: ${call.id} in chat ${data.chatId}`);
+      return { success: true, callId: call.id, participants: [client.userId, ...chatParticipants] };
+    } catch (error) {
+      this.logger.error('Group call initiate error:', error);
+      return { error: error instanceof Error ? error.message : 'Failed to initiate group call' };
+    }
   }
 
   @SubscribeMessage('call:group:join')
@@ -448,11 +598,16 @@ export class WebsocketGateway
       return { error: 'Group call not found or ended' };
     }
 
-    // Get existing participants before adding the new one
+    try {
+      // Update DB participant record
+      await this.callsService.answerCall(data.callId, client.userId);
+    } catch {
+      // Already joined or not invited — proceed anyway for mesh
+    }
+
     const existingParticipants = Array.from(groupCall.participants);
     groupCall.participants.add(client.userId);
 
-    // Notify existing participants that a new peer joined — they each need to create a peer connection
     for (const participantId of existingParticipants) {
       this.websocketService.emitToUser(participantId, 'call:group:participant-joined', {
         callId: data.callId,
@@ -461,13 +616,12 @@ export class WebsocketGateway
       });
     }
 
-    // Tell the joining user who is already in the call so they can create peer connections
     client.emit('call:group:peers', {
       callId: data.callId,
       peers: existingParticipants,
     });
 
-    console.log(`User ${client.userId} joined group call ${data.callId} (${groupCall.participants.size} participants)`);
+    this.logger.log(`User ${client.userId} joined group call ${data.callId} (${groupCall.participants.size} participants)`);
     return { success: true, peers: existingParticipants };
   }
 
@@ -537,11 +691,17 @@ export class WebsocketGateway
       return { error: 'Not authenticated' };
     }
 
+    // Update DB
+    try {
+      await this.callsService.leaveCall(data.callId, client.userId);
+    } catch {
+      // Ignore if not found
+    }
+
     const groupCall = this.activeGroupCalls.get(data.callId);
     if (groupCall) {
       groupCall.participants.delete(client.userId);
 
-      // Notify remaining participants to close their peer connection with the leaving user
       for (const participantId of groupCall.participants) {
         this.websocketService.emitToUser(participantId, 'call:group:participant-left', {
           callId: data.callId,
@@ -549,16 +709,160 @@ export class WebsocketGateway
         });
       }
 
-      // Clean up if no participants remain
       if (groupCall.participants.size === 0) {
         this.activeGroupCalls.delete(data.callId);
-        console.log(`Group call ${data.callId} ended — no participants remaining`);
+
+        // End call in DB and create call message
+        try {
+          const result = await this.callsService.endCall(data.callId, client.userId);
+          if (result.chatId) {
+            await this.callsService.createCallMessage(result.id, result.chatId, result.initiatorId, result.callMessage);
+          }
+        } catch {
+          // Ignore
+        }
+
+        this.logger.log(`Group call ${data.callId} ended — no participants remaining`);
       } else {
-        console.log(`User ${client.userId} left group call ${data.callId} (${groupCall.participants.size} remaining)`);
+        this.logger.log(`User ${client.userId} left group call ${data.callId} (${groupCall.participants.size} remaining)`);
       }
     }
 
     return { success: true };
+  }
+
+  // Add participant to active group call
+  @SubscribeMessage('call:group:add-participant')
+  async handleGroupCallAddParticipant(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string },
+  ) {
+    if (!client.userId) return { error: 'Not authenticated' };
+
+    try {
+      await this.callsService.addParticipant(data.callId, client.userId, data.targetUserId);
+      const caller = await this.usersService.findById(client.userId);
+      const groupCall = this.activeGroupCalls.get(data.callId);
+
+      this.websocketService.emitToUser(data.targetUserId, 'call:group:incoming', {
+        callId: data.callId,
+        chatId: groupCall?.chatId,
+        callerId: client.userId,
+        callerName: caller?.displayName || 'Unknown',
+        callType: groupCall?.callType || 'audio',
+        participants: groupCall ? Array.from(groupCall.participants) : [],
+      });
+
+      return { success: true };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Failed to add participant' };
+    }
+  }
+
+  // ==================== PER-RECIPIENT MESSAGE STATUS ====================
+
+  @SubscribeMessage('message:status:delivered')
+  async handleMessageStatusDelivered(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { messageId: string; chatId: string },
+  ) {
+    if (!client.userId) return { error: 'Not authenticated' };
+
+    try {
+      // Update per-recipient status
+      const existingStatus = await this.databaseService.findMessageStatus(data.messageId, client.userId);
+      if (existingStatus) {
+        await this.databaseService.updateMessageStatus(existingStatus.id, {
+          status: 'delivered',
+          deliveredAt: new Date(),
+        });
+      } else {
+        await this.databaseService.createMessageStatus({
+          messageId: data.messageId,
+          userId: client.userId,
+          status: 'delivered',
+          deliveredAt: new Date(),
+          seenAt: null,
+        });
+      }
+
+      // Check if ALL recipients have delivered — if so, update message status
+      const message = await this.databaseService.findMessageById(data.messageId);
+      if (message) {
+        const allDelivered = await this.databaseService.areAllRecipientsStatus(
+          data.messageId, 'delivered', message.senderId,
+        );
+        if (allDelivered) {
+          await this.databaseService.updateMessage(data.messageId, {
+            status: 'delivered',
+            deliveredAt: new Date(),
+          });
+          this.websocketService.emitToUser(message.senderId, 'message:delivered', {
+            messageId: data.messageId,
+            deliveredAt: new Date(),
+          });
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Message status delivered error:', error);
+      return { error: 'Failed to update message status' };
+    }
+  }
+
+  @SubscribeMessage('message:status:seen')
+  async handleMessageStatusSeen(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { messageIds: string[]; chatId: string },
+  ) {
+    if (!client.userId) return { error: 'Not authenticated' };
+
+    try {
+      for (const messageId of data.messageIds) {
+        const existingStatus = await this.databaseService.findMessageStatus(messageId, client.userId);
+        if (existingStatus) {
+          await this.databaseService.updateMessageStatus(existingStatus.id, {
+            status: 'seen',
+            seenAt: new Date(),
+            deliveredAt: existingStatus.deliveredAt || new Date(),
+          });
+        } else {
+          await this.databaseService.createMessageStatus({
+            messageId,
+            userId: client.userId,
+            status: 'seen',
+            deliveredAt: new Date(),
+            seenAt: new Date(),
+          });
+        }
+
+        // Check if ALL recipients have seen — if so, update message status to 'read'
+        const message = await this.databaseService.findMessageById(messageId);
+        if (message) {
+          const allSeen = await this.databaseService.areAllRecipientsStatus(
+            messageId, 'seen', message.senderId,
+          );
+          if (allSeen) {
+            await this.databaseService.updateMessage(messageId, {
+              status: 'read',
+              readAt: new Date(),
+            });
+            this.websocketService.emitToUser(message.senderId, 'message:read', {
+              chatId: data.chatId,
+              messageIds: [messageId],
+              readAt: new Date(),
+              readBy: client.userId,
+            });
+          }
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Message status seen error:', error);
+      return { error: 'Failed to update message status' };
+    }
   }
 
   // Bug #5 fix: Cron job to delete expired disappearing messages (runs every 60 seconds)

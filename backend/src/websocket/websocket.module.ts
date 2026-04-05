@@ -8,6 +8,7 @@ import { ChatsModule } from '../chats/chats.module';
 import { UsersModule } from '../users/users.module';
 import { DevicesModule } from '../devices/devices.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CallsModule } from '../calls/calls.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     UsersModule,
     forwardRef(() => DevicesModule),
     NotificationsModule,
+    CallsModule,
     ScheduleModule.forRoot(),
   ],
   providers: [WebsocketGateway, WebsocketService],

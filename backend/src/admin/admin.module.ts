@@ -18,6 +18,8 @@ import {
   RefreshTokenEntity,
   ChatbotConfigEntity,
   OrderEntity,
+  StickerEntity,
+  FaqEntity,
 } from '../database/entities';
 
 @Module({
@@ -35,6 +37,8 @@ import {
       RefreshTokenEntity,
       ChatbotConfigEntity,
       OrderEntity,
+      StickerEntity,
+      FaqEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

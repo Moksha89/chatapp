@@ -18,6 +18,12 @@ import {
   WebSessionEntity,
   ChatbotConfigEntity,
   OrderEntity,
+  CallEntity,
+  CallParticipantEntity,
+  MessageStatusEntity,
+  FriendEntity,
+  StickerEntity,
+  FaqEntity,
 } from './entities';
 
 export interface User {
@@ -110,6 +116,12 @@ export interface ChatParticipant {
   role: string;
   joinedAt: Date;
   lastReadAt: Date | null;
+  isPinned?: boolean;
+  isMuted?: boolean;
+  mutedUntil?: Date | null;
+  isArchived?: boolean;
+  isFavorite?: boolean;
+  clearChatBefore?: Date | null;
 }
 
 export interface Message {
@@ -185,6 +197,74 @@ export interface WebSession {
   createdAt: Date;
 }
 
+export interface Call {
+  id: string;
+  initiatorId: string;
+  receiverId: string | null;
+  chatId: string | null;
+  callType: string;
+  callMode: string;
+  status: string;
+  startedAt: Date | null;
+  endedAt: Date | null;
+  duration: number | null;
+  maxParticipants: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CallParticipant {
+  id: string;
+  callId: string;
+  userId: string;
+  status: string;
+  joinedAt: Date | null;
+  leftAt: Date | null;
+  isMuted: boolean;
+  isVideoEnabled: boolean;
+  createdAt: Date;
+}
+
+export interface MessageStatus {
+  id: string;
+  messageId: string;
+  userId: string;
+  status: string;
+  deliveredAt: Date | null;
+  seenAt: Date | null;
+  createdAt: Date;
+}
+
+export interface Friend {
+  id: string;
+  requesterId: string;
+  recipientId: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Sticker {
+  id: string;
+  packName: string;
+  imageUrl: string;
+  emoji: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export interface Faq {
+  id: string;
+  question: string;
+  answer: string;
+  category: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 @Injectable()
 export class DatabaseService implements OnModuleInit {
   constructor(
@@ -218,6 +298,18 @@ export class DatabaseService implements OnModuleInit {
     private chatbotConfigRepository: Repository<ChatbotConfigEntity>,
     @InjectRepository(OrderEntity)
     private orderRepository: Repository<OrderEntity>,
+    @InjectRepository(CallEntity)
+    private callRepository: Repository<CallEntity>,
+    @InjectRepository(CallParticipantEntity)
+    private callParticipantRepository: Repository<CallParticipantEntity>,
+    @InjectRepository(MessageStatusEntity)
+    private messageStatusRepository: Repository<MessageStatusEntity>,
+    @InjectRepository(FriendEntity)
+    private friendRepository: Repository<FriendEntity>,
+    @InjectRepository(StickerEntity)
+    private stickerRepository: Repository<StickerEntity>,
+    @InjectRepository(FaqEntity)
+    private faqRepository: Repository<FaqEntity>,
   ) {}
 
   async onModuleInit() {
@@ -805,5 +897,289 @@ export class DatabaseService implements OnModuleInit {
   async updateOrderStatus(id: string, status: string): Promise<OrderEntity | undefined> {
     await this.orderRepository.update(id, { status });
     return this.findOrderById(id);
+  }
+
+  // ==================== CALL CRUD ====================
+
+  async createCall(data: Omit<Call, 'id' | 'createdAt' | 'updatedAt'>): Promise<Call> {
+    const call = this.callRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.callRepository.save(call) as Promise<Call>;
+  }
+
+  async findCallById(id: string): Promise<Call | undefined> {
+    const call = await this.callRepository.findOne({ where: { id } });
+    return call || undefined;
+  }
+
+  async updateCall(id: string, data: Partial<Call>): Promise<Call | undefined> {
+    await this.callRepository.update(id, data);
+    return this.findCallById(id);
+  }
+
+  async getCallHistory(userId: string, limit = 50): Promise<Call[]> {
+    return this.callRepository
+      .createQueryBuilder('call')
+      .where('call.initiatorId = :userId OR call.receiverId = :userId', { userId })
+      .orderBy('call.createdAt', 'DESC')
+      .take(limit)
+      .getMany() as Promise<Call[]>;
+  }
+
+  async getActiveCallForUser(userId: string): Promise<Call | undefined> {
+    const call = await this.callRepository
+      .createQueryBuilder('call')
+      .innerJoin('call_participants', 'cp', 'cp."callId" = call.id')
+      .where('cp."userId" = :userId', { userId })
+      .andWhere('call.status IN (:...statuses)', { statuses: ['ringing', 'active'] })
+      .andWhere('cp.status IN (:...cpStatuses)', { cpStatuses: ['invited', 'joined'] })
+      .getOne();
+    return (call as Call) || undefined;
+  }
+
+  // ==================== CALL PARTICIPANT CRUD ====================
+
+  async createCallParticipant(data: Omit<CallParticipant, 'id' | 'createdAt'>): Promise<CallParticipant> {
+    const participant = this.callParticipantRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.callParticipantRepository.save(participant) as Promise<CallParticipant>;
+  }
+
+  async findCallParticipant(callId: string, userId: string): Promise<CallParticipant | undefined> {
+    const participant = await this.callParticipantRepository.findOne({
+      where: { callId, userId },
+    });
+    return participant || undefined;
+  }
+
+  async findCallParticipantsByCallId(callId: string): Promise<CallParticipant[]> {
+    return this.callParticipantRepository.find({ where: { callId } }) as Promise<CallParticipant[]>;
+  }
+
+  async updateCallParticipant(id: string, data: Partial<CallParticipant>): Promise<CallParticipant | undefined> {
+    await this.callParticipantRepository.update(id, data);
+    const participant = await this.callParticipantRepository.findOne({ where: { id } });
+    return participant || undefined;
+  }
+
+  async getActiveCallParticipants(callId: string): Promise<CallParticipant[]> {
+    return this.callParticipantRepository.find({
+      where: { callId, status: 'joined' },
+    }) as Promise<CallParticipant[]>;
+  }
+
+  // ==================== MESSAGE STATUS CRUD ====================
+
+  async createMessageStatus(data: Omit<MessageStatus, 'id' | 'createdAt'>): Promise<MessageStatus> {
+    const status = this.messageStatusRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.messageStatusRepository.save(status) as Promise<MessageStatus>;
+  }
+
+  async findMessageStatus(messageId: string, userId: string): Promise<MessageStatus | undefined> {
+    const status = await this.messageStatusRepository.findOne({
+      where: { messageId, userId },
+    });
+    return status || undefined;
+  }
+
+  async findMessageStatusesByMessageId(messageId: string): Promise<MessageStatus[]> {
+    return this.messageStatusRepository.find({ where: { messageId } }) as Promise<MessageStatus[]>;
+  }
+
+  async updateMessageStatus(id: string, data: Partial<MessageStatus>): Promise<MessageStatus | undefined> {
+    await this.messageStatusRepository.update(id, data);
+    const status = await this.messageStatusRepository.findOne({ where: { id } });
+    return status || undefined;
+  }
+
+  async updateMessageStatusByMessageAndUser(
+    messageId: string,
+    userId: string,
+    data: Partial<MessageStatus>,
+  ): Promise<void> {
+    await this.messageStatusRepository.update({ messageId, userId }, data);
+  }
+
+  async areAllRecipientsStatus(messageId: string, targetStatus: string, excludeUserId: string): Promise<boolean> {
+    const statuses = await this.messageStatusRepository.find({ where: { messageId } });
+    const recipientStatuses = statuses.filter(s => s.userId !== excludeUserId);
+    if (recipientStatuses.length === 0) return false;
+    const statusPriority: Record<string, number> = { sent: 0, delivered: 1, seen: 2 };
+    const targetPriority = statusPriority[targetStatus] ?? 0;
+    return recipientStatuses.every(s => (statusPriority[s.status] ?? 0) >= targetPriority);
+  }
+
+  async createMessageStatusesForRecipients(messageId: string, recipientIds: string[]): Promise<void> {
+    const statuses = recipientIds.map(userId => ({
+      id: this.generateId(),
+      messageId,
+      userId,
+      status: 'sent',
+      deliveredAt: null,
+      seenAt: null,
+    }));
+    await this.messageStatusRepository.save(statuses);
+  }
+
+  // ==================== FRIEND CRUD ====================
+
+  async createFriend(data: Omit<Friend, 'id' | 'createdAt' | 'updatedAt'>): Promise<Friend> {
+    const friend = this.friendRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.friendRepository.save(friend) as Promise<Friend>;
+  }
+
+  async findFriendship(userId1: string, userId2: string): Promise<Friend | undefined> {
+    const friend = await this.friendRepository.findOne({
+      where: [
+        { requesterId: userId1, recipientId: userId2 },
+        { requesterId: userId2, recipientId: userId1 },
+      ],
+    });
+    return friend || undefined;
+  }
+
+  async findFriendById(id: string): Promise<Friend | undefined> {
+    const friend = await this.friendRepository.findOne({ where: { id } });
+    return friend || undefined;
+  }
+
+  async updateFriend(id: string, data: Partial<Friend>): Promise<Friend | undefined> {
+    await this.friendRepository.update(id, data);
+    return this.findFriendById(id);
+  }
+
+  async deleteFriend(id: string): Promise<boolean> {
+    const result = await this.friendRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  async getFriendsForUser(userId: string): Promise<Friend[]> {
+    return this.friendRepository.find({
+      where: [
+        { requesterId: userId, status: 'accepted' },
+        { recipientId: userId, status: 'accepted' },
+      ],
+    }) as Promise<Friend[]>;
+  }
+
+  async getPendingFriendRequests(userId: string): Promise<Friend[]> {
+    return this.friendRepository.find({
+      where: { recipientId: userId, status: 'pending' },
+      order: { createdAt: 'DESC' },
+    }) as Promise<Friend[]>;
+  }
+
+  async getSentFriendRequests(userId: string): Promise<Friend[]> {
+    return this.friendRepository.find({
+      where: { requesterId: userId, status: 'pending' },
+      order: { createdAt: 'DESC' },
+    }) as Promise<Friend[]>;
+  }
+
+  async getFriendSuggestions(userId: string, limit = 20): Promise<User[]> {
+    const friends = await this.getFriendsForUser(userId);
+    const friendIds = friends.map(f => f.requesterId === userId ? f.recipientId : f.requesterId);
+    const pending = await this.friendRepository.find({
+      where: [
+        { requesterId: userId },
+        { recipientId: userId },
+      ],
+    });
+    const excludeIds = new Set([userId, ...friendIds, ...pending.map(p => p.requesterId === userId ? p.recipientId : p.requesterId)]);
+    
+    const allUsers = await this.userRepository.find({ take: limit + excludeIds.size });
+    return allUsers.filter(u => !excludeIds.has(u.id)).slice(0, limit) as User[];
+  }
+
+  // ==================== STICKER CRUD ====================
+
+  async createSticker(data: Omit<Sticker, 'id' | 'createdAt'>): Promise<Sticker> {
+    const sticker = this.stickerRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.stickerRepository.save(sticker) as Promise<Sticker>;
+  }
+
+  async findStickerById(id: string): Promise<Sticker | undefined> {
+    const sticker = await this.stickerRepository.findOne({ where: { id } });
+    return sticker || undefined;
+  }
+
+  async getStickers(activeOnly = true): Promise<Sticker[]> {
+    const where = activeOnly ? { isActive: true } : {};
+    return this.stickerRepository.find({
+      where,
+      order: { packName: 'ASC', sortOrder: 'ASC' },
+    }) as Promise<Sticker[]>;
+  }
+
+  async getStickerPacks(): Promise<string[]> {
+    const stickers = await this.stickerRepository
+      .createQueryBuilder('sticker')
+      .select('DISTINCT sticker.packName', 'packName')
+      .where('sticker.isActive = :active', { active: true })
+      .getRawMany();
+    return stickers.map(s => s.packName);
+  }
+
+  async getStickersByPack(packName: string): Promise<Sticker[]> {
+    return this.stickerRepository.find({
+      where: { packName, isActive: true },
+      order: { sortOrder: 'ASC' },
+    }) as Promise<Sticker[]>;
+  }
+
+  async updateSticker(id: string, data: Partial<Sticker>): Promise<Sticker | undefined> {
+    await this.stickerRepository.update(id, data);
+    return this.findStickerById(id);
+  }
+
+  async deleteSticker(id: string): Promise<boolean> {
+    const result = await this.stickerRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  // ==================== FAQ CRUD ====================
+
+  async createFaq(data: Omit<Faq, 'id' | 'createdAt' | 'updatedAt'>): Promise<Faq> {
+    const faq = this.faqRepository.create({
+      ...data,
+      id: this.generateId(),
+    });
+    return this.faqRepository.save(faq) as Promise<Faq>;
+  }
+
+  async findFaqById(id: string): Promise<Faq | undefined> {
+    const faq = await this.faqRepository.findOne({ where: { id } });
+    return faq || undefined;
+  }
+
+  async getFaqs(activeOnly = true): Promise<Faq[]> {
+    const where = activeOnly ? { isActive: true } : {};
+    return this.faqRepository.find({
+      where,
+      order: { sortOrder: 'ASC' },
+    }) as Promise<Faq[]>;
+  }
+
+  async updateFaq(id: string, data: Partial<Faq>): Promise<Faq | undefined> {
+    await this.faqRepository.update(id, data);
+    return this.findFaqById(id);
+  }
+
+  async deleteFaq(id: string): Promise<boolean> {
+    const result = await this.faqRepository.delete(id);
+    return (result.affected ?? 0) > 0;
   }
 }

@@ -14,6 +14,8 @@ import {
   RefreshTokenEntity,
   ChatbotConfigEntity,
   OrderEntity,
+  StickerEntity,
+  FaqEntity,
 } from '../database/entities';
 import { AuditLogEntity } from './audit-log.entity';
 import * as os from 'os';
@@ -66,6 +68,10 @@ export class AdminService {
     private orderRepository: Repository<OrderEntity>,
     @InjectRepository(AuditLogEntity)
     private auditLogRepository: Repository<AuditLogEntity>,
+    @InjectRepository(StickerEntity)
+    private stickerRepository: Repository<StickerEntity>,
+    @InjectRepository(FaqEntity)
+    private faqRepository: Repository<FaqEntity>,
   ) {
     this.initDefaultAdmin();
   }
@@ -540,5 +546,77 @@ export class AdminService {
       OTP_MODE: process.env.USE_TWILIO === 'true' ? 'twilio' : 'dev',
       DEV_OTP: process.env.DEV_OTP || '123456',
     };
+  }
+
+  // ========== STICKERS ==========
+  async getStickers(): Promise<StickerEntity[]> {
+    return this.stickerRepository.find({ order: { sortOrder: 'ASC', createdAt: 'DESC' } });
+  }
+
+  async getStickerPacks(): Promise<string[]> {
+    const stickers = await this.stickerRepository
+      .createQueryBuilder('sticker')
+      .select('DISTINCT sticker.packName', 'packName')
+      .getRawMany();
+    return stickers.map(s => s.packName as string);
+  }
+
+  async createSticker(data: { packName: string; imageUrl: string; emoji?: string; sortOrder?: number }): Promise<StickerEntity> {
+    const sticker = this.stickerRepository.create({
+      packName: data.packName,
+      imageUrl: data.imageUrl,
+      emoji: data.emoji || null,
+      sortOrder: data.sortOrder || 0,
+      isActive: true,
+    });
+    return this.stickerRepository.save(sticker);
+  }
+
+  async updateSticker(id: string, data: Partial<{ packName: string; imageUrl: string; emoji: string; sortOrder: number; isActive: boolean }>): Promise<StickerEntity | null> {
+    await this.stickerRepository.update(id, data);
+    return this.stickerRepository.findOne({ where: { id } });
+  }
+
+  async deleteSticker(id: string): Promise<boolean> {
+    const result = await this.stickerRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  // ========== FAQ ==========
+  async getFaqs(): Promise<FaqEntity[]> {
+    return this.faqRepository.find({ order: { sortOrder: 'ASC', createdAt: 'DESC' } });
+  }
+
+  async createFaq(data: { question: string; answer: string; category?: string; sortOrder?: number }): Promise<FaqEntity> {
+    const faq = this.faqRepository.create({
+      question: data.question,
+      answer: data.answer,
+      category: data.category || null,
+      sortOrder: data.sortOrder || 0,
+      isActive: true,
+    });
+    return this.faqRepository.save(faq);
+  }
+
+  async updateFaq(id: string, data: Partial<{ question: string; answer: string; category: string; sortOrder: number; isActive: boolean }>): Promise<FaqEntity | null> {
+    await this.faqRepository.update(id, data);
+    return this.faqRepository.findOne({ where: { id } });
+  }
+
+  async deleteFaq(id: string): Promise<boolean> {
+    const result = await this.faqRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  // ========== MAINTENANCE MODE ==========
+  private maintenanceMode = false;
+
+  isMaintenanceMode(): boolean {
+    return this.maintenanceMode;
+  }
+
+  setMaintenanceMode(enabled: boolean): { maintenanceMode: boolean } {
+    this.maintenanceMode = enabled;
+    return { maintenanceMode: this.maintenanceMode };
   }
 }

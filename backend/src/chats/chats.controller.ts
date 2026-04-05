@@ -429,4 +429,78 @@ export class ChatsController {
   ) {
     return this.chatsService.updateOrderStatus(chatId, user.id, orderId, body.status);
   }
+
+  // ==================== CHAT UX FEATURES ====================
+
+  // Pin/unpin conversation
+  @Put(':id/pin')
+  @ApiOperation({ summary: 'Pin or unpin a conversation' })
+  @ApiResponse({ status: 200, description: 'Conversation pin toggled' })
+  async pinConversation(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { isPinned: boolean },
+  ) {
+    return this.chatsService.pinConversation(chatId, user.id, body.isPinned);
+  }
+
+  // Mute/unmute conversation with expiry
+  @Put(':id/mute')
+  @ApiOperation({ summary: 'Mute or unmute a conversation' })
+  @ApiResponse({ status: 200, description: 'Conversation mute toggled' })
+  async muteConversation(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { muted: boolean; duration?: '1h' | '8h' | '1w' | 'forever' },
+  ) {
+    return this.chatsService.muteConversation(chatId, user.id, body.muted, body.duration);
+  }
+
+  // Archive/unarchive conversation
+  @Put(':id/archive')
+  @ApiOperation({ summary: 'Archive or unarchive a conversation' })
+  @ApiResponse({ status: 200, description: 'Conversation archive toggled' })
+  async archiveConversation(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { isArchived: boolean },
+  ) {
+    return this.chatsService.archiveConversation(chatId, user.id, body.isArchived);
+  }
+
+  // Mark/unmark as favorite
+  @Put(':id/favorite')
+  @ApiOperation({ summary: 'Mark or unmark a conversation as favorite' })
+  @ApiResponse({ status: 200, description: 'Conversation favorite toggled' })
+  async favoriteConversation(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { isFavorite: boolean },
+  ) {
+    return this.chatsService.favoriteConversation(chatId, user.id, body.isFavorite);
+  }
+
+  // Clear chat history (per-user)
+  @Post(':id/clear')
+  @ApiOperation({ summary: 'Clear chat history for this user' })
+  @ApiResponse({ status: 200, description: 'Chat history cleared' })
+  async clearChat(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+  ) {
+    await this.chatsService.clearChat(chatId, user.id);
+    return { message: 'Chat cleared' };
+  }
+
+  // Report contact
+  @Post(':id/report')
+  @ApiOperation({ summary: 'Report a contact or chat' })
+  @ApiResponse({ status: 200, description: 'Report submitted' })
+  async reportContact(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') chatId: string,
+    @Body() body: { reason: string; details?: string },
+  ) {
+    return this.chatsService.reportContact(chatId, user.id, body.reason, body.details);
+  }
 }

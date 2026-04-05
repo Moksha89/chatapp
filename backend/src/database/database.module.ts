@@ -22,6 +22,12 @@ import {
   FcmTokenEntity,
   ChatbotConfigEntity,
   OrderEntity,
+  CallEntity,
+  CallParticipantEntity,
+  MessageStatusEntity,
+  FriendEntity,
+  StickerEntity,
+  FaqEntity,
 } from './entities';
 import { DatabaseService } from './database.service';
 import { AuditLogEntity } from '../admin/audit-log.entity';
@@ -47,6 +53,12 @@ const entities = [
   FcmTokenEntity,
   ChatbotConfigEntity,
   OrderEntity,
+  CallEntity,
+  CallParticipantEntity,
+  MessageStatusEntity,
+  FriendEntity,
+  StickerEntity,
+  FaqEntity,
   AuditLogEntity,
 ];
 

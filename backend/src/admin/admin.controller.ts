@@ -280,4 +280,101 @@ export class AdminController {
   async getSettings() {
     return this.adminService.getSystemSettings();
   }
+
+  // ========== STICKERS ==========
+  @Get('stickers')
+  @UseGuards(AdminAuthGuard)
+  async getStickers() {
+    return this.adminService.getStickers();
+  }
+
+  @Get('stickers/packs')
+  @UseGuards(AdminAuthGuard)
+  async getStickerPacks() {
+    return this.adminService.getStickerPacks();
+  }
+
+  @Post('stickers')
+  @UseGuards(AdminAuthGuard)
+  async createSticker(
+    @Body() body: { packName: string; imageUrl: string; emoji?: string; sortOrder?: number },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'CREATE_STICKER', `Created sticker in pack ${body.packName}`);
+    return this.adminService.createSticker(body);
+  }
+
+  @Patch('stickers/:id')
+  @UseGuards(AdminAuthGuard)
+  async updateSticker(
+    @Param('id') id: string,
+    @Body() body: Partial<{ packName: string; imageUrl: string; emoji: string; sortOrder: number; isActive: boolean }>,
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'UPDATE_STICKER', `Updated sticker ${id}`, id);
+    return this.adminService.updateSticker(id, body);
+  }
+
+  @Delete('stickers/:id')
+  @UseGuards(AdminAuthGuard)
+  async deleteSticker(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'DELETE_STICKER', `Deleted sticker ${id}`, id);
+    return { success: await this.adminService.deleteSticker(id) };
+  }
+
+  // ========== FAQ ==========
+  @Get('faqs')
+  @UseGuards(AdminAuthGuard)
+  async getFaqs() {
+    return this.adminService.getFaqs();
+  }
+
+  @Post('faqs')
+  @UseGuards(AdminAuthGuard)
+  async createFaq(
+    @Body() body: { question: string; answer: string; category?: string; sortOrder?: number },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'CREATE_FAQ', `Created FAQ: ${body.question}`);
+    return this.adminService.createFaq(body);
+  }
+
+  @Patch('faqs/:id')
+  @UseGuards(AdminAuthGuard)
+  async updateFaq(
+    @Param('id') id: string,
+    @Body() body: Partial<{ question: string; answer: string; category: string; sortOrder: number; isActive: boolean }>,
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'UPDATE_FAQ', `Updated FAQ ${id}`, id);
+    return this.adminService.updateFaq(id, body);
+  }
+
+  @Delete('faqs/:id')
+  @UseGuards(AdminAuthGuard)
+  async deleteFaq(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'DELETE_FAQ', `Deleted FAQ ${id}`, id);
+    return { success: await this.adminService.deleteFaq(id) };
+  }
+
+  // ========== MAINTENANCE MODE ==========
+  @Get('maintenance')
+  @UseGuards(AdminAuthGuard)
+  async getMaintenanceMode() {
+    return { maintenanceMode: this.adminService.isMaintenanceMode() };
+  }
+
+  @Post('maintenance')
+  @UseGuards(AdminAuthGuard)
+  async setMaintenanceMode(
+    @Body() body: { enabled: boolean },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(
+      req.admin.sub,
+      body.enabled ? 'ENABLE_MAINTENANCE' : 'DISABLE_MAINTENANCE',
+      `${body.enabled ? 'Enabled' : 'Disabled'} maintenance mode`,
+    );
+    return this.adminService.setMaintenanceMode(body.enabled);
+  }
 }
