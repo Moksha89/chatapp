@@ -1119,16 +1119,67 @@ function AuditLogPage({ token }: { token: string }) {
 function SettingsPage({ token }: { token: string }) {
   const [settings, setSettings] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [maintenance, setMaintenance] = useState<{ maintenanceMode: boolean; message: string }>({ maintenanceMode: false, message: '' });
+  const [maintMsg, setMaintMsg] = useState('');
 
   useEffect(() => {
-    adminFetch('/settings', token).then(setSettings).catch(() => {}).finally(() => setLoading(false));
+    Promise.all([
+      adminFetch('/settings', token),
+      adminFetch('/maintenance', token),
+    ]).then(([s, m]) => {
+      setSettings(s as Record<string, string>);
+      const mData = m as { maintenanceMode: boolean; message: string };
+      setMaintenance(mData);
+      setMaintMsg(mData.message || '');
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [token]);
+
+  const toggleMaintenance = async () => {
+    const newState = !maintenance.maintenanceMode;
+    const result = await adminFetch('/maintenance', token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: newState, message: maintMsg || undefined }),
+    }) as { maintenanceMode: boolean; message: string };
+    setMaintenance(result);
+  };
 
   if (loading) return <LoadingState />;
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-white">System Settings</h2>
+
+      {/* Maintenance Mode */}
+      <div className={`border rounded-xl p-5 ${maintenance.maintenanceMode ? 'bg-red-900/20 border-red-700/50' : 'bg-slate-800/50 border-slate-700/50'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className={`w-5 h-5 ${maintenance.maintenanceMode ? 'text-red-400' : 'text-slate-400'}`} />
+            <div>
+              <h3 className="text-sm font-semibold text-white">Maintenance Mode</h3>
+              <p className="text-xs text-slate-400">{maintenance.maintenanceMode ? 'App is currently in maintenance mode' : 'App is running normally'}</p>
+            </div>
+          </div>
+          <button
+            onClick={toggleMaintenance}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              maintenance.maintenanceMode
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-red-600 hover:bg-red-700 text-white'
+            }`}
+          >
+            {maintenance.maintenanceMode ? 'Disable Maintenance' : 'Enable Maintenance'}
+          </button>
+        </div>
+        <input
+          type="text"
+          value={maintMsg}
+          onChange={e => setMaintMsg(e.target.value)}
+          className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-blue-500/30"
+          placeholder="Custom maintenance message (optional)"
+        />
+      </div>
+
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-white mb-4">Environment Configuration</h3>
         <div className="space-y-3">
@@ -1143,7 +1194,7 @@ function SettingsPage({ token }: { token: string }) {
 
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-white mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <button className="flex items-center gap-3 bg-slate-700/30 hover:bg-slate-700/50 rounded-lg p-4 transition text-left">
             <div className="p-2 bg-blue-500/10 rounded-lg"><Download className="w-5 h-5 text-blue-400" /></div>
             <div>
@@ -1156,13 +1207,6 @@ function SettingsPage({ token }: { token: string }) {
             <div>
               <p className="text-white text-sm font-medium">Clear Cache</p>
               <p className="text-slate-400 text-xs">Reset all caches</p>
-            </div>
-          </button>
-          <button className="flex items-center gap-3 bg-slate-700/30 hover:bg-slate-700/50 rounded-lg p-4 transition text-left">
-            <div className="p-2 bg-red-500/10 rounded-lg"><AlertTriangle className="w-5 h-5 text-red-400" /></div>
-            <div>
-              <p className="text-white text-sm font-medium">Maintenance Mode</p>
-              <p className="text-slate-400 text-xs">Enable/disable maintenance</p>
             </div>
           </button>
         </div>

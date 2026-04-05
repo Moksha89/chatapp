@@ -358,17 +358,30 @@ export class AdminController {
     return { success: await this.adminService.deleteFaq(id) };
   }
 
+  // ========== PUBLIC STATUS (no auth required) ==========
+  @Get('status')
+  async getPublicStatus() {
+    return {
+      maintenanceMode: this.adminService.isMaintenanceMode(),
+      maintenanceMessage: this.adminService.getMaintenanceMessage(),
+      setupCompleted: this.adminService.isSetupCompleted(),
+    };
+  }
+
   // ========== MAINTENANCE MODE ==========
   @Get('maintenance')
   @UseGuards(AdminAuthGuard)
   async getMaintenanceMode() {
-    return { maintenanceMode: this.adminService.isMaintenanceMode() };
+    return {
+      maintenanceMode: this.adminService.isMaintenanceMode(),
+      message: this.adminService.getMaintenanceMessage(),
+    };
   }
 
   @Post('maintenance')
   @UseGuards(AdminAuthGuard)
   async setMaintenanceMode(
-    @Body() body: { enabled: boolean },
+    @Body() body: { enabled: boolean; message?: string },
     @Req() req: { admin: { sub: string } },
   ) {
     await this.adminService.logAction(
@@ -376,7 +389,20 @@ export class AdminController {
       body.enabled ? 'ENABLE_MAINTENANCE' : 'DISABLE_MAINTENANCE',
       `${body.enabled ? 'Enabled' : 'Disabled'} maintenance mode`,
     );
-    return this.adminService.setMaintenanceMode(body.enabled);
+    return this.adminService.setMaintenanceMode(body.enabled, body.message);
+  }
+
+  // ========== INSTALL WIZARD ==========
+  @Get('setup/status')
+  async getSetupStatus() {
+    return this.adminService.getSetupStatus();
+  }
+
+  @Post('setup/run')
+  async runSetupWizard(
+    @Body() body: { appName?: string; adminPassword?: string; seedDefaults?: boolean },
+  ) {
+    return this.adminService.runSetupWizard(body);
   }
 
   // ========== PAGE CONTENT ==========

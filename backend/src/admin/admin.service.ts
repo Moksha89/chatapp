@@ -622,14 +622,127 @@ export class AdminService {
 
   // ========== MAINTENANCE MODE ==========
   private maintenanceMode = false;
+  private maintenanceMessage = 'We are currently performing maintenance. Please try again later.';
 
   isMaintenanceMode(): boolean {
     return this.maintenanceMode;
   }
 
-  setMaintenanceMode(enabled: boolean): { maintenanceMode: boolean } {
+  getMaintenanceMessage(): string {
+    return this.maintenanceMessage;
+  }
+
+  setMaintenanceMode(enabled: boolean, message?: string): { maintenanceMode: boolean; message: string } {
     this.maintenanceMode = enabled;
-    return { maintenanceMode: this.maintenanceMode };
+    if (message) this.maintenanceMessage = message;
+    return { maintenanceMode: this.maintenanceMode, message: this.maintenanceMessage };
+  }
+
+  // ========== INSTALL WIZARD (First-time Setup) ==========
+  private setupCompleted = false;
+
+  isSetupCompleted(): boolean {
+    return this.setupCompleted;
+  }
+
+  async getSetupStatus(): Promise<{
+    isSetupCompleted: boolean;
+    hasAdmin: boolean;
+    hasUsers: boolean;
+    hasDefaultSettings: boolean;
+    hasDefaultPages: boolean;
+    hasDefaultReportCategories: boolean;
+    databaseConnected: boolean;
+  }> {
+    let hasUsers = false;
+    let hasDefaultSettings = false;
+    let hasDefaultPages = false;
+    let hasDefaultReportCategories = false;
+    let databaseConnected = false;
+
+    try {
+      const userCount = await this.userRepository.count();
+      hasUsers = userCount > 0;
+      databaseConnected = true;
+
+      const settingsCount = await this.appSettingRepository.count();
+      hasDefaultSettings = settingsCount > 0;
+
+      const pagesCount = await this.pageContentRepository.count();
+      hasDefaultPages = pagesCount > 0;
+
+      const categoriesCount = await this.reportCategoryRepository.count();
+      hasDefaultReportCategories = categoriesCount > 0;
+    } catch {
+      databaseConnected = false;
+    }
+
+    return {
+      isSetupCompleted: this.setupCompleted,
+      hasAdmin: true, // Always true since admin is in-memory
+      hasUsers,
+      hasDefaultSettings,
+      hasDefaultPages,
+      hasDefaultReportCategories,
+      databaseConnected,
+    };
+  }
+
+  async runSetupWizard(config: {
+    appName?: string;
+    adminPassword?: string;
+    seedDefaults?: boolean;
+  }): Promise<{ success: boolean; steps: Array<{ step: string; status: string }> }> {
+    const steps: Array<{ step: string; status: string }> = [];
+
+    // Step 1: Update admin password if provided
+    if (config.adminPassword) {
+      try {
+        this.adminUsers[0].passwordHash = await bcrypt.hash(config.adminPassword, 10);
+        steps.push({ step: 'Update admin password', status: 'completed' });
+      } catch {
+        steps.push({ step: 'Update admin password', status: 'failed' });
+      }
+    }
+
+    // Step 2: Set app name if provided
+    if (config.appName) {
+      try {
+        await this.setAppSetting('app_name', config.appName, 'general', 'Application name');
+        steps.push({ step: 'Set app name', status: 'completed' });
+      } catch {
+        steps.push({ step: 'Set app name', status: 'failed' });
+      }
+    }
+
+    // Step 3: Seed defaults
+    if (config.seedDefaults !== false) {
+      try {
+        await this.seedDefaultSettings();
+        steps.push({ step: 'Seed default settings', status: 'completed' });
+      } catch {
+        steps.push({ step: 'Seed default settings', status: 'failed' });
+      }
+
+      try {
+        await this.seedDefaultReportCategories();
+        steps.push({ step: 'Seed default report categories', status: 'completed' });
+      } catch {
+        steps.push({ step: 'Seed default report categories', status: 'failed' });
+      }
+
+      try {
+        await this.seedDefaultPages();
+        steps.push({ step: 'Seed default pages', status: 'completed' });
+      } catch {
+        steps.push({ step: 'Seed default pages', status: 'failed' });
+      }
+    }
+
+    this.setupCompleted = true;
+    steps.push({ step: 'Mark setup complete', status: 'completed' });
+
+    return { success: steps.every(s => s.status === 'completed'), steps };
   }
 
   // ========== PAGE CONTENT (Privacy Policy, Terms, etc.) ==========

@@ -6,6 +6,8 @@ import { I18nProvider } from './i18n/I18nContext';
 import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionStatus } from './components/ConnectionStatus';
+import { MaintenancePage } from './components/MaintenancePage';
+import { InstallWizard } from './components/InstallWizard';
 
 // Lazy load heavy components for faster initial load
 const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -13,6 +15,8 @@ const ChatSidebar = lazy(() => import('./components/ChatSidebar').then(m => ({ d
 const ChatArea = lazy(() => import('./components/ChatArea').then(m => ({ default: m.ChatArea })));
 const CallDialog = lazy(() => import('./components/CallDialog').then(m => ({ default: m.CallDialog })));
 const AdminPanel = lazy(() => import('./admin/AdminPanel'));
+
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 function ResponsiveLayout() {
   const { activeChat } = useChat();
@@ -100,6 +104,40 @@ function LoadingSpinner() {
 function App() {
   // Check if we're on the /admin route
   const isAdminRoute = window.location.pathname.startsWith('/admin');
+  const isSetupRoute = window.location.pathname === '/setup';
+
+  const [appStatus, setAppStatus] = useState<{
+    maintenanceMode: boolean;
+    maintenanceMessage: string;
+    setupCompleted: boolean;
+    checked: boolean;
+  }>({ maintenanceMode: false, maintenanceMessage: '', setupCompleted: true, checked: false });
+
+  useEffect(() => {
+    // Don't check status for admin routes — admin panel works regardless
+    if (isAdminRoute) {
+      setAppStatus(prev => ({ ...prev, checked: true }));
+      return;
+    }
+    fetch(`${API_URL}/admin/status`)
+      .then(res => res.json())
+      .then((data: { maintenanceMode?: boolean; maintenanceMessage?: string; setupCompleted?: boolean }) => {
+        setAppStatus({
+          maintenanceMode: !!data.maintenanceMode,
+          maintenanceMessage: data.maintenanceMessage || '',
+          setupCompleted: data.setupCompleted !== false,
+          checked: true,
+        });
+      })
+      .catch(() => {
+        // If status check fails, proceed normally
+        setAppStatus(prev => ({ ...prev, checked: true }));
+      });
+  }, [isAdminRoute]);
+
+  if (!appStatus.checked) {
+    return <LoadingSpinner />;
+  }
 
   if (isAdminRoute) {
     return (
@@ -109,6 +147,23 @@ function App() {
         </Suspense>
       </ErrorBoundary>
     );
+  }
+
+  // Show install wizard for first-time setup
+  if (isSetupRoute || !appStatus.setupCompleted) {
+    return (
+      <ErrorBoundary>
+        <InstallWizard onComplete={() => {
+          setAppStatus(prev => ({ ...prev, setupCompleted: true }));
+          window.history.replaceState(null, '', '/');
+        }} />
+      </ErrorBoundary>
+    );
+  }
+
+  // Show maintenance page if maintenance mode is enabled
+  if (appStatus.maintenanceMode) {
+    return <MaintenancePage message={appStatus.maintenanceMessage} />;
   }
 
   return (
