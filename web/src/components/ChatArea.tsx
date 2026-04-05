@@ -52,7 +52,10 @@ import {
   ChevronDown,
   BellOff,
   Hash,
-  Globe
+  Globe,
+  BarChart3,
+  MapPin,
+  User as UserIcon
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -706,7 +709,7 @@ export function ChatArea() {
                       )}
                       {activeChat?.type === 'direct' && (
                         <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowContactDetails(true); }}>
-                          <User className="h-4 w-4" /> Contact info
+                          <UserIcon className="h-4 w-4" /> Contact info
                         </button>
                       )}
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGlobalSearch(true); }}>
@@ -1093,7 +1096,7 @@ export function ChatArea() {
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
                   >
                     <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-white" />
+                      <UserIcon className="h-4 w-4 text-white" />
                     </div>
                     <span className="text-sm">Contact</span>
                   </button>
