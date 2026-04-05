@@ -24,6 +24,7 @@ import { BroadcastManager } from './BroadcastManager';
 import { ProductCatalog } from './ProductCatalog';
 import { AutoReplySettings } from './AutoReplySettings';
 import { PrivacySettings } from './PrivacySettings';
+import { FriendsPanel } from './FriendsPanel';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
@@ -41,6 +42,7 @@ export function ChatSidebar() {
   const [showProducts, setShowProducts] = useState(false);
   const [showAutoReply, setShowAutoReply] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
   const [showChannelDialog, setShowChannelDialog] = useState(false);
   const [showCommunityDialog, setShowCommunityDialog] = useState(false);
   const [channelName, setChannelName] = useState('');
@@ -248,6 +250,10 @@ export function ChatSidebar() {
               Create Community
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowFriends(true)}>
+              <Users className="mr-2 h-4 w-4" />
+              Friends
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setShowPrivacy(true)}>
               <Shield className="mr-2 h-4 w-4" />
               Privacy Settings
@@ -416,6 +422,7 @@ export function ChatSidebar() {
       <ProductCatalog isOpen={showProducts} onClose={() => setShowProducts(false)} />
       <AutoReplySettings isOpen={showAutoReply} onClose={() => setShowAutoReply(false)} />
       <PrivacySettings isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
+      <FriendsPanel isOpen={showFriends} onClose={() => setShowFriends(false)} />
 
       {/* Chat Context Menu */}
       {contextMenu && (

@@ -1115,17 +1115,21 @@ class ApiService {
   }
 
   async getFriendRequests() {
-    return this.request<Array<{ id: string; userId: string; friendId: string; status: string; createdAt: string }>>('/friends/requests');
+    return this.request<Array<{ id: string; requesterId: string; recipientId: string; status: string; createdAt: string; user: { id: string; displayName: string; phoneNumber: string } }>>('/friends/requests/pending');
+  }
+
+  async getSentFriendRequests() {
+    return this.request<Array<{ id: string; requesterId: string; recipientId: string; status: string; createdAt: string; user: { id: string; displayName: string; phoneNumber: string } }>>('/friends/requests/sent');
   }
 
   async getFriendSuggestions() {
     return this.request<Array<{ id: string; displayName: string; phoneNumber: string }>>('/friends/suggestions');
   }
 
-  async sendFriendRequest(friendId: string) {
+  async sendFriendRequest(userId: string) {
     return this.request<{ id: string; status: string }>('/friends/request', {
       method: 'POST',
-      body: JSON.stringify({ friendId }),
+      body: JSON.stringify({ userId }),
     });
   }
 
@@ -1141,15 +1145,23 @@ class ApiService {
     });
   }
 
-  async blockFriend(friendId: string) {
-    return this.request<{ id: string; status: string }>(`/friends/${friendId}/block`, {
-      method: 'POST',
+  async removeFriend(friendshipId: string) {
+    return this.request<{ message: string }>(`/friends/${friendshipId}`, {
+      method: 'DELETE',
     });
   }
 
-  async unblockFriend(friendId: string) {
-    return this.request<{ id: string; status: string }>(`/friends/${friendId}/unblock`, {
+  async blockFriend(userId: string) {
+    return this.request<{ id: string; status: string }>('/friends/block', {
       method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  }
+
+  async unblockFriend(userId: string) {
+    return this.request<{ message: string }>('/friends/unblock', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
     });
   }
 
