@@ -114,6 +114,11 @@ function App() {
     checked: boolean;
   }>({ maintenanceMode: false, maintenanceMessage: '', setupCompleted: true, checked: false });
 
+  // Show onboarding for first-time visitors (must be before any early returns)
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('onboarding_completed');
+  });
+
   useEffect(() => {
     // Don't check status for admin routes — admin panel works regardless
     if (isAdminRoute) {
@@ -166,11 +171,6 @@ function App() {
   if (appStatus.maintenanceMode) {
     return <MaintenancePage message={appStatus.maintenanceMessage} />;
   }
-
-  // Show onboarding for first-time visitors
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem('onboarding_completed');
-  });
 
   if (showOnboarding) {
     return (
