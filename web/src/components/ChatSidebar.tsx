@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2, UserPlus, Phone } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
