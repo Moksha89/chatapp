@@ -556,7 +556,7 @@ export function ChatArea() {
           </a>
           <div className="encryption-banner mt-8 inline-flex items-center gap-2 mx-auto">
             <Lock className="h-3 w-3" />
-            Secure messaging
+            End-to-end encrypted
           </div>
         </div>
       </div>

@@ -29,7 +29,7 @@ export interface X3DHResponderParams {
   senderEphemeralKey: Uint8Array;
 }
 
-const X3DH_INFO = 'WhatsAppBusinessChat_X3DH';
+const X3DH_INFO = 'EChatBusiness_X3DH';
 
 export function x3dhInitiator(params: X3DHInitiatorParams): X3DHResult {
   const { identityKeyPair, ephemeralKeyPair, recipientBundle } = params;

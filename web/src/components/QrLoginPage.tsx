@@ -184,7 +184,7 @@ export function QrLoginPage() {
           <div className="mt-8 pt-6 border-t border-white/20">
             <div className="flex items-center gap-2 text-sm mb-4">
               <Shield className="w-4 h-4" />
-              <span>Secure messaging</span>
+              <span>End-to-end encrypted</span>
             </div>
             
             <a 

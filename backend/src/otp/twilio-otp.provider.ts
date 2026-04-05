@@ -18,8 +18,14 @@ export class TwilioOtpProvider implements OtpProvider {
   }
 
   private normalizePhoneNumber(phone: string): string {
-    const digits = phone.replace(/[^\d+]/g, '');
-    return digits.startsWith('+') ? digits : `+${digits}`;
+    // Remove spaces, dashes, parentheses, dots — keep digits and leading +
+    let cleaned = phone.replace(/[\s\-().]/g, '');
+    // Ensure E.164 format: must start with +
+    if (!cleaned.startsWith('+')) {
+      cleaned = `+${cleaned}`;
+    }
+    // Remove any remaining non-digit chars except the leading +
+    return '+' + cleaned.slice(1).replace(/\D/g, '');
   }
 
   private async initializeTwilio(): Promise<void> {
@@ -65,9 +71,9 @@ export class TwilioOtpProvider implements OtpProvider {
       }
 
       await this.twilioClient.messages.create({
-        body: `Your verification code is: ${otp}. It expires in 5 minutes.`,
+        body: `Your E-Chat verification code is: ${otp}. It expires in 5 minutes.`,
         from: twilioPhoneNumber,
-        to: phoneNumber,
+        to: normalizedPhone,
       });
 
       this.logger.log(`OTP sent to ${phoneNumber}`);
