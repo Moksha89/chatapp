@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -203,12 +204,13 @@ fun ChatScreen(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { onProfileClick(chatId) }
+                        modifier = Modifier
+                            .clickable { onProfileClick(chatId) }
                     ) {
                         Box {
                             Surface(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(36.dp)
                                     .clip(CircleShape),
                                 color = Color(0xFF246BFD)
                             ) {
@@ -216,29 +218,35 @@ fun ChatScreen(
                                     Text(
                                         text = chatName.firstOrNull()?.toString() ?: "?",
                                         color = Color.White,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
                                     )
                                 }
                             }
                             if (effectiveOnline) {
                                 Box(
                                     modifier = Modifier
-                                        .size(12.dp)
-                                        .background(Color(0xFF246BFD), CircleShape)
+                                        .size(10.dp)
+                                        .background(Color(0xFF4CAF50), CircleShape)
                                         .align(Alignment.BottomEnd)
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text(chatName, fontSize = 16.sp)
+                            Text(
+                                chatName,
+                                fontSize = 15.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             Text(
                                 text = when {
                                     effectiveTyping -> "typing..."
                                     effectiveOnline -> "online"
                                     else -> "offline"
                                 },
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 color = Color.White.copy(alpha = 0.7f)
                             )
                         }
@@ -251,14 +259,23 @@ fun ChatScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF1A56DB),
-                    titleContentColor = Color.White
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White
                 ),
                 actions = {
                     IconButton(onClick = { onVideoCall(chatId) }) {
-                        Icon(Icons.Default.Videocam, contentDescription = "Video Call", tint = Color.White)
+                        Icon(
+                            Icons.Default.Videocam,
+                            contentDescription = "Video Call",
+                            tint = Color.White
+                        )
                     }
                     IconButton(onClick = { onCall(chatId) }) {
-                        Icon(Icons.Default.Call, contentDescription = "Voice Call", tint = Color.White)
+                        Icon(
+                            Icons.Default.Call,
+                            contentDescription = "Voice Call",
+                            tint = Color.White
+                        )
                     }
                 }
             )
