@@ -106,7 +106,7 @@ fun HelpScreen(
                     onClick = {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
                             data = Uri.parse("mailto:support@whatsappbusiness.com")
-                            putExtra(Intent.EXTRA_SUBJECT, "WhatsApp Business Support")
+                            putExtra(Intent.EXTRA_SUBJECT, "E-Chat Business Support")
                         }
                         try { context.startActivity(intent) } catch (_: Exception) { }
                     }
@@ -117,7 +117,7 @@ fun HelpScreen(
                 HelpItem(
                     icon = Icons.Default.Language,
                     title = "Visit Website",
-                    subtitle = "Learn more about WhatsApp Business",
+                    subtitle = "Learn more about E-Chat Business",
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://business.whatsapp.com"))
                         try { context.startActivity(intent) } catch (_: Exception) { }
@@ -188,7 +188,7 @@ fun HelpScreen(
             item {
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
-                    text = "WhatsApp Business",
+                    text = "E-Chat Business",
                     color = Color.Gray,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 16.dp)

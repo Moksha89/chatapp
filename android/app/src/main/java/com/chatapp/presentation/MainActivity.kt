@@ -28,7 +28,7 @@ import androidx.core.content.ContextCompat
 import com.chatapp.BuildConfig
 import com.chatapp.data.api.ApiService
 import com.chatapp.data.api.dto.AndroidVersion
-import com.chatapp.presentation.common.theme.WhatsAppBusinessChatTheme
+import com.chatapp.presentation.common.theme.EChatBusinessTheme
 import com.chatapp.presentation.navigation.AppNavigation
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            WhatsAppBusinessChatTheme {
+            EChatBusinessTheme {
                 var showUpdateDialog by remember { mutableStateOf(false) }
                 var updateInfo by remember { mutableStateOf<AndroidVersion?>(null) }
                 var forceUpdate by remember { mutableStateOf(false) }

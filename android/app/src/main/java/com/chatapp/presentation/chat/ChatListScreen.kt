@@ -47,7 +47,7 @@ fun ChatListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("WhatsApp Business") },
+                title = { Text("E-Chat Business") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White

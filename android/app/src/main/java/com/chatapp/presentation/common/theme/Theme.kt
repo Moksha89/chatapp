@@ -46,7 +46,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun WhatsAppBusinessChatTheme(
+fun EChatBusinessTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {

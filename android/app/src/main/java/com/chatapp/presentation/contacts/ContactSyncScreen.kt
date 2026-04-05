@@ -91,7 +91,7 @@ fun ContactSyncScreen(
                     if (registered.isNotEmpty()) {
                         item {
                             Text(
-                                "On WhatsApp Business",
+                                "On E-Chat Business",
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF1A56DB),
                                 modifier = Modifier.padding(16.dp)
@@ -106,7 +106,7 @@ fun ContactSyncScreen(
                     if (unregistered.isNotEmpty()) {
                         item {
                             Text(
-                                "Invite to WhatsApp Business",
+                                "Invite to E-Chat Business",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Gray,
                                 modifier = Modifier.padding(16.dp)

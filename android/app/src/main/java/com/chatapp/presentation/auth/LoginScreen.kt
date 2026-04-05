@@ -68,7 +68,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "WhatsApp Business Chat",
+                    text = "E-Chat Business",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )

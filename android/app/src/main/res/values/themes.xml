@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.WhatsAppBusinessChat" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">#075E54</item>
+    <style name="Theme.EChatBusiness" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#246BFD</item>
         <item name="android:navigationBarColor">#FFFFFF</item>
     </style>
 </resources>
