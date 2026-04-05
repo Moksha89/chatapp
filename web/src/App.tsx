@@ -7,7 +7,6 @@ import { ToastProvider } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { MaintenancePage } from './components/MaintenancePage';
-import { InstallWizard } from './components/InstallWizard';
 import { OnboardingPage } from './components/OnboardingPage';
 
 // Lazy load heavy components for faster initial load
@@ -112,14 +111,11 @@ function LoadingSpinner() {
 function App() {
   // Check if we're on the /admin route
   const isAdminRoute = window.location.pathname.startsWith('/admin');
-  const isSetupRoute = window.location.pathname === '/setup';
-
   const [appStatus, setAppStatus] = useState<{
     maintenanceMode: boolean;
     maintenanceMessage: string;
-    setupCompleted: boolean;
     checked: boolean;
-  }>({ maintenanceMode: false, maintenanceMessage: '', setupCompleted: true, checked: false });
+  }>({ maintenanceMode: false, maintenanceMessage: '', checked: false });
 
   // Show onboarding for first-time visitors (must be before any early returns)
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -134,11 +130,10 @@ function App() {
     }
     fetch(`${API_URL}/admin/status`)
       .then(res => res.json())
-      .then((data: { maintenanceMode?: boolean; maintenanceMessage?: string; setupCompleted?: boolean }) => {
+      .then((data: { maintenanceMode?: boolean; maintenanceMessage?: string }) => {
         setAppStatus({
           maintenanceMode: !!data.maintenanceMode,
           maintenanceMessage: data.maintenanceMessage || '',
-          setupCompleted: data.setupCompleted !== false,
           checked: true,
         });
       })
@@ -158,18 +153,6 @@ function App() {
         <Suspense fallback={<LoadingSpinner />}>
           <AdminPanel />
         </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  // Show install wizard for first-time setup
-  if (isSetupRoute || !appStatus.setupCompleted) {
-    return (
-      <ErrorBoundary>
-        <InstallWizard onComplete={() => {
-          setAppStatus(prev => ({ ...prev, setupCompleted: true }));
-          window.history.replaceState(null, '', '/');
-        }} />
       </ErrorBoundary>
     );
   }

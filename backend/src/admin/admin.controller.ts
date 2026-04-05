@@ -364,7 +364,6 @@ export class AdminController {
     return {
       maintenanceMode: await this.adminService.isMaintenanceMode(),
       maintenanceMessage: await this.adminService.getMaintenanceMessage(),
-      setupCompleted: await this.adminService.isSetupCompleted(),
     };
   }
 
@@ -390,19 +389,6 @@ export class AdminController {
       `${body.enabled ? 'Enabled' : 'Disabled'} maintenance mode`,
     );
     return this.adminService.setMaintenanceMode(body.enabled, body.message);
-  }
-
-  // ========== INSTALL WIZARD ==========
-  @Get('setup/status')
-  async getSetupStatus() {
-    return this.adminService.getSetupStatus();
-  }
-
-  @Post('setup/run')
-  async runSetupWizard(
-    @Body() body: { appName?: string; adminPassword?: string; seedDefaults?: boolean },
-  ) {
-    return this.adminService.runSetupWizard(body);
   }
 
   // ========== PAGE CONTENT ==========
