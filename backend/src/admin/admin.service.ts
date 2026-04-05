@@ -16,6 +16,10 @@ import {
   OrderEntity,
   StickerEntity,
   FaqEntity,
+  PageContentEntity,
+  ContactSubmissionEntity,
+  ReportCategoryEntity,
+  AppSettingEntity,
 } from '../database/entities';
 import { AuditLogEntity } from './audit-log.entity';
 import * as os from 'os';
@@ -72,6 +76,14 @@ export class AdminService {
     private stickerRepository: Repository<StickerEntity>,
     @InjectRepository(FaqEntity)
     private faqRepository: Repository<FaqEntity>,
+    @InjectRepository(PageContentEntity)
+    private pageContentRepository: Repository<PageContentEntity>,
+    @InjectRepository(ContactSubmissionEntity)
+    private contactSubmissionRepository: Repository<ContactSubmissionEntity>,
+    @InjectRepository(ReportCategoryEntity)
+    private reportCategoryRepository: Repository<ReportCategoryEntity>,
+    @InjectRepository(AppSettingEntity)
+    private appSettingRepository: Repository<AppSettingEntity>,
   ) {
     this.initDefaultAdmin();
   }
@@ -618,5 +630,235 @@ export class AdminService {
   setMaintenanceMode(enabled: boolean): { maintenanceMode: boolean } {
     this.maintenanceMode = enabled;
     return { maintenanceMode: this.maintenanceMode };
+  }
+
+  // ========== PAGE CONTENT (Privacy Policy, Terms, etc.) ==========
+  async getPageContents(): Promise<PageContentEntity[]> {
+    return this.pageContentRepository.find({ order: { updatedAt: 'DESC' } });
+  }
+
+  async getPageBySlug(slug: string): Promise<PageContentEntity | null> {
+    return this.pageContentRepository.findOne({ where: { slug } });
+  }
+
+  async createPageContent(data: { slug: string; title: string; content: string }): Promise<PageContentEntity> {
+    const page = this.pageContentRepository.create({
+      slug: data.slug,
+      title: data.title,
+      content: data.content,
+      isPublished: true,
+    });
+    return this.pageContentRepository.save(page);
+  }
+
+  async updatePageContent(id: string, data: Partial<{ title: string; content: string; isPublished: boolean }>): Promise<PageContentEntity | null> {
+    await this.pageContentRepository.update(id, data);
+    return this.pageContentRepository.findOne({ where: { id } });
+  }
+
+  async deletePageContent(id: string): Promise<boolean> {
+    const result = await this.pageContentRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  // ========== CONTACT SUBMISSIONS ==========
+  async getContactSubmissions(page = 1, limit = 20, status?: string): Promise<{
+    submissions: ContactSubmissionEntity[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const skip = (page - 1) * limit;
+    let queryBuilder = this.contactSubmissionRepository.createQueryBuilder('submission');
+    if (status) {
+      queryBuilder = queryBuilder.where('submission.status = :status', { status });
+    }
+    const [submissions, total] = await queryBuilder
+      .orderBy('submission.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+    return { submissions, total, page, totalPages: Math.ceil(total / limit) };
+  }
+
+  async createContactSubmission(data: { name: string; email: string; subject?: string; message: string }): Promise<ContactSubmissionEntity> {
+    const submission = this.contactSubmissionRepository.create({
+      name: data.name,
+      email: data.email,
+      subject: data.subject,
+      message: data.message,
+      status: 'pending',
+    });
+    return this.contactSubmissionRepository.save(submission);
+  }
+
+  async updateContactSubmission(id: string, data: { status?: string; adminReply?: string }): Promise<ContactSubmissionEntity | null> {
+    await this.contactSubmissionRepository.update(id, data);
+    return this.contactSubmissionRepository.findOne({ where: { id } });
+  }
+
+  async deleteContactSubmission(id: string): Promise<boolean> {
+    const result = await this.contactSubmissionRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  // ========== REPORT CATEGORIES ==========
+  async getReportCategories(): Promise<ReportCategoryEntity[]> {
+    return this.reportCategoryRepository.find({ order: { sortOrder: 'ASC', createdAt: 'DESC' } });
+  }
+
+  async createReportCategory(data: { name: string; description?: string; sortOrder?: number }): Promise<ReportCategoryEntity> {
+    const category = this.reportCategoryRepository.create({
+      name: data.name,
+      description: data.description,
+      sortOrder: data.sortOrder || 0,
+      isActive: true,
+    });
+    return this.reportCategoryRepository.save(category);
+  }
+
+  async updateReportCategory(id: string, data: Partial<{ name: string; description: string; sortOrder: number; isActive: boolean }>): Promise<ReportCategoryEntity | null> {
+    await this.reportCategoryRepository.update(id, data);
+    return this.reportCategoryRepository.findOne({ where: { id } });
+  }
+
+  async deleteReportCategory(id: string): Promise<boolean> {
+    const result = await this.reportCategoryRepository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
+  // ========== APP SETTINGS (Media, Email, User Control) ==========
+  async getAppSettings(category?: string): Promise<AppSettingEntity[]> {
+    if (category) {
+      return this.appSettingRepository.find({ where: { category }, order: { key: 'ASC' } });
+    }
+    return this.appSettingRepository.find({ order: { category: 'ASC', key: 'ASC' } });
+  }
+
+  async getAppSetting(key: string): Promise<string | null> {
+    const setting = await this.appSettingRepository.findOne({ where: { key } });
+    return setting ? setting.value : null;
+  }
+
+  async setAppSetting(key: string, value: string, category?: string, description?: string): Promise<AppSettingEntity> {
+    let setting = await this.appSettingRepository.findOne({ where: { key } });
+    if (setting) {
+      setting.value = value;
+      if (category) setting.category = category;
+      if (description) setting.description = description;
+    } else {
+      setting = this.appSettingRepository.create({ key, value, category: category || 'general', description });
+    }
+    return this.appSettingRepository.save(setting);
+  }
+
+  async setAppSettingsBatch(settings: Array<{ key: string; value: string; category?: string; description?: string }>): Promise<AppSettingEntity[]> {
+    const results: AppSettingEntity[] = [];
+    for (const s of settings) {
+      results.push(await this.setAppSetting(s.key, s.value, s.category, s.description));
+    }
+    return results;
+  }
+
+  async deleteAppSetting(key: string): Promise<boolean> {
+    const result = await this.appSettingRepository.delete({ key });
+    return (result.affected ?? 0) > 0;
+  }
+
+  // ========== DELETED ACCOUNTS ==========
+  async getDeletedAccounts(page = 1, limit = 20): Promise<{
+    users: UserEntity[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const skip = (page - 1) * limit;
+    const [users, total] = await this.userRepository.findAndCount({
+      where: { status: '__DELETED__' },
+      order: { updatedAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return { users, total, page, totalPages: Math.ceil(total / limit) };
+  }
+
+  async softDeleteUser(userId: string): Promise<UserEntity | null> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) return null;
+    user.status = '__DELETED__';
+    return this.userRepository.save(user);
+  }
+
+  async restoreUser(userId: string): Promise<UserEntity | null> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) return null;
+    user.status = null;
+    return this.userRepository.save(user);
+  }
+
+  // ========== SEED DEFAULT SETTINGS ==========
+  async seedDefaultSettings(): Promise<void> {
+    const defaults = [
+      // Media settings
+      { key: 'media_max_image_size', value: '16777216', category: 'media', description: 'Max image upload size in bytes (16MB)' },
+      { key: 'media_max_video_size', value: '104857600', category: 'media', description: 'Max video upload size in bytes (100MB)' },
+      { key: 'media_max_document_size', value: '104857600', category: 'media', description: 'Max document upload size in bytes (100MB)' },
+      { key: 'media_allowed_image_types', value: 'image/jpeg,image/png,image/gif,image/webp', category: 'media', description: 'Allowed image MIME types' },
+      { key: 'media_allowed_video_types', value: 'video/mp4,video/webm,video/quicktime', category: 'media', description: 'Allowed video MIME types' },
+      // Email settings
+      { key: 'email_smtp_host', value: '', category: 'email', description: 'SMTP host' },
+      { key: 'email_smtp_port', value: '587', category: 'email', description: 'SMTP port' },
+      { key: 'email_smtp_user', value: '', category: 'email', description: 'SMTP username' },
+      { key: 'email_smtp_pass', value: '', category: 'email', description: 'SMTP password' },
+      { key: 'email_from_address', value: 'noreply@chatapp.com', category: 'email', description: 'From email address' },
+      { key: 'email_from_name', value: 'ChatApp', category: 'email', description: 'From name' },
+      // User control settings
+      { key: 'user_registration_enabled', value: 'true', category: 'user_control', description: 'Enable/disable new user registration' },
+      { key: 'user_email_verification_required', value: 'false', category: 'user_control', description: 'Require email verification for new users' },
+      { key: 'user_max_devices', value: '5', category: 'user_control', description: 'Maximum linked devices per user' },
+      { key: 'user_max_group_size', value: '256', category: 'user_control', description: 'Maximum members in a group' },
+    ];
+
+    for (const d of defaults) {
+      const exists = await this.appSettingRepository.findOne({ where: { key: d.key } });
+      if (!exists) {
+        await this.appSettingRepository.save(this.appSettingRepository.create(d));
+      }
+    }
+  }
+
+  // Seed default report categories
+  async seedDefaultReportCategories(): Promise<void> {
+    const defaults = [
+      { name: 'Spam', description: 'Unsolicited or irrelevant messages', sortOrder: 1 },
+      { name: 'Harassment', description: 'Abusive or threatening behavior', sortOrder: 2 },
+      { name: 'Inappropriate Content', description: 'Offensive or explicit content', sortOrder: 3 },
+      { name: 'Fraud/Scam', description: 'Deceptive or fraudulent activity', sortOrder: 4 },
+      { name: 'Impersonation', description: 'Pretending to be someone else', sortOrder: 5 },
+      { name: 'Other', description: 'Other reason not listed above', sortOrder: 6 },
+    ];
+
+    const count = await this.reportCategoryRepository.count();
+    if (count === 0) {
+      for (const d of defaults) {
+        await this.reportCategoryRepository.save(this.reportCategoryRepository.create({ ...d, isActive: true }));
+      }
+    }
+  }
+
+  // Seed default page content
+  async seedDefaultPages(): Promise<void> {
+    const defaults = [
+      { slug: 'privacy-policy', title: 'Privacy Policy', content: '<h1>Privacy Policy</h1><p>Your privacy is important to us. This privacy policy explains how we collect, use, and protect your personal information.</p>' },
+      { slug: 'terms-and-conditions', title: 'Terms & Conditions', content: '<h1>Terms & Conditions</h1><p>By using this application, you agree to the following terms and conditions.</p>' },
+      { slug: 'about', title: 'About Us', content: '<h1>About</h1><p>Welcome to our WhatsApp Business Chat Application.</p>' },
+    ];
+
+    for (const d of defaults) {
+      const exists = await this.pageContentRepository.findOne({ where: { slug: d.slug } });
+      if (!exists) {
+        await this.pageContentRepository.save(this.pageContentRepository.create({ ...d, isPublished: true }));
+      }
+    }
   }
 }

@@ -20,6 +20,10 @@ import {
   OrderEntity,
   StickerEntity,
   FaqEntity,
+  PageContentEntity,
+  ContactSubmissionEntity,
+  ReportCategoryEntity,
+  AppSettingEntity,
 } from '../database/entities';
 
 @Module({
@@ -39,6 +43,10 @@ import {
       OrderEntity,
       StickerEntity,
       FaqEntity,
+      PageContentEntity,
+      ContactSubmissionEntity,
+      ReportCategoryEntity,
+      AppSettingEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

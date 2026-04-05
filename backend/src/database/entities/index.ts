@@ -24,3 +24,7 @@ export { MessageStatusEntity } from './message-status.entity';
 export { FriendEntity } from './friend.entity';
 export { StickerEntity } from './sticker.entity';
 export { FaqEntity } from './faq.entity';
+export { PageContentEntity } from './page-content.entity';
+export { ContactSubmissionEntity } from './contact-submission.entity';
+export { ReportCategoryEntity } from './report-category.entity';
+export { AppSettingEntity } from './app-setting.entity';

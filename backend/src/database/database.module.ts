@@ -28,6 +28,10 @@ import {
   FriendEntity,
   StickerEntity,
   FaqEntity,
+  PageContentEntity,
+  ContactSubmissionEntity,
+  ReportCategoryEntity,
+  AppSettingEntity,
 } from './entities';
 import { DatabaseService } from './database.service';
 import { AuditLogEntity } from '../admin/audit-log.entity';
@@ -59,6 +63,10 @@ const entities = [
   FriendEntity,
   StickerEntity,
   FaqEntity,
+  PageContentEntity,
+  ContactSubmissionEntity,
+  ReportCategoryEntity,
+  AppSettingEntity,
   AuditLogEntity,
 ];
 

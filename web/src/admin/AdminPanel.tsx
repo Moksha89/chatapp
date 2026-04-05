@@ -5,6 +5,7 @@ import {
   LogOut, Menu, X, ChevronLeft, ChevronRight, Search, RefreshCw, Download,
   Trash2, Ban, Check, AlertTriangle, Server,
   TrendingUp, Activity, Smartphone, Lock, Unlock,
+  BookOpen, Mail, Flag, Sliders, UserX, UserPlus, Save, Plus, Edit, Eye, EyeOff,
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
@@ -136,6 +137,11 @@ const NAV_ITEMS = [
   { key: 'settings', label: 'System Settings', icon: Settings },
   { key: 'audit', label: 'Audit Log', icon: FileText },
   { key: 'api', label: 'API & Webhooks', icon: Webhook },
+  { key: 'pages', label: 'Page Content', icon: BookOpen },
+  { key: 'contacts', label: 'Contact Submissions', icon: Mail },
+  { key: 'reports', label: 'Report Categories', icon: Flag },
+  { key: 'app-settings', label: 'App Settings', icon: Sliders },
+  { key: 'deleted-accounts', label: 'Deleted Accounts', icon: UserX },
 ];
 
 function Sidebar({ active, onNav, collapsed, onToggle }: {
@@ -1268,6 +1274,419 @@ function APIPage() {
 }
 
 // ========== LOADING & ERROR STATES ==========
+// ========== PAGE CONTENT MANAGEMENT ==========
+function PageContentPage({ token }: { token: string }) {
+  const [pages, setPages] = useState<Array<Record<string, unknown>>>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
+  const [formData, setFormData] = useState({ slug: '', title: '', content: '' });
+  const [showForm, setShowForm] = useState(false);
+
+  const fetchPages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch('/pages', token);
+      setPages(data);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [token]);
+
+  useEffect(() => { fetchPages(); }, [fetchPages]);
+
+  const handleSave = async () => {
+    try {
+      if (editing) {
+        await adminFetch(`/pages/${editing.id}`, token, {
+          method: 'PATCH',
+          body: JSON.stringify({ title: formData.title, content: formData.content }),
+        });
+      } else {
+        await adminFetch('/pages', token, {
+          method: 'POST',
+          body: JSON.stringify(formData),
+        });
+      }
+      setShowForm(false);
+      setEditing(null);
+      setFormData({ slug: '', title: '', content: '' });
+      fetchPages();
+    } catch { /* ignore */ }
+  };
+
+  const handleDelete = async (id: string) => {
+    await adminFetch(`/pages/${id}`, token, { method: 'DELETE' });
+    fetchPages();
+  };
+
+  const startEdit = (page: Record<string, unknown>) => {
+    setEditing(page);
+    setFormData({ slug: page.slug as string, title: page.title as string, content: page.content as string });
+    setShowForm(true);
+  };
+
+  if (loading) return <LoadingState />;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">Page Content</h2>
+        <button onClick={() => { setEditing(null); setFormData({ slug: '', title: '', content: '' }); setShowForm(true); }}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm transition">
+          <Plus className="w-4 h-4" /> Add Page
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-white">{editing ? 'Edit Page' : 'New Page'}</h3>
+          {!editing && (
+            <input value={formData.slug} onChange={e => setFormData({ ...formData, slug: e.target.value })}
+              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm" placeholder="slug (e.g. privacy-policy)" />
+          )}
+          <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })}
+            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm" placeholder="Page Title" />
+          <textarea value={formData.content} onChange={e => setFormData({ ...formData, content: e.target.value })}
+            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm h-48" placeholder="Page content (HTML supported)" />
+          <div className="flex gap-3">
+            <button onClick={handleSave} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm transition flex items-center gap-2">
+              <Save className="w-4 h-4" /> Save
+            </button>
+            <button onClick={() => { setShowForm(false); setEditing(null); }} className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+        <DataTable
+          columns={[
+            { key: 'slug', label: 'Slug' },
+            { key: 'title', label: 'Title' },
+            { key: 'isPublished', label: 'Published', render: (v) => (
+              <span className={`px-2 py-0.5 rounded-full text-xs ${v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                {v ? 'Published' : 'Draft'}
+              </span>
+            )},
+            { key: 'updatedAt', label: 'Updated', render: (v) => new Date(v as string).toLocaleDateString() },
+          ]}
+          data={pages}
+          actions={(row) => (
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => startEdit(row)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition"><Edit className="w-4 h-4" /></button>
+              <button onClick={() => handleDelete(row.id as string)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ========== CONTACT SUBMISSIONS ==========
+function ContactSubmissionsPage({ token }: { token: string }) {
+  const [submissions, setSubmissions] = useState<Array<Record<string, unknown>>>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [selectedStatus, setSelectedStatus] = useState('');
+
+  const fetchSubmissions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch(`/contact-submissions?page=${page}&limit=20${selectedStatus ? `&status=${selectedStatus}` : ''}`, token);
+      setSubmissions(data.submissions);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [token, page, selectedStatus]);
+
+  useEffect(() => { fetchSubmissions(); }, [fetchSubmissions]);
+
+  const updateStatus = async (id: string, status: string) => {
+    await adminFetch(`/contact-submissions/${id}`, token, { method: 'PATCH', body: JSON.stringify({ status }) });
+    fetchSubmissions();
+  };
+
+  const deleteSubmission = async (id: string) => {
+    await adminFetch(`/contact-submissions/${id}`, token, { method: 'DELETE' });
+    fetchSubmissions();
+  };
+
+  if (loading) return <LoadingState />;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">Contact Submissions <span className="text-sm text-slate-400 font-normal">({total})</span></h2>
+        <div className="flex gap-2">
+          {['', 'pending', 'read', 'replied', 'archived'].map(s => (
+            <button key={s} onClick={() => { setSelectedStatus(s); setPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition ${selectedStatus === s ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400 hover:text-white'}`}>
+              {s || 'All'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+        <DataTable
+          columns={[
+            { key: 'name', label: 'Name' },
+            { key: 'email', label: 'Email' },
+            { key: 'subject', label: 'Subject' },
+            { key: 'message', label: 'Message', render: (v) => <span className="truncate max-w-xs block">{String(v)}</span> },
+            { key: 'status', label: 'Status', render: (v) => {
+              const colors: Record<string, string> = { pending: 'bg-amber-500/20 text-amber-400', read: 'bg-blue-500/20 text-blue-400', replied: 'bg-emerald-500/20 text-emerald-400', archived: 'bg-slate-500/20 text-slate-400' };
+              return <span className={`px-2 py-0.5 rounded-full text-xs ${colors[v as string] || 'bg-slate-500/20 text-slate-400'}`}>{String(v)}</span>;
+            }},
+            { key: 'createdAt', label: 'Date', render: (v) => new Date(v as string).toLocaleDateString() },
+          ]}
+          data={submissions}
+          actions={(row) => (
+            <div className="flex gap-1 justify-end">
+              {row.status === 'pending' && <button onClick={() => updateStatus(row.id as string, 'read')} className="p-1.5 rounded-lg hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 transition" title="Mark as read"><Eye className="w-4 h-4" /></button>}
+              {row.status !== 'archived' && <button onClick={() => updateStatus(row.id as string, 'archived')} className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-white transition" title="Archive"><EyeOff className="w-4 h-4" /></button>}
+              <button onClick={() => deleteSubmission(row.id as string)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          )}
+        />
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      </div>
+    </div>
+  );
+}
+
+// ========== REPORT CATEGORIES ==========
+function ReportCategoriesPage({ token }: { token: string }) {
+  const [categories, setCategories] = useState<Array<Record<string, unknown>>>([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [showForm, setShowForm] = useState(false);
+
+  const fetchCategories = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch('/report-categories', token);
+      setCategories(data);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [token]);
+
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+
+  const handleCreate = async () => {
+    await adminFetch('/report-categories', token, { method: 'POST', body: JSON.stringify(formData) });
+    setFormData({ name: '', description: '' });
+    setShowForm(false);
+    fetchCategories();
+  };
+
+  const toggleActive = async (id: string, isActive: boolean) => {
+    await adminFetch(`/report-categories/${id}`, token, { method: 'PATCH', body: JSON.stringify({ isActive: !isActive }) });
+    fetchCategories();
+  };
+
+  const deleteCategory = async (id: string) => {
+    await adminFetch(`/report-categories/${id}`, token, { method: 'DELETE' });
+    fetchCategories();
+  };
+
+  if (loading) return <LoadingState />;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">Report Categories</h2>
+        <div className="flex gap-2">
+          <button onClick={() => { adminFetch('/app-settings/seed', token, { method: 'POST' }).then(() => fetchCategories()); }}
+            className="px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition">Seed Defaults</button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm transition">
+            <Plus className="w-4 h-4" /> Add Category
+          </button>
+        </div>
+      </div>
+
+      {showForm && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-4">
+          <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
+            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm" placeholder="Category name" />
+          <input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
+            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm" placeholder="Description" />
+          <div className="flex gap-3">
+            <button onClick={handleCreate} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm transition">Create</button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+        <DataTable
+          columns={[
+            { key: 'name', label: 'Name' },
+            { key: 'description', label: 'Description' },
+            { key: 'isActive', label: 'Active', render: (v) => (
+              <span className={`px-2 py-0.5 rounded-full text-xs ${v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                {v ? 'Active' : 'Disabled'}
+              </span>
+            )},
+          ]}
+          data={categories}
+          actions={(row) => (
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => toggleActive(row.id as string, row.isActive as boolean)}
+                className={`p-1.5 rounded-lg transition ${row.isActive ? 'hover:bg-red-500/20 text-slate-400 hover:text-red-400' : 'hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400'}`}>
+                {row.isActive ? <Ban className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+              </button>
+              <button onClick={() => deleteCategory(row.id as string)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ========== APP SETTINGS ==========
+function AppSettingsPage({ token }: { token: string }) {
+  const [settings, setSettings] = useState<Array<Record<string, unknown>>>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('media');
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const categories = ['media', 'email', 'user_control', 'general'];
+  const categoryLabels: Record<string, string> = { media: 'Media Settings', email: 'Email Configuration', user_control: 'User Control', general: 'General' };
+
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch(`/app-settings?category=${activeCategory}`, token);
+      setSettings(data);
+      const vals: Record<string, string> = {};
+      data.forEach((s: Record<string, unknown>) => { vals[s.key as string] = s.value as string; });
+      setEditValues(vals);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [token, activeCategory]);
+
+  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const settingsArr = Object.entries(editValues).map(([key, value]) => ({ key, value, category: activeCategory }));
+    await adminFetch('/app-settings', token, { method: 'PUT', body: JSON.stringify({ settings: settingsArr }) });
+    setSaving(false);
+    fetchSettings();
+  };
+
+  const seedDefaults = async () => {
+    await adminFetch('/app-settings/seed', token, { method: 'POST' });
+    fetchSettings();
+  };
+
+  if (loading) return <LoadingState />;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">App Settings</h2>
+        <button onClick={seedDefaults} className="px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition">Seed Defaults</button>
+      </div>
+
+      <div className="flex gap-2">
+        {categories.map(c => (
+          <button key={c} onClick={() => setActiveCategory(c)}
+            className={`px-4 py-2 rounded-lg text-sm transition ${activeCategory === c ? 'bg-emerald-500/20 text-emerald-400 font-medium' : 'bg-slate-700 text-slate-400 hover:text-white'}`}>
+            {categoryLabels[c]}
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-4">
+        {settings.length === 0 ? (
+          <p className="text-slate-400 text-center py-8">No settings found. Click "Seed Defaults" to create default settings.</p>
+        ) : settings.map((s) => (
+          <div key={s.key as string} className="flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-medium text-slate-300">{(s.key as string).replace(/_/g, ' ').replace(/^(media|email|user) /, '')}</label>
+              {s.description && <p className="text-xs text-slate-500 mt-0.5">{s.description as string}</p>}
+            </div>
+            <input
+              value={editValues[s.key as string] || ''}
+              onChange={e => setEditValues({ ...editValues, [s.key as string]: e.target.value })}
+              className="w-72 bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm"
+              type={(s.key as string).includes('pass') ? 'password' : 'text'}
+            />
+          </div>
+        ))}
+        {settings.length > 0 && (
+          <div className="pt-4 border-t border-slate-700/50">
+            <button onClick={handleSave} disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg text-sm transition">
+              <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Settings'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ========== DELETED ACCOUNTS ==========
+function DeletedAccountsPage({ token }: { token: string }) {
+  const [users, setUsers] = useState<Array<Record<string, unknown>>>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDeleted = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminFetch(`/deleted-accounts?page=${page}&limit=20`, token);
+      setUsers(data.users);
+      setTotalPages(data.totalPages);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [token, page]);
+
+  useEffect(() => { fetchDeleted(); }, [fetchDeleted]);
+
+  const restoreUser = async (id: string) => {
+    await adminFetch(`/users/${id}/restore`, token, { method: 'POST' });
+    fetchDeleted();
+  };
+
+  const permanentDelete = async (id: string) => {
+    await adminFetch(`/users/${id}`, token, { method: 'DELETE' });
+    fetchDeleted();
+  };
+
+  if (loading) return <LoadingState />;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-white">Deleted Accounts</h2>
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+        <DataTable
+          columns={[
+            { key: 'phoneNumber', label: 'Phone' },
+            { key: 'displayName', label: 'Name' },
+            { key: 'updatedAt', label: 'Deleted At', render: (v) => new Date(v as string).toLocaleDateString() },
+          ]}
+          data={users}
+          actions={(row) => (
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => restoreUser(row.id as string)} className="p-1.5 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 transition" title="Restore"><UserPlus className="w-4 h-4" /></button>
+              <button onClick={() => permanentDelete(row.id as string)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition" title="Permanently delete"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          )}
+        />
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      </div>
+    </div>
+  );
+}
+
 function LoadingState() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -1358,6 +1777,11 @@ export function AdminPanel() {
       case 'settings': return <SettingsPage token={token} />;
       case 'audit': return <AuditLogPage token={token} />;
       case 'api': return <APIPage />;
+      case 'pages': return <PageContentPage token={token} />;
+      case 'contacts': return <ContactSubmissionsPage token={token} />;
+      case 'reports': return <ReportCategoriesPage token={token} />;
+      case 'app-settings': return <AppSettingsPage token={token} />;
+      case 'deleted-accounts': return <DeletedAccountsPage token={token} />;
       default: return <DashboardPage token={token} />;
     }
   };

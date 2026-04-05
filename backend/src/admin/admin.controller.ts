@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Delete,
   Patch,
   Query,
@@ -376,5 +377,174 @@ export class AdminController {
       `${body.enabled ? 'Enabled' : 'Disabled'} maintenance mode`,
     );
     return this.adminService.setMaintenanceMode(body.enabled);
+  }
+
+  // ========== PAGE CONTENT ==========
+  @Get('pages')
+  @UseGuards(AdminAuthGuard)
+  async getPageContents() {
+    return this.adminService.getPageContents();
+  }
+
+  @Get('pages/:slug')
+  async getPageBySlug(@Param('slug') slug: string) {
+    return this.adminService.getPageBySlug(slug);
+  }
+
+  @Post('pages')
+  @UseGuards(AdminAuthGuard)
+  async createPageContent(
+    @Body() body: { slug: string; title: string; content: string },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'CREATE_PAGE', `Created page: ${body.slug}`);
+    return this.adminService.createPageContent(body);
+  }
+
+  @Patch('pages/:id')
+  @UseGuards(AdminAuthGuard)
+  async updatePageContent(
+    @Param('id') id: string,
+    @Body() body: Partial<{ title: string; content: string; isPublished: boolean }>,
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'UPDATE_PAGE', `Updated page ${id}`, id);
+    return this.adminService.updatePageContent(id, body);
+  }
+
+  @Delete('pages/:id')
+  @UseGuards(AdminAuthGuard)
+  async deletePageContent(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'DELETE_PAGE', `Deleted page ${id}`, id);
+    return { success: await this.adminService.deletePageContent(id) };
+  }
+
+  // ========== CONTACT SUBMISSIONS ==========
+  @Get('contact-submissions')
+  @UseGuards(AdminAuthGuard)
+  async getContactSubmissions(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.adminService.getContactSubmissions(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+      status,
+    );
+  }
+
+  @Post('contact-submissions')
+  async createContactSubmission(
+    @Body() body: { name: string; email: string; subject?: string; message: string },
+  ) {
+    return this.adminService.createContactSubmission(body);
+  }
+
+  @Patch('contact-submissions/:id')
+  @UseGuards(AdminAuthGuard)
+  async updateContactSubmission(
+    @Param('id') id: string,
+    @Body() body: { status?: string; adminReply?: string },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'UPDATE_CONTACT', `Updated contact submission ${id}`, id);
+    return this.adminService.updateContactSubmission(id, body);
+  }
+
+  @Delete('contact-submissions/:id')
+  @UseGuards(AdminAuthGuard)
+  async deleteContactSubmission(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'DELETE_CONTACT', `Deleted contact submission ${id}`, id);
+    return { success: await this.adminService.deleteContactSubmission(id) };
+  }
+
+  // ========== REPORT CATEGORIES ==========
+  @Get('report-categories')
+  @UseGuards(AdminAuthGuard)
+  async getReportCategories() {
+    return this.adminService.getReportCategories();
+  }
+
+  @Post('report-categories')
+  @UseGuards(AdminAuthGuard)
+  async createReportCategory(
+    @Body() body: { name: string; description?: string; sortOrder?: number },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'CREATE_REPORT_CATEGORY', `Created report category: ${body.name}`);
+    return this.adminService.createReportCategory(body);
+  }
+
+  @Patch('report-categories/:id')
+  @UseGuards(AdminAuthGuard)
+  async updateReportCategory(
+    @Param('id') id: string,
+    @Body() body: Partial<{ name: string; description: string; sortOrder: number; isActive: boolean }>,
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'UPDATE_REPORT_CATEGORY', `Updated report category ${id}`, id);
+    return this.adminService.updateReportCategory(id, body);
+  }
+
+  @Delete('report-categories/:id')
+  @UseGuards(AdminAuthGuard)
+  async deleteReportCategory(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'DELETE_REPORT_CATEGORY', `Deleted report category ${id}`, id);
+    return { success: await this.adminService.deleteReportCategory(id) };
+  }
+
+  // ========== APP SETTINGS (Media, Email, User Control) ==========
+  @Get('app-settings')
+  @UseGuards(AdminAuthGuard)
+  async getAppSettings(@Query('category') category?: string) {
+    return this.adminService.getAppSettings(category);
+  }
+
+  @Put('app-settings')
+  @UseGuards(AdminAuthGuard)
+  async setAppSettings(
+    @Body() body: { settings: Array<{ key: string; value: string; category?: string; description?: string }> },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'UPDATE_SETTINGS', `Updated ${body.settings.length} settings`);
+    return this.adminService.setAppSettingsBatch(body.settings);
+  }
+
+  @Post('app-settings/seed')
+  @UseGuards(AdminAuthGuard)
+  async seedSettings(@Req() req: { admin: { sub: string } }) {
+    await this.adminService.seedDefaultSettings();
+    await this.adminService.seedDefaultReportCategories();
+    await this.adminService.seedDefaultPages();
+    await this.adminService.logAction(req.admin.sub, 'SEED_DEFAULTS', 'Seeded default settings, report categories, and pages');
+    return { success: true };
+  }
+
+  // ========== DELETED ACCOUNTS ==========
+  @Get('deleted-accounts')
+  @UseGuards(AdminAuthGuard)
+  async getDeletedAccounts(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminService.getDeletedAccounts(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+    );
+  }
+
+  @Post('users/:id/soft-delete')
+  @UseGuards(AdminAuthGuard)
+  async softDeleteUser(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'SOFT_DELETE_USER', `Soft deleted user ${id}`, id);
+    return this.adminService.softDeleteUser(id);
+  }
+
+  @Post('users/:id/restore')
+  @UseGuards(AdminAuthGuard)
+  async restoreUser(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'RESTORE_USER', `Restored user ${id}`, id);
+    return this.adminService.restoreUser(id);
   }
 }
