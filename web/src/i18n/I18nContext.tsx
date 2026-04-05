@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { translations, Language, languageNames } from './translations';
+import { translations, Language, languageNames, RTL_LANGUAGES } from './translations';
 import { api } from '../services/api';
 
 interface I18nContextType {
@@ -7,6 +7,8 @@ interface I18nContextType {
   setLanguage: (lang: Language) => Promise<void>;
   t: (key: string) => string;
   languages: typeof languageNames;
+  isRTL: boolean;
+  dir: 'ltr' | 'rtl';
 }
 
 const I18nContext = createContext<I18nContextType | null>(null);
@@ -14,12 +16,21 @@ const I18nContext = createContext<I18nContextType | null>(null);
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en');
 
+  const isRTL = RTL_LANGUAGES.includes(language);
+  const dir = isRTL ? 'rtl' : 'ltr';
+
   useEffect(() => {
     const savedLang = localStorage.getItem('language') as Language;
     if (savedLang && translations[savedLang]) {
       setLanguageState(savedLang);
     }
   }, []);
+
+  // Apply RTL direction to document
+  useEffect(() => {
+    document.documentElement.dir = dir;
+    document.documentElement.lang = language;
+  }, [dir, language]);
 
   const setLanguage = useCallback(async (lang: Language) => {
     setLanguageState(lang);
@@ -36,7 +47,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, [language]);
 
   return (
-    <I18nContext.Provider value={{ language, setLanguage, t, languages: languageNames }}>
+    <I18nContext.Provider value={{ language, setLanguage, t, languages: languageNames, isRTL, dir }}>
       {children}
     </I18nContext.Provider>
   );

@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { MaintenancePage } from './components/MaintenancePage';
 import { InstallWizard } from './components/InstallWizard';
+import { OnboardingPage } from './components/OnboardingPage';
 
 // Lazy load heavy components for faster initial load
 const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -164,6 +165,19 @@ function App() {
   // Show maintenance page if maintenance mode is enabled
   if (appStatus.maintenanceMode) {
     return <MaintenancePage message={appStatus.maintenanceMessage} />;
+  }
+
+  // Show onboarding for first-time visitors
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('onboarding_completed');
+  });
+
+  if (showOnboarding) {
+    return (
+      <ErrorBoundary>
+        <OnboardingPage onComplete={() => setShowOnboarding(false)} />
+      </ErrorBoundary>
+    );
   }
 
   return (

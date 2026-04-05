@@ -39,6 +39,7 @@ fun SettingsScreen(
     userName: String = "User",
     phoneNumber: String = ""
 ) {
+    var biometricLockEnabled by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -219,6 +220,46 @@ fun SettingsScreen(
                     title = "Help",
                     subtitle = "Help center, contact us",
                     onClick = onHelp
+                )
+            }
+
+            item {
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            // Biometric / Fingerprint Lock
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fingerprint,
+                        contentDescription = null,
+                        tint = Color(0xFF1A56DB),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Fingerprint Lock", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                        Text("Require fingerprint to open app", fontSize = 14.sp, color = Color.Gray)
+                    }
+                    Switch(
+                        checked = biometricLockEnabled,
+                        onCheckedChange = { biometricLockEnabled = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF1A56DB))
+                    )
+                }
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Contacts,
+                    title = "Contact Sync",
+                    subtitle = "Sync your device contacts",
+                    onClick = onContactSync
                 )
             }
 

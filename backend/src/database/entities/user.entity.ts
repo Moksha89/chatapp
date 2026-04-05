@@ -37,6 +37,15 @@ export class UserEntity {
   @Column({ type: 'varchar', default: 'en' })
   language: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  country: string | null;
+
+  @Column({ default: false })
+  isApproved: boolean;
+
+  @Column({ default: false })
+  requiresApproval: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

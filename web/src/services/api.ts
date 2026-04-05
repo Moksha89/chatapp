@@ -1227,6 +1227,55 @@ class ApiService {
   async getGoogleDriveAuthUrl() {
     return this.request<{ authUrl?: string; error?: string }>('/backup/google/auth');
   }
+
+  // ========== CHATIFY FEATURES: Admin Extras ==========
+  async getCountryStats() {
+    return this.request<Array<{ country: string; count: number; percentage: number }>>('/admin/dashboard/country-stats');
+  }
+
+  async getPendingApprovals(page = 1) {
+    return this.request<{ users: Array<{ id: string; phoneNumber: string; displayName: string; createdAt: string }>; total: number }>(`/admin/approvals/pending?page=${page}`);
+  }
+
+  async approveUser(userId: string) {
+    return this.request<{ id: string }>(`/admin/users/${userId}/approve`, { method: 'POST' });
+  }
+
+  async rejectUser(userId: string) {
+    return this.request<boolean>(`/admin/users/${userId}/reject`, { method: 'POST' });
+  }
+
+  async adminCreateUser(data: { phoneNumber: string; displayName: string; isBusiness?: boolean; country?: string }) {
+    return this.request<{ id: string; phoneNumber: string; displayName: string }>('/admin/users/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async postGlobalStatus(content: string, type: 'text' | 'image' = 'text', mediaUrl?: string, backgroundColor?: string) {
+    return this.request<{ id: string }>('/admin/status/global', {
+      method: 'POST',
+      body: JSON.stringify({ content, type, mediaUrl, backgroundColor }),
+    });
+  }
+
+  async getConfigurableLimits() {
+    return this.request<Record<string, string>>('/admin/limits');
+  }
+
+  // ========== CHATIFY FEATURES: Shared Media ==========
+  async getChatSharedMedia(chatId: string) {
+    return this.request<Array<{ id: string; type: string; mediaUrl: string; mediaName: string; mediaSize: number; createdAt: string }>>(
+      `/chats/${chatId}/messages?type=media`
+    );
+  }
+
+  // ========== CHATIFY FEATURES: Group Seen-By ==========
+  async getMessageSeenBy(chatId: string, messageId: string) {
+    return this.request<Array<{ userId: string; displayName: string; seenAt: string }>>(
+      `/chats/${chatId}/messages/${messageId}/seen-by`
+    );
+  }
 }
 
 export const api = new ApiService();

@@ -19,12 +19,16 @@ interface CallContextType {
   remoteStream: MediaStream | null;
   isMuted: boolean;
   isVideoOff: boolean;
+  isSpeakerOn: boolean;
+  callDuration: number;
   initiateCall: (targetUserId: string, targetUserName: string, callType: CallType) => Promise<void>;
   answerCall: () => Promise<void>;
   rejectCall: () => void;
   endCall: () => void;
   toggleMute: () => void;
   toggleVideo: () => void;
+  toggleSpeaker: () => void;
+  switchCamera: () => Promise<void>;
 }
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
@@ -62,6 +66,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const callTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
@@ -85,6 +92,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setCallState('idle');
     setIsMuted(false);
     setIsVideoOff(false);
+    setIsSpeakerOn(false);
+    setCallDuration(0);
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
     pendingOfferRef.current = null;
   }, []);
 
@@ -110,6 +123,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       console.log('Connection state:', pc.connectionState);
       if (pc.connectionState === 'connected') {
         setCallState('connected');
+        // Start call duration timer
+        if (callTimerRef.current) clearInterval(callTimerRef.current);
+        callTimerRef.current = setInterval(() => {
+          setCallDuration(prev => prev + 1);
+        }, 1000);
       } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
         cleanup();
       }
@@ -241,6 +259,41 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [localStream]);
 
+  const toggleSpeaker = useCallback(() => {
+    // Toggle speaker by adjusting audio output (Web Audio API)
+    if (remoteStream) {
+      const audioTracks = remoteStream.getAudioTracks();
+      if (audioTracks.length > 0) {
+        setIsSpeakerOn(prev => !prev);
+      }
+    }
+  }, [remoteStream]);
+
+  const switchCamera = useCallback(async () => {
+    if (!localStream || !peerConnectionRef.current) return;
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+    try {
+      const currentFacing = videoTrack.getSettings().facingMode;
+      const newFacing = currentFacing === 'user' ? 'environment' : 'user';
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newFacing },
+        audio: false,
+      });
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const sender = peerConnectionRef.current.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) {
+        await sender.replaceTrack(newVideoTrack);
+      }
+      videoTrack.stop();
+      localStream.removeTrack(videoTrack);
+      localStream.addTrack(newVideoTrack);
+      setLocalStream(new MediaStream(localStream.getTracks()));
+    } catch (error) {
+      console.error('Failed to switch camera:', error);
+    }
+  }, [localStream]);
+
   // Socket event listeners
   useEffect(() => {
     const handleIncomingCall = (data: {
@@ -323,12 +376,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         remoteStream,
         isMuted,
         isVideoOff,
+        isSpeakerOn,
+        callDuration,
         initiateCall,
         answerCall,
         rejectCall,
         endCall,
         toggleMute,
         toggleVideo,
+        toggleSpeaker,
+        switchCamera,
       }}
     >
       {children}

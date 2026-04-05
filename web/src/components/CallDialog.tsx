@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCall } from '../context/CallContext';
-import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, X } from 'lucide-react';
+import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, X, Volume2, VolumeX, SwitchCamera } from 'lucide-react';
 import { Button } from './ui/button';
 
 export function CallDialog() {
@@ -11,16 +11,19 @@ export function CallDialog() {
     remoteStream,
     isMuted,
     isVideoOff,
+    isSpeakerOn,
+    callDuration,
     answerCall,
     rejectCall,
     endCall,
     toggleMute,
     toggleVideo,
+    toggleSpeaker,
+    switchCamera,
   } = useCall();
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const [callDuration, setCallDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
 
   useEffect(() => {
@@ -35,18 +38,12 @@ export function CallDialog() {
     }
   }, [remoteStream]);
 
+  // Speaker mode: set volume on remote audio element
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (callState === 'connected') {
-      setCallDuration(0);
-      interval = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.volume = isSpeakerOn ? 1.0 : 0.5;
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [callState]);
+  }, [isSpeakerOn]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -210,20 +207,45 @@ export function CallDialog() {
                   <p className="text-gray-400 text-xs mt-2">{isMuted ? 'Unmute' : 'Mute'}</p>
                 </div>
 
+                <div className="text-center">
+                  <Button
+                    onClick={toggleSpeaker}
+                    className={`w-14 h-14 rounded-full transition-all ${
+                      isSpeakerOn 
+                        ? 'bg-white text-gray-900 hover:bg-gray-200' 
+                        : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                    }`}
+                  >
+                    {isSpeakerOn ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+                  </Button>
+                  <p className="text-gray-400 text-xs mt-2">{isSpeakerOn ? 'Speaker' : 'Earpiece'}</p>
+                </div>
+
                 {isVideoCall && (
-                  <div className="text-center">
-                    <Button
-                      onClick={toggleVideo}
-                      className={`w-14 h-14 rounded-full transition-all ${
-                        isVideoOff 
-                          ? 'bg-white text-gray-900 hover:bg-gray-200' 
-                          : 'bg-gray-700/80 text-white hover:bg-gray-600'
-                      }`}
-                    >
-                      {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-                    </Button>
-                    <p className="text-gray-400 text-xs mt-2">{isVideoOff ? 'Start Video' : 'Stop Video'}</p>
-                  </div>
+                  <>
+                    <div className="text-center">
+                      <Button
+                        onClick={toggleVideo}
+                        className={`w-14 h-14 rounded-full transition-all ${
+                          isVideoOff 
+                            ? 'bg-white text-gray-900 hover:bg-gray-200' 
+                            : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                        }`}
+                      >
+                        {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+                      </Button>
+                      <p className="text-gray-400 text-xs mt-2">{isVideoOff ? 'Start Video' : 'Stop Video'}</p>
+                    </div>
+                    <div className="text-center">
+                      <Button
+                        onClick={switchCamera}
+                        className="w-14 h-14 rounded-full bg-gray-700/80 text-white hover:bg-gray-600 transition-all"
+                      >
+                        <SwitchCamera className="w-6 h-6" />
+                      </Button>
+                      <p className="text-gray-400 text-xs mt-2">Flip</p>
+                    </div>
+                  </>
                 )}
 
                 <div className="text-center">

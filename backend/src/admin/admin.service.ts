@@ -909,6 +909,108 @@ export class AdminService {
     return this.userRepository.save(user);
   }
 
+  // ========== COUNTRY STATISTICS ==========
+  async getCountryStatistics(): Promise<Array<{ country: string; count: number; percentage: number }>> {
+    const users = await this.userRepository.find({ select: ['country'] });
+    const countryMap = new Map<string, number>();
+    for (const u of users) {
+      const country = u.country || 'Unknown';
+      countryMap.set(country, (countryMap.get(country) || 0) + 1);
+    }
+    const total = users.length || 1;
+    return Array.from(countryMap.entries())
+      .map(([country, count]) => ({ country, count, percentage: Math.round((count / total) * 100) }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  // ========== USER APPROVAL WORKFLOW ==========
+  async getPendingApprovals(page = 1, limit = 20): Promise<{ users: UserEntity[]; total: number }> {
+    const [users, total] = await this.userRepository.findAndCount({
+      where: { requiresApproval: true, isApproved: false },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { users, total };
+  }
+
+  async approveUser(userId: string): Promise<UserEntity | null> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) return null;
+    user.isApproved = true;
+    user.requiresApproval = false;
+    return this.userRepository.save(user);
+  }
+
+  async rejectUser(userId: string): Promise<boolean> {
+    const result = await this.userRepository.delete(userId);
+    return (result.affected ?? 0) > 0;
+  }
+
+  // ========== ADMIN ADD USERS ==========
+  async adminCreateUser(data: { phoneNumber: string; displayName: string; isBusiness?: boolean; country?: string }): Promise<UserEntity> {
+    const existing = await this.userRepository.findOne({ where: { phoneNumber: data.phoneNumber } });
+    if (existing) throw new Error('Phone number already registered');
+    const user = this.userRepository.create({
+      phoneNumber: data.phoneNumber,
+      displayName: data.displayName,
+      isBusiness: data.isBusiness || false,
+      country: data.country || null,
+      isApproved: true,
+      requiresApproval: false,
+    });
+    return this.userRepository.save(user);
+  }
+
+  // ========== ADMIN GLOBAL STATUS ==========
+  async postGlobalStatus(content: string, type: 'text' | 'image' = 'text', mediaUrl?: string, backgroundColor?: string): Promise<{ id: string }> {
+    // Post a status to all users from admin (system-level status)
+    const adminUser = await this.userRepository.findOne({ where: { phoneNumber: 'SYSTEM' } });
+    let systemUserId: string;
+    if (!adminUser) {
+      const systemUser = this.userRepository.create({
+        phoneNumber: 'SYSTEM',
+        displayName: 'System Admin',
+        isBusiness: true,
+        isApproved: true,
+      });
+      const saved = await this.userRepository.save(systemUser);
+      systemUserId = saved.id;
+    } else {
+      systemUserId = adminUser.id;
+    }
+    // Create the status entry directly
+    const statusRepo = this.userRepository.manager.getRepository('statuses');
+    const status = statusRepo.create({
+      userId: systemUserId,
+      content,
+      type,
+      mediaUrl: mediaUrl || null,
+      backgroundColor: backgroundColor || '#246BFD',
+      textColor: '#FFFFFF',
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      viewedBy: [],
+    });
+    const saved = await statusRepo.save(status);
+    return { id: (saved as { id: string }).id };
+  }
+
+  // ========== CONFIGURABLE LIMITS ==========
+  async getConfigurableLimits(): Promise<Record<string, string>> {
+    const settings = await this.appSettingRepository.find({
+      where: [
+        { category: 'limits' },
+        { category: 'media' },
+        { category: 'user_control' },
+      ],
+    });
+    const result: Record<string, string> = {};
+    for (const s of settings) {
+      result[s.key] = s.value;
+    }
+    return result;
+  }
+
   // ========== SEED DEFAULT SETTINGS ==========
   async seedDefaultSettings(): Promise<void> {
     const defaults = [
@@ -930,6 +1032,25 @@ export class AdminService {
       { key: 'user_email_verification_required', value: 'false', category: 'user_control', description: 'Require email verification for new users' },
       { key: 'user_max_devices', value: '5', category: 'user_control', description: 'Maximum linked devices per user' },
       { key: 'user_max_group_size', value: '256', category: 'user_control', description: 'Maximum members in a group' },
+      // Configurable limits (Chatify features)
+      { key: 'limits_max_forward_contacts', value: '5', category: 'limits', description: 'Max contacts to forward a message to at once' },
+      { key: 'limits_status_expiry_hours', value: '24', category: 'limits', description: 'Hours before status/story expires' },
+      { key: 'limits_max_broadcast_members', value: '256', category: 'limits', description: 'Max members in a broadcast list' },
+      { key: 'limits_max_group_members', value: '256', category: 'limits', description: 'Max members in a group' },
+      { key: 'limits_max_file_size_mb', value: '100', category: 'limits', description: 'Max file upload size in MB' },
+      { key: 'limits_max_status_per_day', value: '30', category: 'limits', description: 'Max status posts per day per user' },
+      // Rate App links
+      { key: 'rate_app_android_url', value: '', category: 'app_links', description: 'Google Play Store rating URL' },
+      { key: 'rate_app_ios_url', value: '', category: 'app_links', description: 'Apple App Store rating URL' },
+      // User approval
+      { key: 'user_approval_required', value: 'false', category: 'user_control', description: 'Require admin approval for new users' },
+      // Sponsor status
+      { key: 'sponsor_status_enabled', value: 'false', category: 'features', description: 'Enable sponsored/promoted status' },
+      // Ad management
+      { key: 'ads_admob_banner_id_android', value: '', category: 'ads', description: 'AdMob banner ID for Android' },
+      { key: 'ads_admob_banner_id_ios', value: '', category: 'ads', description: 'AdMob banner ID for iOS' },
+      { key: 'ads_facebook_banner_id', value: '', category: 'ads', description: 'Facebook Ads banner ID' },
+      { key: 'ads_enabled', value: 'false', category: 'ads', description: 'Enable ad display' },
     ];
 
     for (const d of defaults) {

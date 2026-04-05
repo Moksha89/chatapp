@@ -283,9 +283,12 @@ export function ChatArea() {
   }, [activeChat, showError]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>, type: MediaMessage['type']) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadAndSendMedia(file, type);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      // Support multiple image sharing (batch select)
+      Array.from(files).forEach(file => {
+        uploadAndSendMedia(file, type);
+      });
     }
     e.target.value = '';
     setShowAttachMenu(false);
@@ -1137,6 +1140,7 @@ export function ChatArea() {
               ref={imageInputRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={(e) => handleFileSelect(e, 'image')}
             />

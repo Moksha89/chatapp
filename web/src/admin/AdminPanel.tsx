@@ -6,6 +6,7 @@ import {
   Trash2, Ban, Check, AlertTriangle, Server,
   TrendingUp, Activity, Smartphone, Lock, Unlock,
   BookOpen, Mail, Flag, Sliders, UserX, UserPlus, Save, Plus, Edit, Eye, EyeOff,
+  Globe, CheckCircle, XCircle, Send, MapPin,
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
@@ -142,6 +143,11 @@ const NAV_ITEMS = [
   { key: 'reports', label: 'Report Categories', icon: Flag },
   { key: 'app-settings', label: 'App Settings', icon: Sliders },
   { key: 'deleted-accounts', label: 'Deleted Accounts', icon: UserX },
+  { key: 'country-stats', label: 'Country Statistics', icon: Globe },
+  { key: 'user-approval', label: 'User Approval', icon: CheckCircle },
+  { key: 'add-users', label: 'Add Users', icon: UserPlus },
+  { key: 'global-status', label: 'Global Status', icon: Send },
+  { key: 'limits', label: 'Configurable Limits', icon: Sliders },
 ];
 
 function Sidebar({ active, onNav, collapsed, onToggle }: {
@@ -1731,6 +1737,274 @@ function DeletedAccountsPage({ token }: { token: string }) {
   );
 }
 
+// ========== CHATIFY: Country Statistics Page ==========
+function CountryStatsPage({ token }: { token: string }) {
+  const [stats, setStats] = useState<Array<{ country: string; count: number; percentage: number }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    adminFetch('/dashboard/country-stats', token).then(setStats).catch(console.error).finally(() => setLoading(false));
+  }, [token]);
+
+  if (loading) return <LoadingState />;
+
+  const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold flex items-center gap-2"><Globe className="w-5 h-5" /> User Distribution by Country</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold mb-4">Country Breakdown</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <RechartsPie>
+              <Pie data={stats.slice(0, 8)} dataKey="count" nameKey="country" cx="50%" cy="50%" outerRadius={100} label={({ country, percentage }: { country: string; percentage: number }) => `${country} (${percentage}%)`}>
+                {stats.slice(0, 8).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+            </RechartsPie>
+          </ResponsiveContainer>
+        </div>
+        <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold mb-4">All Countries</h3>
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {stats.map((s, i) => (
+              <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-700/50">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-emerald-400" />
+                  <span>{s.country}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-slate-400">{s.count} users</span>
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full text-xs">{s.percentage}%</span>
+                </div>
+              </div>
+            ))}
+            {stats.length === 0 && <p className="text-slate-400 text-center py-4">No country data available</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========== CHATIFY: User Approval Page ==========
+function UserApprovalPage({ token }: { token: string }) {
+  const [data, setData] = useState<{ users: Array<{ id: string; phoneNumber: string; displayName: string; createdAt: string }>; total: number }>({ users: [], total: 0 });
+  const [loading, setLoading] = useState(true);
+
+  const fetchPending = useCallback(() => {
+    setLoading(true);
+    adminFetch('/approvals/pending', token).then(setData).catch(console.error).finally(() => setLoading(false));
+  }, [token]);
+
+  useEffect(() => { fetchPending(); }, [fetchPending]);
+
+  const handleApprove = async (userId: string) => {
+    await adminFetch(`/users/${userId}/approve`, token, { method: 'POST' });
+    fetchPending();
+  };
+
+  const handleReject = async (userId: string) => {
+    await adminFetch(`/users/${userId}/reject`, token, { method: 'POST' });
+    fetchPending();
+  };
+
+  if (loading) return <LoadingState />;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold flex items-center gap-2"><CheckCircle className="w-5 h-5" /> Pending User Approvals ({data.total})</h2>
+      {data.users.length === 0 ? (
+        <div className="bg-slate-800/50 rounded-xl p-8 text-center border border-slate-700">
+          <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+          <p className="text-slate-400">No pending approvals</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {data.users.map(user => (
+            <div key={user.id} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 flex items-center justify-between">
+              <div>
+                <p className="font-medium">{user.displayName}</p>
+                <p className="text-sm text-slate-400">{user.phoneNumber}</p>
+                <p className="text-xs text-slate-500">Registered: {new Date(user.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleApprove(user.id)} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm flex items-center gap-1"><Check className="w-4 h-4" /> Approve</button>
+                <button onClick={() => handleReject(user.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm flex items-center gap-1"><XCircle className="w-4 h-4" /> Reject</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ========== CHATIFY: Add Users Page ==========
+function AddUsersPage({ token }: { token: string }) {
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
+  const [isBusiness, setIsBusiness] = useState(false);
+  const [country, setCountry] = useState('');
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResult(null);
+    setError(null);
+    try {
+      const user = await adminFetch('/users/create', token, {
+        method: 'POST',
+        body: JSON.stringify({ phoneNumber: phone, displayName: name, isBusiness, country: country || undefined }),
+      });
+      setResult(`User created: ${user.displayName} (${user.phoneNumber})`);
+      setPhone('');
+      setName('');
+      setCountry('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create user');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold flex items-center gap-2"><UserPlus className="w-5 h-5" /> Add New User</h2>
+      <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 max-w-lg">
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Phone Number *</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+1234567890" className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Display Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} required placeholder="John Doe" className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Country</label>
+            <input value={country} onChange={e => setCountry(e.target.value)} placeholder="US" className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white" />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={isBusiness} onChange={e => setIsBusiness(e.target.checked)} className="rounded" />
+            Business Account
+          </label>
+          <button type="submit" className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium flex items-center gap-2"><Plus className="w-4 h-4" /> Create User</button>
+          {result && <p className="text-emerald-400 text-sm">{result}</p>}
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ========== CHATIFY: Global Status Page ==========
+function GlobalStatusPage({ token }: { token: string }) {
+  const [content, setContent] = useState('');
+  const [bgColor, setBgColor] = useState('#246BFD');
+  const [result, setResult] = useState<string | null>(null);
+
+  const handlePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await adminFetch('/status/global', token, {
+        method: 'POST',
+        body: JSON.stringify({ content, type: 'text', backgroundColor: bgColor }),
+      });
+      setResult('Global status posted successfully!');
+      setContent('');
+    } catch (err) {
+      setResult(`Error: ${err instanceof Error ? err.message : 'Failed'}`);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold flex items-center gap-2"><Send className="w-5 h-5" /> Post Global Status</h2>
+      <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 max-w-lg">
+        <p className="text-sm text-slate-400 mb-4">Post a status visible to all users from the system admin account.</p>
+        <form onSubmit={handlePost} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Status Content *</label>
+            <textarea value={content} onChange={e => setContent(e.target.value)} required rows={3} placeholder="Type your announcement..." className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Background Color</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-10 h-10 rounded cursor-pointer" />
+              <span className="text-sm text-slate-400">{bgColor}</span>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl text-white text-center font-medium" style={{ backgroundColor: bgColor }}>
+            {content || 'Preview status here...'}
+          </div>
+          <button type="submit" className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium flex items-center gap-2"><Send className="w-4 h-4" /> Post Status</button>
+          {result && <p className={`text-sm ${result.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'}`}>{result}</p>}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ========== CHATIFY: Configurable Limits Page ==========
+function ConfigurableLimitsPage({ token }: { token: string }) {
+  const [limits, setLimits] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    adminFetch('/limits', token).then(setLimits).catch(console.error).finally(() => setLoading(false));
+  }, [token]);
+
+  const handleSave = async () => {
+    try {
+      const batch = Object.entries(limits).map(([key, value]) => ({ key, value }));
+      await adminFetch('/app-settings/batch', token, { method: 'POST', body: JSON.stringify({ settings: batch }) });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Failed to save limits:', err);
+    }
+  };
+
+  if (loading) return <LoadingState />;
+
+  const limitGroups = [
+    { title: 'File & Media Limits', keys: ['limits_max_file_size_mb', 'media_max_image_size', 'media_max_video_size', 'media_max_document_size'] },
+    { title: 'User & Group Limits', keys: ['limits_max_group_members', 'user_max_group_size', 'user_max_devices', 'limits_max_broadcast_members'] },
+    { title: 'Status & Messaging', keys: ['limits_status_expiry_hours', 'limits_max_status_per_day', 'limits_max_forward_contacts'] },
+    { title: 'Feature Toggles', keys: ['user_approval_required', 'user_registration_enabled', 'ads_enabled', 'sponsor_status_enabled'] },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold flex items-center gap-2"><Sliders className="w-5 h-5" /> Configurable Limits</h2>
+        <button onClick={handleSave} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium flex items-center gap-2">
+          <Save className="w-4 h-4" /> {saved ? 'Saved!' : 'Save All'}
+        </button>
+      </div>
+      {limitGroups.map(group => (
+        <div key={group.title} className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold mb-4">{group.title}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {group.keys.map(key => (
+              <div key={key}>
+                <label className="block text-sm font-medium text-slate-300 mb-1">{key.replace(/_/g, ' ').replace(/^(limits|media|user|ads|sponsor) /, '').replace(/\b\w/g, l => l.toUpperCase())}</label>
+                <input
+                  value={limits[key] || ''}
+                  onChange={e => setLimits(prev => ({ ...prev, [key]: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LoadingState() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -1826,6 +2100,11 @@ export function AdminPanel() {
       case 'reports': return <ReportCategoriesPage token={token} />;
       case 'app-settings': return <AppSettingsPage token={token} />;
       case 'deleted-accounts': return <DeletedAccountsPage token={token} />;
+      case 'country-stats': return <CountryStatsPage token={token} />;
+      case 'user-approval': return <UserApprovalPage token={token} />;
+      case 'add-users': return <AddUsersPage token={token} />;
+      case 'global-status': return <GlobalStatusPage token={token} />;
+      case 'limits': return <ConfigurableLimitsPage token={token} />;
       default: return <DashboardPage token={token} />;
     }
   };

@@ -573,4 +573,67 @@ export class AdminController {
     await this.adminService.logAction(req.admin.sub, 'RESTORE_USER', `Restored user ${id}`, id);
     return this.adminService.restoreUser(id);
   }
+
+  // ========== COUNTRY STATISTICS ==========
+  @Get('dashboard/country-stats')
+  @UseGuards(AdminAuthGuard)
+  async getCountryStats() {
+    return this.adminService.getCountryStatistics();
+  }
+
+  // ========== USER APPROVAL WORKFLOW ==========
+  @Get('approvals/pending')
+  @UseGuards(AdminAuthGuard)
+  async getPendingApprovals(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminService.getPendingApprovals(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+    );
+  }
+
+  @Post('users/:id/approve')
+  @UseGuards(AdminAuthGuard)
+  async approveUser(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'APPROVE_USER', `Approved user ${id}`, id);
+    return this.adminService.approveUser(id);
+  }
+
+  @Post('users/:id/reject')
+  @UseGuards(AdminAuthGuard)
+  async rejectUser(@Param('id') id: string, @Req() req: { admin: { sub: string } }) {
+    await this.adminService.logAction(req.admin.sub, 'REJECT_USER', `Rejected user ${id}`, id);
+    return this.adminService.rejectUser(id);
+  }
+
+  // ========== ADMIN ADD USERS ==========
+  @Post('users/create')
+  @UseGuards(AdminAuthGuard)
+  async adminCreateUser(
+    @Body() body: { phoneNumber: string; displayName: string; isBusiness?: boolean; country?: string },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'CREATE_USER', `Admin created user ${body.phoneNumber}`);
+    return this.adminService.adminCreateUser(body);
+  }
+
+  // ========== ADMIN GLOBAL STATUS ==========
+  @Post('status/global')
+  @UseGuards(AdminAuthGuard)
+  async postGlobalStatus(
+    @Body() body: { content: string; type?: 'text' | 'image'; mediaUrl?: string; backgroundColor?: string },
+    @Req() req: { admin: { sub: string } },
+  ) {
+    await this.adminService.logAction(req.admin.sub, 'POST_GLOBAL_STATUS', `Admin posted global status`);
+    return this.adminService.postGlobalStatus(body.content, body.type, body.mediaUrl, body.backgroundColor);
+  }
+
+  // ========== CONFIGURABLE LIMITS ==========
+  @Get('limits')
+  @UseGuards(AdminAuthGuard)
+  async getConfigurableLimits() {
+    return this.adminService.getConfigurableLimits();
+  }
 }
