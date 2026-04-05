@@ -1103,7 +1103,7 @@ export class AdminService {
     const defaults = [
       { slug: 'privacy-policy', title: 'Privacy Policy', content: '<h1>Privacy Policy</h1><p>Your privacy is important to us. This privacy policy explains how we collect, use, and protect your personal information.</p>' },
       { slug: 'terms-and-conditions', title: 'Terms & Conditions', content: '<h1>Terms & Conditions</h1><p>By using this application, you agree to the following terms and conditions.</p>' },
-      { slug: 'about', title: 'About Us', content: '<h1>About</h1><p>Welcome to our WhatsApp Business Chat Application.</p>' },
+      { slug: 'about', title: 'About Us', content: '<h1>About</h1><p>Welcome to E-Chat Business — your professional messaging solution.</p>' },
     ];
 
     for (const d of defaults) {

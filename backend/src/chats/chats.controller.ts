@@ -383,7 +383,7 @@ export class ChatsController {
 
   // Submit flow response
   @Post(':id/messages/:messageId/flow')
-  @ApiOperation({ summary: 'Submit a WhatsApp Flow response' })
+  @ApiOperation({ summary: 'Submit an E-Chat Flow response' })
   @ApiResponse({ status: 200, description: 'Flow response submitted' })
   async submitFlowResponse(
     @CurrentUser() user: CurrentUserData,

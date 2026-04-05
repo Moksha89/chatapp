@@ -98,7 +98,7 @@ data class DeleteMessageResponse(
 // Privacy Settings DTOs
 data class PrivacySettingsResponse(
     @SerializedName("readReceiptsEnabled") val readReceiptsEnabled: Boolean,
-    @SerializedName("blockedUsers") val blockedUsers: List<String>
+    @SerializedName("blockedUsers") val blockedUsers: List<String> = emptyList()
 )
 
 data class UpdatePrivacySettingsRequest(

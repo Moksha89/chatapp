@@ -855,7 +855,7 @@ export class ChatsService {
     }
 
     if (format === 'text') {
-      let text = `WhatsApp Chat Backup - ${chatName}\n`;
+      let text = `E-Chat Business Backup - ${chatName}\n`;
       text += `Exported on: ${new Date().toISOString()}\n`;
       text += `Total messages: ${messages.length}\n`;
       text += '─'.repeat(50) + '\n\n';

@@ -32,8 +32,8 @@ async function bootstrap() {
   app.useGlobalGuards(rateLimitGuard);
 
   const config = new DocumentBuilder()
-    .setTitle('WhatsApp Business Chat API')
-    .setDescription('API documentation for WhatsApp Business-style chat application')
+    .setTitle('E-Chat Business API')
+    .setDescription('API documentation for E-Chat Business chat application')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

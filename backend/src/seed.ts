@@ -13,7 +13,7 @@ async function seed() {
     displayName: 'Alice Demo',
     passwordHash: 'demo-hash-1',
     isBusiness: false,
-    status: 'Hey there! I am using WhatsApp Business Chat',
+    status: 'Hey there! I am using E-Chat Business',
     profilePhoto: null,
     lastSeen: new Date(),
     readReceiptsEnabled: true,

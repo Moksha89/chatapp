@@ -105,7 +105,7 @@ fun HelpScreen(
                     subtitle = "Send us an email for support",
                     onClick = {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = Uri.parse("mailto:support@whatsappbusiness.com")
+                            data = Uri.parse("mailto:support@echat.business")
                             putExtra(Intent.EXTRA_SUBJECT, "E-Chat Business Support")
                         }
                         try { context.startActivity(intent) } catch (_: Exception) { }
@@ -119,7 +119,7 @@ fun HelpScreen(
                     title = "Visit Website",
                     subtitle = "Learn more about E-Chat Business",
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://business.whatsapp.com"))
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://abhi.so"))
                         try { context.startActivity(intent) } catch (_: Exception) { }
                     }
                 )
