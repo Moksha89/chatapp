@@ -30,6 +30,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.MediaStore
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import com.chatapp.domain.model.Message
 import com.chatapp.domain.model.MessageStatus
 import java.text.SimpleDateFormat
@@ -52,6 +62,11 @@ fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // Use ViewModel's real-time online/typing status
+    val effectiveOnline = uiState.isOnline || isOnline
+    val effectiveTyping = uiState.isTyping || isTyping
     
     var messageText by remember { mutableStateOf("") }
     var selectedMessage by remember { mutableStateOf<Message?>(null) }
@@ -62,6 +77,34 @@ fun ChatScreen(
     var replyToMessage by remember { mutableStateOf<Message?>(null) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var showAttachMenu by remember { mutableStateOf(false) }
+
+    // Activity result launchers for attachments
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.sendMessage("[Image: ${it.lastPathSegment}]")
+            Toast.makeText(context, "Image selected", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        bitmap?.let {
+            viewModel.sendMessage("[Photo captured]")
+            Toast.makeText(context, "Photo captured", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val documentLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.sendMessage("[Document: ${it.lastPathSegment}]")
+            Toast.makeText(context, "Document selected", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Load messages when screen opens
     LaunchedEffect(chatId) {
@@ -176,8 +219,8 @@ fun ChatScreen(
                             Text(chatName, fontSize = 16.sp)
                             Text(
                                 text = when {
-                                    isTyping -> "typing..."
-                                    isOnline -> "online"
+                                    effectiveTyping -> "typing..."
+                                    effectiveOnline -> "online"
                                     else -> "offline"
                                 },
                                 fontSize = 12.sp,
@@ -311,11 +354,32 @@ fun ChatScreen(
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        AttachmentOption(Icons.Default.Image, "Gallery", Color(0xFF4CAF50)) { showAttachMenu = false }
-                        AttachmentOption(Icons.Default.CameraAlt, "Camera", Color(0xFF2196F3)) { showAttachMenu = false }
-                        AttachmentOption(Icons.Default.InsertDriveFile, "Document", Color(0xFF9C27B0)) { showAttachMenu = false }
-                        AttachmentOption(Icons.Default.LocationOn, "Location", Color(0xFFFF5722)) { showAttachMenu = false }
-                        AttachmentOption(Icons.Default.Person, "Contact", Color(0xFF607D8B)) { showAttachMenu = false }
+                        AttachmentOption(Icons.Default.Image, "Gallery", Color(0xFF4CAF50)) {
+                            showAttachMenu = false
+                            galleryLauncher.launch("image/*")
+                        }
+                        AttachmentOption(Icons.Default.CameraAlt, "Camera", Color(0xFF2196F3)) {
+                            showAttachMenu = false
+                            cameraLauncher.launch(null)
+                        }
+                        AttachmentOption(Icons.Default.InsertDriveFile, "Document", Color(0xFF9C27B0)) {
+                            showAttachMenu = false
+                            documentLauncher.launch(arrayOf("*/*"))
+                        }
+                        AttachmentOption(Icons.Default.LocationOn, "Location", Color(0xFFFF5722)) {
+                            showAttachMenu = false
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q="))
+                            try { context.startActivity(intent) } catch (_: Exception) {
+                                Toast.makeText(context, "No map app found", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        AttachmentOption(Icons.Default.Person, "Contact", Color(0xFF607D8B)) {
+                            showAttachMenu = false
+                            val intent = Intent(Intent.ACTION_PICK, android.provider.ContactsContract.Contacts.CONTENT_URI)
+                            try { context.startActivity(intent) } catch (_: Exception) {
+                                Toast.makeText(context, "Cannot open contacts", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 }
             }
@@ -340,7 +404,11 @@ fun ChatScreen(
 
                     TextField(
                         value = messageText,
-                        onValueChange = { messageText = it },
+                        onValueChange = { newText ->
+                            messageText = newText
+                            if (newText.isNotEmpty()) viewModel.sendTypingStart()
+                            else viewModel.sendTypingStop()
+                        },
                         placeholder = { Text("Type a message") },
                         modifier = Modifier
                             .weight(1f)
@@ -517,7 +585,7 @@ fun MessageBubble(
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .combinedClickable(
-                        onClick = { },
+                        onClick = { onLongPress() },
                         onLongClick = onLongPress
                     )
             ) {
@@ -615,6 +683,7 @@ fun MessageMenuDialog(
     onDelete: () -> Unit
 ) {
     val isOwn = message.senderId == currentUserId
+    val context = LocalContext.current
     
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -680,7 +749,13 @@ fun MessageMenuDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onDismiss() }
+                        .clickable {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("message", message.content ?: "")
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "Message copied", Toast.LENGTH_SHORT).show()
+                            onDismiss()
+                        }
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

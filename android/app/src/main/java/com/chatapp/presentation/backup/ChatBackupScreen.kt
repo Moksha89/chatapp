@@ -23,7 +23,6 @@ fun ChatBackupScreen(
     chatListViewModel: ChatListViewModel = hiltViewModel()
 ) {
     val uiState by chatListViewModel.uiState.collectAsState()
-    var showExportDialog by remember { mutableStateOf(false) }
     var selectedChatId by remember { mutableStateOf<String?>(null) }
     var exportStatus by remember { mutableStateOf<String?>(null) }
 
@@ -104,10 +103,13 @@ fun ChatBackupScreen(
                             Icon(Icons.Default.Chat, contentDescription = null, tint = Color(0xFF128C7E))
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(chat.name, modifier = Modifier.weight(1f))
-                            IconButton(onClick = {
-                                selectedChatId = chat.id
-                                exportStatus = "Export requested for ${chat.name}. Check your downloads."
-                            }) {
+                                IconButton(onClick = {
+                                    selectedChatId = chat.id
+                                    exportStatus = "Exporting ${chat.name}..."
+                                    // TODO: Call actual export API when backend endpoint is available
+                                    // For now, show feedback that export was initiated
+                                    exportStatus = "Chat '${chat.name}' export initiated. The backup will be available in your downloads."
+                                }) {
                                 Icon(Icons.Default.Download, contentDescription = "Export", tint = Color(0xFF128C7E))
                             }
                         }

@@ -1,5 +1,6 @@
 package com.chatapp.presentation.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.chatapp.presentation.auth.LoginScreen
 import com.chatapp.presentation.chat.ChatListScreen
+import com.chatapp.presentation.chat.ChatListViewModel
 import com.chatapp.presentation.chat.ChatScreen
 import com.chatapp.presentation.chat.ChatSearchScreen
 import com.chatapp.presentation.qr.QrScannerScreen
@@ -37,8 +39,8 @@ import com.chatapp.presentation.contacts.ContactSyncScreen
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object ChatList : Screen("chat_list")
-    object Chat : Screen("chat/{chatId}") {
-        fun createRoute(chatId: String) = "chat/$chatId"
+    object Chat : Screen("chat/{chatId}?name={name}") {
+        fun createRoute(chatId: String, name: String = "Chat") = "chat/$chatId?name=${Uri.encode(name)}"
     }
     object QrScanner : Screen("qr_scanner")
     object Settings : Screen("settings")
@@ -85,9 +87,13 @@ fun AppNavigation() {
         }
 
         composable(Screen.ChatList.route) {
+            val chatListViewModel: ChatListViewModel = hiltViewModel()
+            val chatListState by chatListViewModel.uiState.collectAsState()
+
             ChatListScreen(
                 onChatClick = { chatId ->
-                    navController.navigate(Screen.Chat.createRoute(chatId))
+                    val chatName = chatListState.chats.find { it.id == chatId }?.name ?: "Chat"
+                    navController.navigate(Screen.Chat.createRoute(chatId, chatName))
                 },
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
@@ -114,17 +120,22 @@ fun AppNavigation() {
 
         composable(
             route = Screen.Chat.route,
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("chatId") { type = NavType.StringType },
+                navArgument("name") { type = NavType.StringType; defaultValue = "Chat" }
+            )
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            val chatName = backStackEntry.arguments?.getString("name") ?: "Chat"
             ChatScreen(
                 chatId = chatId,
+                chatName = chatName,
                 onBack = { navController.popBackStack() },
                 onCall = { id ->
-                    navController.navigate(Screen.VoiceCall.createRoute(id, "Contact"))
+                    navController.navigate(Screen.VoiceCall.createRoute(id, chatName))
                 },
                 onVideoCall = { id ->
-                    navController.navigate(Screen.VideoCall.createRoute(id, "Contact"))
+                    navController.navigate(Screen.VideoCall.createRoute(id, chatName))
                 }
             )
         }
@@ -257,7 +268,7 @@ fun AppNavigation() {
             ChatSearchScreen(
                 onBack = { navController.popBackStack() },
                 onChatClick = { chatId ->
-                    navController.navigate(Screen.Chat.createRoute(chatId))
+                    navController.navigate(Screen.Chat.createRoute(chatId, "Chat"))
                 }
             )
         }

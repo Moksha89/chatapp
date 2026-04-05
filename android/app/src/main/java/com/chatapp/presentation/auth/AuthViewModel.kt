@@ -3,6 +3,7 @@ package com.chatapp.presentation.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chatapp.data.repository.AuthRepositoryImpl
+import com.chatapp.data.socket.SocketManager
 import com.chatapp.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,8 @@ data class AuthUiState(
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepositoryImpl
+    private val authRepository: AuthRepositoryImpl,
+    private val socketManager: SocketManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -42,6 +44,8 @@ class AuthViewModel @Inject constructor(
         // Check if already logged in
         if (authRepository.isLoggedIn()) {
             _uiState.update { it.copy(isLoggedIn = true) }
+            // Auto-connect socket when already logged in
+            socketManager.connect()
         }
     }
 
@@ -129,6 +133,7 @@ class AuthViewModel @Inject constructor(
                 deviceId = deviceId
             ).fold(
                 onSuccess = {
+                    socketManager.connect()
                     _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
                 },
                 onFailure = { e ->
@@ -158,6 +163,7 @@ class AuthViewModel @Inject constructor(
                 deviceId = deviceId
             ).fold(
                 onSuccess = {
+                    socketManager.connect()
                     _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
                 },
                 onFailure = { e ->
@@ -192,6 +198,7 @@ class AuthViewModel @Inject constructor(
                 isBusiness = _uiState.value.isBusiness
             ).fold(
                 onSuccess = {
+                    socketManager.connect()
                     _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
                 },
                 onFailure = { e ->

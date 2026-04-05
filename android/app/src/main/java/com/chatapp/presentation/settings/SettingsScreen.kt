@@ -31,6 +31,11 @@ fun SettingsScreen(
     onAutoReplies: () -> Unit = {},
     onOrders: () -> Unit = {},
     onBroadcasts: () -> Unit = {},
+    onNotifications: () -> Unit = {},
+    onStorageData: () -> Unit = {},
+    onHelp: () -> Unit = {},
+    onChatBackup: () -> Unit = {},
+    onContactSync: () -> Unit = {},
     userName: String = "User",
     phoneNumber: String = ""
 ) {
@@ -195,7 +200,7 @@ fun SettingsScreen(
                     icon = Icons.Default.Notifications,
                     title = "Notifications",
                     subtitle = "Message and call notifications",
-                    onClick = { }
+                    onClick = onNotifications
                 )
             }
 
@@ -204,7 +209,7 @@ fun SettingsScreen(
                     icon = Icons.Default.Storage,
                     title = "Storage and Data",
                     subtitle = "Network usage, auto-download",
-                    onClick = { }
+                    onClick = onStorageData
                 )
             }
 
@@ -213,7 +218,7 @@ fun SettingsScreen(
                     icon = Icons.Default.Help,
                     title = "Help",
                     subtitle = "Help center, contact us",
-                    onClick = { }
+                    onClick = onHelp
                 )
             }
 
