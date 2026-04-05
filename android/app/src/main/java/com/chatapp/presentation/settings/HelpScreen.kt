@@ -105,8 +105,8 @@ fun HelpScreen(
                     subtitle = "Send us an email for support",
                     onClick = {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = Uri.parse("mailto:support@echat.business")
-                            putExtra(Intent.EXTRA_SUBJECT, "E-Chat Business Support")
+                            data = Uri.parse("mailto:support@abhi.so")
+                            putExtra(Intent.EXTRA_SUBJECT, "Abhi Support")
                         }
                         try { context.startActivity(intent) } catch (_: Exception) { }
                     }
@@ -117,7 +117,7 @@ fun HelpScreen(
                 HelpItem(
                     icon = Icons.Default.Language,
                     title = "Visit Website",
-                    subtitle = "Learn more about E-Chat Business",
+                    subtitle = "Learn more about Abhi",
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://abhi.so"))
                         try { context.startActivity(intent) } catch (_: Exception) { }
@@ -188,7 +188,7 @@ fun HelpScreen(
             item {
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
-                    text = "E-Chat Business",
+                    text = "Abhi",
                     color = Color.Gray,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 16.dp)

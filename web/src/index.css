@@ -12,21 +12,21 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 224 100% 58%;
-    /* E-Chat Design System Colors */
-    --echat-primary: #246BFD;
-    --echat-primary-dark: #1A56DB;
-    --echat-primary-light: #E8F0FE;
-    --echat-secondary: #6C5CE7;
-    --echat-bg: #F7F8FC;
-    --echat-surface: #FFFFFF;
-    --echat-text: #1A1A2E;
-    --echat-text-secondary: #6B7280;
-    --echat-border: #E5E7EB;
-    --echat-sent-bubble: #246BFD;
-    --echat-received-bubble: #FFFFFF;
-    --echat-online: #22C55E;
-    --echat-gradient-start: #246BFD;
-    --echat-gradient-end: #6C5CE7;
+    /* Abhi Design System Colors */
+    --abhi-primary: #246BFD;
+    --abhi-primary-dark: #1A56DB;
+    --abhi-primary-light: #E8F0FE;
+    --abhi-secondary: #6C5CE7;
+    --abhi-bg: #F7F8FC;
+    --abhi-surface: #FFFFFF;
+    --abhi-text: #1A1A2E;
+    --abhi-text-secondary: #6B7280;
+    --abhi-border: #E5E7EB;
+    --abhi-sent-bubble: #246BFD;
+    --abhi-received-bubble: #FFFFFF;
+    --abhi-online: #22C55E;
+    --abhi-gradient-start: #246BFD;
+    --abhi-gradient-end: #6C5CE7;
   }
   .dark {
     --sidebar-background: 240 5.9% 10%;
@@ -49,9 +49,9 @@
 }
 
 @layer components {
-  /* E-Chat modern chat background */
+  /* Abhi modern chat background */
   .wa-chat-bg {
-    background-color: var(--echat-bg);
+    background-color: var(--abhi-bg);
     background-image: 
       radial-gradient(circle at 20% 50%, rgba(36, 107, 253, 0.03) 0%, transparent 50%),
       radial-gradient(circle at 80% 20%, rgba(108, 92, 231, 0.03) 0%, transparent 50%),
@@ -111,7 +111,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: var(--echat-primary);
+    background-color: var(--abhi-primary);
     animation: typingBounce 1.4s infinite ease-in-out;
   }
   .typing-dots span:nth-child(1) { animation-delay: 0s; }
@@ -205,7 +205,7 @@
     box-shadow: 0 0 0 2.5px white;
   }
   .presence-dot.online {
-    background-color: var(--echat-online);
+    background-color: var(--abhi-online);
   }
 
   /* Image loading placeholder */
@@ -237,10 +237,10 @@
     50% { transform: scale(1.1); }
   }
 
-  /* Encryption banner - E-Chat style */
+  /* Encryption banner - Abhi style */
   .encryption-banner {
-    background-color: var(--echat-primary-light);
-    color: var(--echat-primary);
+    background-color: var(--abhi-primary-light);
+    color: var(--abhi-primary);
     font-size: 12px;
     padding: 6px 16px;
     text-align: center;
@@ -268,7 +268,7 @@
 
   /* Sidebar typing indicator */
   .sidebar-typing {
-    color: var(--echat-primary);
+    color: var(--abhi-primary);
     font-style: italic;
   }
 
@@ -334,7 +334,7 @@
 
   /* Focus visible styles for accessibility */
   .focus-ring:focus-visible {
-    outline: 2px solid var(--echat-primary);
+    outline: 2px solid var(--abhi-primary);
     outline-offset: 2px;
   }
 
@@ -343,32 +343,32 @@
     transition: width 0.3s ease;
   }
 
-  /* E-Chat gradient background for headers */
-  .echat-gradient {
-    background: linear-gradient(135deg, var(--echat-gradient-start) 0%, var(--echat-gradient-end) 100%);
+  /* Abhi gradient background for headers */
+  .abhi-gradient {
+    background: linear-gradient(135deg, var(--abhi-gradient-start) 0%, var(--abhi-gradient-end) 100%);
   }
 
-  /* E-Chat card style */
-  .echat-card {
+  /* Abhi card style */
+  .abhi-card {
     background: white;
     border-radius: 16px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   }
 
-  /* E-Chat avatar gradient */
-  .echat-avatar {
+  /* Abhi avatar gradient */
+  .abhi-avatar {
     background: linear-gradient(135deg, #246BFD 0%, #6C5CE7 100%);
   }
 
-  /* E-Chat input style */
-  .echat-input {
-    background: var(--echat-bg);
+  /* Abhi input style */
+  .abhi-input {
+    background: var(--abhi-bg);
     border: 1.5px solid transparent;
     border-radius: 24px;
     transition: all 0.2s ease;
   }
-  .echat-input:focus {
-    border-color: var(--echat-primary);
+  .abhi-input:focus {
+    border-color: var(--abhi-primary);
     box-shadow: 0 0 0 3px rgba(36, 107, 253, 0.1);
   }
 }

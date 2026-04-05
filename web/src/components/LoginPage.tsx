@@ -93,10 +93,10 @@ export function LoginPage() {
     <div className="min-h-screen bg-[#F7F8FC] flex items-center justify-center p-4" style={{backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(36, 107, 253, 0.06) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(108, 92, 231, 0.06) 0%, transparent 50%)'}}>
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 border border-gray-100/50">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 echat-gradient shadow-lg shadow-blue-500/20">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 abhi-gradient shadow-lg shadow-blue-500/20">
             <MessageSquare className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">E-Chat Business</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Abhi</h1>
           <p className="text-gray-400 mt-1 text-sm">Sign in to continue messaging</p>
         </div>
 

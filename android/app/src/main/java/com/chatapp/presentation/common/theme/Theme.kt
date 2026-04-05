@@ -12,17 +12,17 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// E-Chat Design System Colors
-private val EChatPrimary = Color(0xFF246BFD)
-private val EChatPrimaryDark = Color(0xFF1A56DB)
-private val EChatSecondary = Color(0xFF6C5CE7)
+// Abhi Design System Colors
+private val AbhiPrimary = Color(0xFF246BFD)
+private val AbhiPrimaryDark = Color(0xFF1A56DB)
+private val AbhiSecondary = Color(0xFF6C5CE7)
 
 private val LightColorScheme = lightColorScheme(
-    primary = EChatPrimary,
+    primary = AbhiPrimary,
     onPrimary = Color.White,
-    primaryContainer = EChatPrimaryDark,
+    primaryContainer = AbhiPrimaryDark,
     onPrimaryContainer = Color.White,
-    secondary = EChatSecondary,
+    secondary = AbhiSecondary,
     onSecondary = Color.White,
     background = Color(0xFFF7F8FC),
     onBackground = Color(0xFF1A1A2E),
@@ -33,11 +33,11 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = EChatPrimary,
+    primary = AbhiPrimary,
     onPrimary = Color.White,
-    primaryContainer = EChatPrimaryDark,
+    primaryContainer = AbhiPrimaryDark,
     onPrimaryContainer = Color.White,
-    secondary = EChatSecondary,
+    secondary = AbhiSecondary,
     onSecondary = Color.White,
     background = Color(0xFF121212),
     onBackground = Color.White,
@@ -46,7 +46,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun EChatBusinessTheme(
+fun AbhiTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
@@ -56,7 +56,7 @@ fun EChatBusinessTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = EChatPrimary.toArgb()
+            window.statusBarColor = AbhiPrimary.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }

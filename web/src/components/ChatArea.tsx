@@ -541,10 +541,10 @@ export function ChatArea() {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#F7F8FC]">
         <div className="text-center max-w-md px-6 fade-in">
-          <div className="echat-gradient p-8 rounded-full inline-block mb-6 shadow-lg shadow-blue-500/20">
+          <div className="abhi-gradient p-8 rounded-full inline-block mb-6 shadow-lg shadow-blue-500/20">
             <MessageCircle className="h-20 w-20 text-white" />
           </div>
-          <h2 className="text-3xl font-light text-gray-700 mb-3">E-Chat Business</h2>
+          <h2 className="text-3xl font-light text-gray-700 mb-3">Abhi</h2>
           <p className="text-gray-500 text-base mb-6">Send and receive messages without keeping your phone online.</p>
           <p className="text-gray-400 text-sm">Use on up to 4 linked devices and 1 phone at the same time.</p>
           <a
@@ -582,7 +582,7 @@ export function ChatArea() {
             const photo = activeChat?.type === 'direct' ? (otherP?.user as { profilePhoto?: string } | undefined)?.profilePhoto : undefined;
             return photo ? <AvatarImage src={photo} alt={getChatName()} /> : null;
           })()}
-          <AvatarFallback className="echat-avatar text-white font-medium">
+          <AvatarFallback className="abhi-avatar text-white font-medium">
             {getChatInitials()}
           </AvatarFallback>
         </Avatar>
@@ -834,7 +834,7 @@ export function ChatArea() {
                     {/* Sender avatar in group messages */}
                     {!isOwn && (activeChat?.type === 'group' || activeChat?.type === 'community' || activeChat?.type === 'channel') && (
                       <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarFallback className="echat-avatar text-white text-xs">
+                        <AvatarFallback className="abhi-avatar text-white text-xs">
                           {getSenderName(message.senderId).slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>

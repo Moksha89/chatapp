@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EChatBusiness"
+rootProject.name = "Abhi"
 include(":app")

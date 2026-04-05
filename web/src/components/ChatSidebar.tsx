@@ -195,7 +195,7 @@ export function ChatSidebar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="p-0 h-auto">
               <Avatar className="h-10 w-10">
-                  <AvatarFallback className="echat-avatar text-white font-semibold">
+                  <AvatarFallback className="abhi-avatar text-white font-semibold">
                     {user?.displayName?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
               </Avatar>
@@ -369,7 +369,7 @@ export function ChatSidebar() {
             >
               <div className="relative mr-3 flex-shrink-0">
                 <Avatar className="h-12 w-12">
-                  <AvatarFallback className="echat-avatar text-white font-medium">
+                  <AvatarFallback className="abhi-avatar text-white font-medium">
                     {getChatInitials(chat)}
                   </AvatarFallback>
                 </Avatar>

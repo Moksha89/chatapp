@@ -5,8 +5,8 @@ import { hkdf } from '@noble/hashes/hkdf.js';
 import { KeyPair, generateKeyPair, calculateDH, bytesToBase64, base64ToBytes } from './keys';
 
 const MAX_SKIP = 1000;
-const RATCHET_INFO = 'EChatBusiness_Ratchet';
-const MESSAGE_KEY_INFO = 'EChatBusiness_MessageKey';
+const RATCHET_INFO = 'Abhi_Ratchet';
+const MESSAGE_KEY_INFO = 'Abhi_MessageKey';
 
 export interface MessageHeader {
   publicKey: string;

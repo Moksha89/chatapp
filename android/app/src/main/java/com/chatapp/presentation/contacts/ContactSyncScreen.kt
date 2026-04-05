@@ -91,7 +91,7 @@ fun ContactSyncScreen(
                     if (registered.isNotEmpty()) {
                         item {
                             Text(
-                                "On E-Chat Business",
+                                "On Abhi",
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF1A56DB),
                                 modifier = Modifier.padding(16.dp)
@@ -106,7 +106,7 @@ fun ContactSyncScreen(
                     if (unregistered.isNotEmpty()) {
                         item {
                             Text(
-                                "Invite to E-Chat Business",
+                                "Invite to Abhi",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Gray,
                                 modifier = Modifier.padding(16.dp)

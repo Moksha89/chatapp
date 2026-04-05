@@ -201,7 +201,7 @@ export function FriendsPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                   return (
                     <div key={f.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[#F7F8FC] transition">
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="echat-avatar text-white font-medium text-sm">
+                        <AvatarFallback className="abhi-avatar text-white font-medium text-sm">
                           {friendUser?.displayName?.charAt(0).toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
@@ -232,7 +232,7 @@ export function FriendsPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                     {requests.map(r => (
                       <div key={r.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[#F7F8FC] transition">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback className="echat-avatar text-white font-medium text-sm">
+                          <AvatarFallback className="abhi-avatar text-white font-medium text-sm">
                             {r.user?.displayName?.charAt(0).toUpperCase() || '?'}
                           </AvatarFallback>
                         </Avatar>
@@ -261,7 +261,7 @@ export function FriendsPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                     {sentRequests.map(r => (
                       <div key={r.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[#F7F8FC] transition">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback className="echat-avatar text-white font-medium text-sm">
+                          <AvatarFallback className="abhi-avatar text-white font-medium text-sm">
                             {r.user?.displayName?.charAt(0).toUpperCase() || '?'}
                           </AvatarFallback>
                         </Avatar>
@@ -295,7 +295,7 @@ export function FriendsPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                 {suggestions.map(s => (
                   <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[#F7F8FC] transition">
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback className="echat-avatar text-white font-medium text-sm">
+                      <AvatarFallback className="abhi-avatar text-white font-medium text-sm">
                         {s.displayName?.charAt(0).toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
