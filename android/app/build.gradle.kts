@@ -18,8 +18,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "API_BASE_URL", "\"http://208.110.87.24:8080\"")
-        buildConfigField("String", "SOCKET_URL", "\"http://208.110.87.24:8080\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://abhi.so\"")
+        buildConfigField("String", "SOCKET_URL", "\"https://abhi.so\"")
     }
 
     signingConfigs {

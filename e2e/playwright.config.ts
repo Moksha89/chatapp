@@ -2,8 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Use remote server for full E2E tests (frontend + backend together)
 // Override with env vars for local development
-const BASE_URL = process.env.BASE_URL || 'http://208.110.87.24:8888';
-const API_URL = process.env.API_URL || 'http://208.110.87.24:8080';
+const BASE_URL = process.env.BASE_URL || 'https://abhi.so';
+const API_URL = process.env.API_URL || 'https://abhi.so';
 
 export default defineConfig({
   testDir: './tests',

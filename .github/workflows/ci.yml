@@ -91,8 +91,8 @@ jobs:
         continue-on-error: true
         run: npx playwright test tests/api-health.spec.ts
         env:
-          BASE_URL: http://208.110.87.24:8888
-          API_URL: http://208.110.87.24:8080
+          BASE_URL: https://abhi.so
+          API_URL: https://abhi.so
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
