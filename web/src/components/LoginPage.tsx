@@ -96,7 +96,7 @@ export function LoginPage() {
           <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <MessageSquare className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">ChatApp</h1>
+          <h1 className="text-2xl font-bold text-gray-800">WhatsApp Business</h1>
           <p className="text-gray-500 mt-1">Sign in to continue</p>
         </div>
 

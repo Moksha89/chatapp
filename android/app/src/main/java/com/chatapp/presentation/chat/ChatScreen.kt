@@ -92,8 +92,19 @@ fun ChatScreen(
         ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
         bitmap?.let {
-            viewModel.sendMessage("[Photo captured]")
-            Toast.makeText(context, "Photo captured", Toast.LENGTH_SHORT).show()
+            // Save bitmap to temp file and upload
+            try {
+                val tempFile = java.io.File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
+                val outputStream = java.io.FileOutputStream(tempFile)
+                it.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, outputStream)
+                outputStream.flush()
+                outputStream.close()
+                val uri = Uri.fromFile(tempFile)
+                Toast.makeText(context, "Uploading photo...", Toast.LENGTH_SHORT).show()
+                viewModel.sendMediaMessage(context, uri, "image")
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to capture photo", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -205,7 +216,7 @@ fun ChatScreen(
                                     )
                                 }
                             }
-                            if (isOnline) {
+                            if (effectiveOnline) {
                                 Box(
                                     modifier = Modifier
                                         .size(12.dp)
@@ -266,6 +277,13 @@ fun ChatScreen(
                 }
             } else {
                 val listState = rememberLazyListState()
+                
+                // Auto-scroll to bottom when new messages arrive
+                LaunchedEffect(uiState.messages.size) {
+                    if (uiState.messages.isNotEmpty()) {
+                        listState.animateScrollToItem(uiState.messages.size - 1)
+                    }
+                }
                 
                 LazyColumn(
                     state = listState,
