@@ -115,7 +115,7 @@ fun QrScannerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -135,7 +135,7 @@ fun QrScannerScreen(
                     imageVector = Icons.Default.QrCodeScanner,
                     contentDescription = null,
                     modifier = Modifier.size(80.dp),
-                    tint = Color(0xFF25D366)
+                    tint = Color(0xFF246BFD)
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
@@ -153,12 +153,12 @@ fun QrScannerScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     onClick = onBack,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF128C7E))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A56DB))
                 ) {
                     Text("Done")
                 }
             } else if (isPairing || isLoading) {
-                CircularProgressIndicator(color = Color(0xFF128C7E))
+                CircularProgressIndicator(color = Color(0xFF1A56DB))
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Linking device...",
@@ -169,7 +169,7 @@ fun QrScannerScreen(
                     imageVector = Icons.Default.QrCodeScanner,
                     contentDescription = null,
                     modifier = Modifier.size(80.dp),
-                    tint = Color(0xFF128C7E)
+                    tint = Color(0xFF1A56DB)
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
@@ -216,7 +216,7 @@ fun QrScannerScreen(
                             permissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF128C7E)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A56DB)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null)

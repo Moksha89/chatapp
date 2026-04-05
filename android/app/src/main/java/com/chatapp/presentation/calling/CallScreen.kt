@@ -82,7 +82,7 @@ fun CallScreen(
                         .then(
                             if (!isConnected) Modifier.scale(pulseScale) else Modifier
                         ),
-                    color = Color(0xFF25D366)
+                    color = Color(0xFF246BFD)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
@@ -188,7 +188,7 @@ fun CallScreen(
                                 isConnected = true
                                 onAcceptCall()
                             },
-                            containerColor = Color(0xFF25D366),
+                            containerColor = Color(0xFF246BFD),
                             modifier = Modifier.size(64.dp)
                         ) {
                             Icon(Icons.Default.Call, contentDescription = "Accept", tint = Color.White, modifier = Modifier.size(32.dp))

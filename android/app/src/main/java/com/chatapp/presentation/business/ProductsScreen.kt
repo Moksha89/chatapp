@@ -39,7 +39,7 @@ fun ProductsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -48,7 +48,7 @@ fun ProductsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFF25D366)
+                containerColor = Color(0xFF246BFD)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Product", tint = Color.White)
             }
@@ -62,7 +62,7 @@ fun ProductsScreen(
             if (uiState.isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = Color(0xFF128C7E)
+                    color = Color(0xFF1A56DB)
                 )
             } else if (uiState.products.isEmpty()) {
                 Column(
@@ -125,7 +125,7 @@ fun ProductCard(
                 color = Color(0xFFE8F5E9)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Inventory, contentDescription = null, tint = Color(0xFF128C7E))
+                    Icon(Icons.Default.Inventory, contentDescription = null, tint = Color(0xFF1A56DB))
                 }
             }
 
@@ -139,7 +139,7 @@ fun ProductCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     "${product.currency} ${String.format("%.2f", product.price)}",
-                    color = Color(0xFF128C7E),
+                    color = Color(0xFF1A56DB),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -193,7 +193,7 @@ fun AddProductDialog(
             TextButton(
                 onClick = { onAdd(name, description, price.toDoubleOrNull() ?: 0.0) },
                 enabled = name.isNotBlank() && price.isNotBlank()
-            ) { Text("Add", color = Color(0xFF128C7E)) }
+            ) { Text("Add", color = Color(0xFF1A56DB)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

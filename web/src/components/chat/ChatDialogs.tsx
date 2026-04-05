@@ -192,7 +192,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
                     }}
                   >
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-[#00a884] text-white text-xs">
+                      <AvatarFallback className="bg-[#246BFD] text-white text-xs">
                         {chatName.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -213,7 +213,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-sm">
             <h3 className="font-semibold mb-3">Disappearing Messages</h3>
-            {activeChat?.disappearingMessagesDuration && <p className="text-sm text-[#00a884] mb-2 flex items-center gap-1"><Timer className="h-3 w-3" /> Currently enabled ({activeChat.disappearingMessagesDuration === 86400 ? '24 hours' : activeChat.disappearingMessagesDuration === 604800 ? '7 days' : '90 days'})</p>}
+            {activeChat?.disappearingMessagesDuration && <p className="text-sm text-[#246BFD] mb-2 flex items-center gap-1"><Timer className="h-3 w-3" /> Currently enabled ({activeChat.disappearingMessagesDuration === 86400 ? '24 hours' : activeChat.disappearingMessagesDuration === 604800 ? '7 days' : '90 days'})</p>}
             <p className="text-sm text-gray-500 mb-4">Messages will disappear after the selected duration.</p>
             <div className="space-y-2">
               {[{label: 'Off', value: null}, {label: '24 hours', value: 86400}, {label: '7 days', value: 604800}, {label: '90 days', value: 7776000}].map(opt => (
@@ -247,7 +247,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
               {['default', '#d9fdd3', '#fde4cf', '#cff4fc', '#f0d9ff', '#ffe4e1', '#e8f5e9', '#fff3e0', '#e3f2fd', '#fce4ec', '#f3e5f5', '#e0f7fa'].map(color => (
                 <button
                   key={color}
-                  className="w-full aspect-square rounded-lg border-2 border-gray-200 hover:border-[#00a884]"
+                  className="w-full aspect-square rounded-lg border-2 border-gray-200 hover:border-[#246BFD]"
                   style={{ backgroundColor: color === 'default' ? '#efeae2' : color }}
                   onClick={async () => {
                     if (activeChat) {
@@ -322,14 +322,14 @@ export function ChatDialogs(props: ChatDialogsProps) {
               </div>
             ))}
             {pollOptions.length < 12 && (
-              <button className="text-sm text-[#00a884] hover:text-[#008069] mb-3" onClick={() => setPollOptions([...pollOptions, ''])}>
+              <button className="text-sm text-[#246BFD] hover:text-[#1A56DB] mb-3" onClick={() => setPollOptions([...pollOptions, ''])}>
                 + Add option
               </button>
             )}
             <div className="flex justify-end gap-2 mt-3">
               <Button variant="outline" onClick={() => { setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); }}>Cancel</Button>
               <Button
-                className="bg-[#00a884] hover:bg-[#008069]"
+                className="bg-[#246BFD] hover:bg-[#1A56DB]"
                 disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
                 onClick={() => {
                   const pollData = JSON.stringify({
@@ -361,7 +361,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
             <h3 className="font-semibold mb-3">Share Location</h3>
             <p className="text-sm text-gray-500 mb-4">Share your current location or enter coordinates manually.</p>
             <Button
-              className="w-full bg-[#00a884] hover:bg-[#008069] mb-3"
+              className="w-full bg-[#246BFD] hover:bg-[#1A56DB] mb-3"
               onClick={() => {
                 if (navigator.geolocation) {
                   navigator.geolocation.getCurrentPosition(
@@ -466,7 +466,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
               <input
                 type="text"
                 placeholder="Search GIFs..."
-                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#00a884]/20"
+                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#246BFD]/20"
                 value={gifSearchQuery}
                 onChange={(e) => {
                   setGifSearchQuery(e.target.value);
@@ -535,7 +535,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
             <p className="text-sm text-gray-500 mb-4">Download a backup of this chat conversation.</p>
             <div className="space-y-2">
               <Button
-                className="w-full bg-[#00a884] hover:bg-[#008069]"
+                className="w-full bg-[#246BFD] hover:bg-[#1A56DB]"
                 onClick={async () => {
                   if (activeChat) {
                     try {
@@ -592,7 +592,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
             <div className="flex items-center gap-2 mb-4">
               <label className="text-sm font-medium">Enable chatbot:</label>
               <button
-                className={`w-10 h-6 rounded-full transition-colors ${chatbotEnabled ? 'bg-[#00a884]' : 'bg-gray-300'}`}
+                className={`w-10 h-6 rounded-full transition-colors ${chatbotEnabled ? 'bg-[#246BFD]' : 'bg-gray-300'}`}
                 onClick={() => setChatbotEnabled(!chatbotEnabled)}
               >
                 <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${chatbotEnabled ? 'translate-x-4' : ''}`} />
@@ -620,14 +620,14 @@ export function ChatDialogs(props: ChatDialogsProps) {
                   )}
                 </div>
               ))}
-              <button className="text-sm text-[#00a884] hover:text-[#008069]" onClick={() => setChatbotRules([...chatbotRules, { trigger: '', response: '' }])}>
+              <button className="text-sm text-[#246BFD] hover:text-[#1A56DB]" onClick={() => setChatbotRules([...chatbotRules, { trigger: '', response: '' }])}>
                 + Add rule
               </button>
             </div>
             <div className="flex justify-end gap-2 mt-3">
               <Button variant="outline" onClick={() => setShowChatbotDialog(false)}>Cancel</Button>
               <Button
-                className="bg-[#00a884] hover:bg-[#008069]"
+                className="bg-[#246BFD] hover:bg-[#1A56DB]"
                 onClick={async () => {
                   if (activeChat) {
                     const validRules = chatbotRules.filter(r => r.trigger.trim() && r.response.trim());
@@ -684,7 +684,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
             <div className="mb-4">
               <div className="flex items-center gap-3 mb-3">
                 <Avatar className="h-16 w-16">
-                  <AvatarFallback className="bg-[#00a884] text-white text-xl">{getChatInitials()}</AvatarFallback>
+                  <AvatarFallback className="bg-[#246BFD] text-white text-xl">{getChatInitials()}</AvatarFallback>
                 </Avatar>
                 <div>
                   <h4 className="font-semibold text-lg">{getChatName()}</h4>
@@ -695,7 +695,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
             {            activeChat.participants.find((p: any) => p.userId === userId && p.role === 'admin') && (
                           <Button
                 variant="outline"
-                className="w-full mb-3 text-[#00a884] hover:text-[#008069] hover:bg-[#00a884]/5 border-[#00a884]/30"
+                className="w-full mb-3 text-[#246BFD] hover:text-[#1A56DB] hover:bg-[#246BFD]/5 border-[#246BFD]/30"
                 onClick={async () => {
                   try {
                     const allUsers = await api.getAllUsers();
@@ -726,7 +726,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
                                   <p className="text-sm font-medium truncate">{p.user?.displayName || 'Unknown'}</p>
                                   <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
                                 </div>
-                                {p.userId === userId && <span className="text-xs text-[#00a884] font-medium">You</span>}
+                                {p.userId === userId && <span className="text-xs text-[#246BFD] font-medium">You</span>}
                                 {p.role === 'admin' && p.userId !== userId && <span className="text-xs text-blue-500 font-medium">Admin</span>}
                                 {activeChat.participants.find((pp: any) => pp.userId === userId && pp.role === 'admin') && p.userId !== userId && (
                     <button
@@ -786,14 +786,14 @@ export function ChatDialogs(props: ChatDialogsProps) {
                 <div className="text-center">
                   <div className="relative inline-block mb-3">
                     <Avatar className="h-20 w-20">
-                      <AvatarFallback className="bg-[#00a884] text-white text-2xl">
+                      <AvatarFallback className="bg-[#246BFD] text-white text-2xl">
                         {(displayUser.displayName || '?').slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     {isSelf && (
                       <>
                         <button
-                          className="absolute bottom-0 right-0 bg-[#00a884] text-white rounded-full p-1.5 shadow-lg hover:bg-[#008069] transition-colors"
+                          className="absolute bottom-0 right-0 bg-[#246BFD] text-white rounded-full p-1.5 shadow-lg hover:bg-[#1A56DB] transition-colors"
                           onClick={() => profilePhotoInputRef.current?.click()}
                           title="Change profile photo"
                         >
@@ -824,10 +824,10 @@ export function ChatDialogs(props: ChatDialogsProps) {
                   <p className="text-sm text-gray-500 mb-4">{displayUser.phoneNumber}</p>
                   <div className="flex justify-center gap-4">
                     <Button variant="outline" size="icon" className="rounded-full" onClick={handleVoiceCall}>
-                      <Phone className="h-5 w-5 text-[#00a884]" />
+                      <Phone className="h-5 w-5 text-[#246BFD]" />
                     </Button>
                     <Button variant="outline" size="icon" className="rounded-full" onClick={handleVideoCall}>
-                      <Video className="h-5 w-5 text-[#00a884]" />
+                      <Video className="h-5 w-5 text-[#246BFD]" />
                     </Button>
                   </div>
                 </div>
@@ -852,7 +852,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
               <input
                 type="text"
                 placeholder="Search across all chats..."
-                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#00a884]/20"
+                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#246BFD]/20"
                 value={globalSearchQuery}
                 onChange={(e) => {
                   setGlobalSearchQuery(e.target.value);
@@ -876,7 +876,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
                   }
                   setShowGlobalSearch(false); setGlobalSearchQuery(''); setGlobalSearchResults([]);
                 }}>
-                  <p className="text-xs font-medium text-[#008069] mb-0.5">{chats.find(c => c.id === result.chatId)?.name || chats.find(c => c.id === result.chatId)?.participants.find((p: any) => p.userId !== userId)?.user?.displayName || 'Chat'}</p>
+                  <p className="text-xs font-medium text-[#1A56DB] mb-0.5">{chats.find(c => c.id === result.chatId)?.name || chats.find(c => c.id === result.chatId)?.participants.find((p: any) => p.userId !== userId)?.user?.displayName || 'Chat'}</p>
                   <p className="text-sm truncate">{result.content}</p>
                   <p className="text-xs text-gray-400">{new Date(result.createdAt).toLocaleString()}</p>
                 </div>
@@ -899,7 +899,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
             <div className="mb-4">
               <div className="flex items-center gap-3 mb-3">
                 <Avatar className="h-16 w-16">
-                  <AvatarFallback className="bg-[#00a884] text-white text-xl">{getChatInitials()}</AvatarFallback>
+                  <AvatarFallback className="bg-[#246BFD] text-white text-xl">{getChatInitials()}</AvatarFallback>
                 </Avatar>
                 <div>
                   <h4 className="font-semibold text-lg">{getChatName()}</h4>
@@ -929,7 +929,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
                                   <p className="text-sm font-medium truncate">{p.user?.displayName || 'Unknown'}</p>
                                   <p className="text-xs text-gray-500">{p.user?.phoneNumber || ''}</p>
                                 </div>
-                                {p.role === 'admin' && <span className="text-xs text-[#00a884] font-medium">Admin</span>}
+                                {p.role === 'admin' && <span className="text-xs text-[#246BFD] font-medium">Admin</span>}
                                 {p.userId === userId && <span className="text-xs text-gray-400 ml-1">You</span>}
                 </div>
               ))}
@@ -995,7 +995,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
                   )}
                 </div>
               ))}
-              <button className="text-sm text-[#00a884] hover:text-[#008069]" onClick={() => setOrderItems([...orderItems, { productId: '', name: '', price: 0, quantity: 1 }])}>
+              <button className="text-sm text-[#246BFD] hover:text-[#1A56DB]" onClick={() => setOrderItems([...orderItems, { productId: '', name: '', price: 0, quantity: 1 }])}>
                 + Add item
               </button>
               <div className="border-t pt-2">
@@ -1005,7 +1005,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
             <div className="flex justify-end gap-2 mt-3">
               <Button variant="outline" onClick={() => { setShowOrderDialog(false); setOrderItems([{ productId: '', name: '', price: 0, quantity: 1 }]); }}>Cancel</Button>
               <Button
-                className="bg-[#00a884] hover:bg-[#008069]"
+                className="bg-[#246BFD] hover:bg-[#1A56DB]"
                 disabled={!orderItems.some(item => item.name.trim() && item.price > 0)}
                 onClick={async () => {
                   if (activeChat) {
@@ -1050,7 +1050,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
                   }}
                 >
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-[#00a884] text-white text-xs">
+                    <AvatarFallback className="bg-[#246BFD] text-white text-xs">
                       {u.displayName.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

@@ -206,7 +206,7 @@ fun ChatScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape),
-                                color = Color(0xFF25D366)
+                                color = Color(0xFF246BFD)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
@@ -220,7 +220,7 @@ fun ChatScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(12.dp)
-                                        .background(Color(0xFF25D366), CircleShape)
+                                        .background(Color(0xFF246BFD), CircleShape)
                                         .align(Alignment.BottomEnd)
                                 )
                             }
@@ -246,7 +246,7 @@ fun ChatScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White
                 ),
                 actions = {
@@ -264,7 +264,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color(0xFFECE5DD))
+                .background(Color(0xFFF7F8FC))
         ) {
             if (uiState.isLoading) {
                 Box(
@@ -273,7 +273,7 @@ fun ChatScreen(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFF25D366))
+                    CircularProgressIndicator(color = Color(0xFF246BFD))
                 }
             } else {
                 val listState = rememberLazyListState()
@@ -332,14 +332,14 @@ fun ChatScreen(
                             modifier = Modifier
                                 .width(4.dp)
                                 .height(40.dp)
-                                .background(Color(0xFF25D366))
+                                .background(Color(0xFF246BFD))
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Reply to",
                                 fontSize = 12.sp,
-                                color = Color(0xFF25D366),
+                                color = Color(0xFF246BFD),
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
@@ -404,7 +404,7 @@ fun ChatScreen(
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFFF0F0F0)
+                color = Color(0xFFF7F8FC)
             ) {
                 Row(
                     modifier = Modifier
@@ -452,7 +452,7 @@ fun ChatScreen(
                                 showEmojiPicker = false
                             }
                         },
-                        containerColor = Color(0xFF25D366),
+                        containerColor = Color(0xFF246BFD),
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
@@ -552,7 +552,7 @@ fun SwipeableMessageBubble(
                 Icon(
                     Icons.Default.Reply,
                     contentDescription = "Reply",
-                    tint = Color(0xFF25D366).copy(alpha = (animatedOffsetX / swipeThreshold).coerceIn(0f, 1f)),
+                    tint = Color(0xFF246BFD).copy(alpha = (animatedOffsetX / swipeThreshold).coerceIn(0f, 1f)),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -599,7 +599,7 @@ fun MessageBubble(
                     bottomEnd = if (isOwn) 0.dp else 12.dp
                 ),
                 color = if (message.isDeleted) Color.LightGray.copy(alpha = 0.5f)
-                        else if (isOwn) Color(0xFFDCF8C6) else Color.White,
+                        else if (isOwn) Color(0xFFE8F0FE) else Color.White,
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .combinedClickable(
@@ -745,7 +745,7 @@ fun MessageMenuDialog(
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF128C7E))
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF1A56DB))
                             Spacer(modifier = Modifier.width(12.dp))
                             Text("Edit")
                         }
@@ -824,7 +824,7 @@ fun EditMessageDialog(
                         onClick = onSave,
                         enabled = content.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF25D366)
+                            containerColor = Color(0xFF246BFD)
                         )
                     ) {
                         Text("Save")

@@ -36,7 +36,7 @@ fun AutoRepliesScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -45,7 +45,7 @@ fun AutoRepliesScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFF25D366)
+                containerColor = Color(0xFF246BFD)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Auto-Reply", tint = Color.White)
             }
@@ -57,7 +57,7 @@ fun AutoRepliesScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF128C7E))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF1A56DB))
             } else if (uiState.autoReplies.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
@@ -86,7 +86,7 @@ fun AutoRepliesScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Trigger: ${reply.trigger}", fontWeight = FontWeight.Bold, color = Color(0xFF128C7E))
+                                    Text("Trigger: ${reply.trigger}", fontWeight = FontWeight.Bold, color = Color(0xFF1A56DB))
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text("Response: ${reply.response}", color = Color.Gray, fontSize = 14.sp, maxLines = 2)
                                 }
@@ -130,7 +130,7 @@ fun AutoRepliesScreen(
                 TextButton(
                     onClick = { viewModel.addAutoReply(trigger, response); showAddDialog = false },
                     enabled = trigger.isNotBlank() && response.isNotBlank()
-                ) { Text("Add", color = Color(0xFF128C7E)) }
+                ) { Text("Add", color = Color(0xFF1A56DB)) }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }

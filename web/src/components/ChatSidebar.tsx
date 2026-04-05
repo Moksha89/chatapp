@@ -162,15 +162,15 @@ export function ChatSidebar() {
   };
 
   return (
-    <div className="w-full md:w-96 border-r bg-white flex flex-col h-full">
-      <div className="p-3 bg-[#008069] flex items-center justify-between">
+    <div className="w-full md:w-96 border-r border-gray-100 bg-white flex flex-col h-full">
+      <div className="p-3 bg-white border-b border-gray-100 flex items-center justify-between">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="p-0 h-auto">
               <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-[#00a884] text-white font-semibold">
-                  {user?.displayName?.charAt(0).toUpperCase() || 'U'}
-                </AvatarFallback>
+                  <AvatarFallback className="echat-avatar text-white font-semibold">
+                    {user?.displayName?.charAt(0).toUpperCase() || 'U'}
+                  </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
@@ -249,7 +249,7 @@ export function ChatSidebar() {
             onClick={() => setShowNewChat(true)}
             title="New Chat"
           >
-            <MessageSquarePlus className="h-5 w-5 text-white/90 hover:text-white" />
+            <MessageSquarePlus className="h-5 w-5 text-[#246BFD]" />
           </Button>
           <Button
             variant="ghost"
@@ -257,16 +257,16 @@ export function ChatSidebar() {
             onClick={() => setShowCreateGroup(true)}
             title="Create Group"
           >
-            <Users className="h-5 w-5 text-white/90 hover:text-white" />
+            <Users className="h-5 w-5 text-[#246BFD]" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={logout}
             title="Logout"
-            className="text-white/90 hover:text-white"
+            className="text-gray-400 hover:text-red-500"
           >
-            <LogOut className="h-5 w-5 text-white/90" />
+            <LogOut className="h-5 w-5" />
           </Button>
         </div>
       </div>
@@ -276,7 +276,7 @@ export function ChatSidebar() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search or start new chat"
-            className="pl-10 bg-gray-100 border-0"
+            className="pl-10 bg-[#F7F8FC] border-0 rounded-xl"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -285,10 +285,10 @@ export function ChatSidebar() {
           {(['all', 'unread', 'groups', 'channels', 'communities'] as const).map((filter) => (
             <button
               key={filter}
-              className={`filter-pill px-3 py-1 text-xs rounded-full capitalize font-medium ${
+              className={`filter-pill px-3 py-1.5 text-xs rounded-full capitalize font-medium ${
                 chatFilter === filter
-                  ? 'bg-[#00a884] text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-[#246BFD] text-white shadow-sm shadow-blue-500/20'
+                  : 'bg-[#F7F8FC] text-gray-500 hover:bg-[#E8F0FE] hover:text-[#246BFD]'
               }`}
               onClick={() => setChatFilter(filter)}
             >
@@ -327,14 +327,14 @@ export function ChatSidebar() {
           filteredChats.map((chat) => (
             <div
               key={chat.id}
-              className={`chat-item flex items-center p-3 cursor-pointer hover:bg-[#f0f2f5] ${
-                activeChat?.id === chat.id ? 'bg-[#f0f2f5]' : ''
-              } border-b border-gray-100`}
+              className={`chat-item flex items-center p-3 cursor-pointer ${
+                activeChat?.id === chat.id ? 'bg-[#E8F0FE]' : 'hover:bg-[#F7F8FC]'
+              } mx-1 mb-0.5`}
               onClick={() => selectChat(chat)}
             >
               <div className="relative mr-3 flex-shrink-0">
                 <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-[#00a884] text-white font-medium">
+                  <AvatarFallback className="echat-avatar text-white font-medium">
                     {getChatInitials(chat)}
                   </AvatarFallback>
                 </Avatar>
@@ -356,12 +356,12 @@ export function ChatSidebar() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className={`text-sm truncate flex items-center gap-1 ${isTypingInChat(chat) ? 'text-[#00a884] italic' : 'text-gray-500'}`}>
+                  <span className={`text-sm truncate flex items-center gap-1 ${isTypingInChat(chat) ? 'text-[#246BFD] italic' : 'text-gray-400'}`}>
                     {!isTypingInChat(chat) && getMessageStatusIcon(chat)}
                     {getLastMessagePreview(chat)}
                   </span>
                   {chat.unreadCount > 0 && (
-                    <span className="unread-badge bg-[#00a884] text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 ml-2">
+                    <span className="unread-badge bg-[#246BFD] text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 ml-2 shadow-sm shadow-blue-500/20">
                       {chat.unreadCount}
                     </span>
                   )}
@@ -387,12 +387,12 @@ export function ChatSidebar() {
       {/* Create Channel Dialog */}
       {showChannelDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
-            <h3 className="font-semibold mb-3">Create Channel</h3>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
+            <h3 className="font-semibold mb-3 text-gray-900">Create Channel</h3>
             <input
               type="text"
               placeholder="Channel name"
-              className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm mb-2 bg-[#F7F8FC] focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] outline-none"
               value={channelName}
               onChange={(e) => setChannelName(e.target.value)}
             />
@@ -406,7 +406,7 @@ export function ChatSidebar() {
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => { setShowChannelDialog(false); setChannelName(''); setChannelDesc(''); }}>Cancel</button>
               <button
-                className="px-4 py-2 text-sm bg-[#00a884] text-white rounded-lg hover:bg-[#008069] disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-[#246BFD] text-white rounded-xl hover:bg-[#1A56DB] disabled:opacity-50"
                 disabled={!channelName.trim()}
                 onClick={async () => {
                   try {
@@ -427,12 +427,12 @@ export function ChatSidebar() {
       {/* Create Community Dialog */}
       {showCommunityDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
-            <h3 className="font-semibold mb-3">Create Community</h3>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
+            <h3 className="font-semibold mb-3 text-gray-900">Create Community</h3>
             <input
               type="text"
               placeholder="Community name"
-              className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm mb-2 bg-[#F7F8FC] focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] outline-none"
               value={communityName}
               onChange={(e) => setCommunityName(e.target.value)}
             />
@@ -446,7 +446,7 @@ export function ChatSidebar() {
             <div className="flex justify-end gap-2">
               <button className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => { setShowCommunityDialog(false); setCommunityName(''); setCommunityDesc(''); }}>Cancel</button>
               <button
-                className="px-4 py-2 text-sm bg-[#00a884] text-white rounded-lg hover:bg-[#008069] disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-[#246BFD] text-white rounded-xl hover:bg-[#1A56DB] disabled:opacity-50"
                 disabled={!communityName.trim()}
                 onClick={async () => {
                   try {

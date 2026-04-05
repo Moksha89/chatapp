@@ -63,7 +63,7 @@ fun NewChatScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -105,8 +105,8 @@ fun NewChatScreen(
                     onSearch = { focusManager.clearFocus() }
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF128C7E),
-                    cursorColor = Color(0xFF128C7E)
+                    focusedBorderColor = Color(0xFF1A56DB),
+                    cursorColor = Color(0xFF1A56DB)
                 )
             )
 
@@ -122,7 +122,7 @@ fun NewChatScreen(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape),
-                    color = Color(0xFF25D366)
+                    color = Color(0xFF246BFD)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -146,7 +146,7 @@ fun NewChatScreen(
             Text(
                 text = "Contacts on ChatApp",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color = Color(0xFF128C7E),
+                color = Color(0xFF1A56DB),
                 fontWeight = FontWeight.Medium,
                 fontSize = 14.sp
             )
@@ -156,7 +156,7 @@ fun NewChatScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFF128C7E))
+                    CircularProgressIndicator(color = Color(0xFF1A56DB))
                 }
             } else if (filteredUsers.isEmpty()) {
                 Box(
@@ -207,7 +207,7 @@ fun ContactItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape),
-            color = Color(0xFF25D366)
+            color = Color(0xFF246BFD)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(

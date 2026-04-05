@@ -44,7 +44,7 @@ fun LinkedDevicesScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -53,7 +53,7 @@ fun LinkedDevicesScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onLinkNewDevice,
-                containerColor = Color(0xFF25D366)
+                containerColor = Color(0xFF246BFD)
             ) {
                 Icon(
                     Icons.Default.Add,
@@ -84,7 +84,7 @@ fun LinkedDevicesScreen(
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        tint = Color(0xFF128C7E)
+                        tint = Color(0xFF1A56DB)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
@@ -128,7 +128,7 @@ fun LinkedDevicesScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFF128C7E))
+                    CircularProgressIndicator(color = Color(0xFF1A56DB))
                 }
             } else if (uiState.devices.isEmpty()) {
                 Box(
@@ -163,7 +163,7 @@ fun LinkedDevicesScreen(
                 Text(
                     text = "Devices",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = Color(0xFF128C7E),
+                    color = Color(0xFF1A56DB),
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp
                 )
@@ -236,7 +236,7 @@ fun DeviceItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape),
-            color = if (device.isCurrentDevice) Color(0xFF25D366) else Color(0xFFE0E0E0)
+            color = if (device.isCurrentDevice) Color(0xFF246BFD) else Color(0xFFE0E0E0)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -264,7 +264,7 @@ fun DeviceItem(
                 if (device.isCurrentDevice) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
-                        color = Color(0xFF25D366),
+                        color = Color(0xFF246BFD),
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(

@@ -46,7 +46,7 @@ fun PrivacySettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -60,7 +60,7 @@ fun PrivacySettingsScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = Color(0xFF25D366))
+                CircularProgressIndicator(color = Color(0xFF246BFD))
             }
         } else {
             LazyColumn(
@@ -72,7 +72,7 @@ fun PrivacySettingsScreen(
                 item {
                     Text(
                         text = "Messages",
-                        color = Color(0xFF128C7E),
+                        color = Color(0xFF1A56DB),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
@@ -104,7 +104,7 @@ fun PrivacySettingsScreen(
                             onCheckedChange = { viewModel.toggleReadReceipts(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF25D366)
+                                checkedTrackColor = Color(0xFF246BFD)
                             )
                         )
                     }
@@ -118,7 +118,7 @@ fun PrivacySettingsScreen(
                 item {
                     Text(
                         text = "Blocked Contacts",
-                        color = Color(0xFF128C7E),
+                        color = Color(0xFF1A56DB),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -175,7 +175,7 @@ fun BlockedUserItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape),
-            color = Color(0xFF25D366)
+            color = Color(0xFF246BFD)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
@@ -202,7 +202,7 @@ fun BlockedUserItem(
         TextButton(onClick = onUnblock) {
             Text(
                 text = "Unblock",
-                color = Color(0xFF128C7E)
+                color = Color(0xFF1A56DB)
             )
         }
     }

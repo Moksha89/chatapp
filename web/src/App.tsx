@@ -29,7 +29,7 @@ function ResponsiveLayout() {
 
   if (isMobile) {
     return (
-      <div className="h-screen flex flex-col bg-gray-100">
+      <div className="h-screen flex flex-col bg-[#F7F8FC]">
         <Suspense fallback={<LoadingSpinner />}>
           {activeChat ? (
             <ChatArea />
@@ -42,7 +42,7 @@ function ResponsiveLayout() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex bg-[#F7F8FC]">
       <Suspense fallback={<LoadingSpinner />}>
         <ChatSidebar />
         <ChatArea />
@@ -56,9 +56,9 @@ function ChatApp() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F8FC]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#246BFD] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -88,9 +88,9 @@ function ChatApp() {
 
 function LoadingSpinner() {
   return (
-    <div className="flex-1 flex items-center justify-center bg-gray-100">
+    <div className="flex-1 flex items-center justify-center bg-[#F7F8FC]">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#00a884] mx-auto mb-3"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#246BFD] mx-auto mb-3"></div>
         <p className="text-gray-500 text-sm">Loading...</p>
       </div>
     </div>

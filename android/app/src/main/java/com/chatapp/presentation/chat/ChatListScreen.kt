@@ -49,7 +49,7 @@ fun ChatListScreen(
             TopAppBar(
                 title = { Text("WhatsApp Business") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White
                 ),
                                 actions = {
@@ -97,7 +97,7 @@ fun ChatListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNewChat,
-                containerColor = Color(0xFF25D366)
+                containerColor = Color(0xFF246BFD)
             ) {
                 Icon(Icons.Default.Message, contentDescription = "New Chat", tint = Color.White)
             }
@@ -111,7 +111,7 @@ fun ChatListScreen(
             if (uiState.isLoading && uiState.chats.isEmpty()) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = Color(0xFF128C7E)
+                    color = Color(0xFF1A56DB)
                 )
             } else if (uiState.chats.isEmpty()) {
                 Column(
@@ -167,7 +167,7 @@ fun ChatListItemView(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape),
-            color = Color(0xFF25D366)
+            color = Color(0xFF246BFD)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
@@ -196,7 +196,7 @@ fun ChatListItemView(
                 Text(
                     text = chat.lastMessageTime,
                     fontSize = 12.sp,
-                    color = if (chat.unreadCount > 0) Color(0xFF25D366) else Color.Gray
+                    color = if (chat.unreadCount > 0) Color(0xFF246BFD) else Color.Gray
                 )
             }
 
@@ -219,7 +219,7 @@ fun ChatListItemView(
                 if (chat.unreadCount > 0) {
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFF25D366),
+                        color = Color(0xFF246BFD),
                         modifier = Modifier.size(20.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {

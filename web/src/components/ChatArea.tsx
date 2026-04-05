@@ -558,17 +558,17 @@ export function ChatArea() {
 
   if (!activeChat) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#f0f2f5]">
+      <div className="flex-1 flex items-center justify-center bg-[#F7F8FC]">
         <div className="text-center max-w-md px-6 fade-in">
-          <div className="bg-gradient-to-br from-[#00a884] to-[#008069] p-8 rounded-full inline-block mb-6 shadow-lg">
+          <div className="echat-gradient p-8 rounded-full inline-block mb-6 shadow-lg shadow-blue-500/20">
             <MessageCircle className="h-20 w-20 text-white" />
           </div>
-          <h2 className="text-3xl font-light text-gray-700 mb-3">WhatsApp Business</h2>
+          <h2 className="text-3xl font-light text-gray-700 mb-3">E-Chat Business</h2>
           <p className="text-gray-500 text-base mb-6">Send and receive messages without keeping your phone online.</p>
           <p className="text-gray-400 text-sm">Use on up to 4 linked devices and 1 phone at the same time.</p>
           <a
             href="/version/download/android"
-            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-[#00a884] hover:bg-[#008069] text-white rounded-full text-sm font-medium shadow-sm transition-colors"
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#246BFD] to-[#6C5CE7] hover:from-[#1A56DB] hover:to-[#5A4BD1] text-white rounded-full text-sm font-medium shadow-md shadow-blue-500/20 transition-all"
           >
             <Download className="h-4 w-4" />
             Download Android App
@@ -585,13 +585,13 @@ export function ChatArea() {
   return (
     <div className={`flex-1 flex flex-col ${activeChat?.wallpaper ? '' : 'wa-chat-bg'} relative`} style={activeChat?.wallpaper ? { backgroundColor: activeChat.wallpaper } : undefined}>
       {/* Chat Header */}
-      <div className="px-2 md:px-4 py-2.5 bg-[#008069] flex items-center shadow-sm">
+      <div className="px-2 md:px-4 py-2.5 bg-white border-b border-gray-100 flex items-center shadow-sm">
         {/* Back button for mobile */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => selectChat(null)}
-          className="md:hidden text-white hover:text-white/80 hover:bg-white/10 rounded-full mr-1"
+          className="md:hidden text-gray-600 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full mr-1"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -601,20 +601,20 @@ export function ChatArea() {
             const photo = activeChat?.type === 'direct' ? (otherP?.user as { profilePhoto?: string } | undefined)?.profilePhoto : undefined;
             return photo ? <AvatarImage src={photo} alt={getChatName()} /> : null;
           })()}
-          <AvatarFallback className="bg-[#00a884] text-white font-medium">
+          <AvatarFallback className="echat-avatar text-white font-medium">
             {getChatInitials()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white truncate">
+          <h3 className="font-semibold text-gray-900 truncate">
             {getChatName()}
-            {activeChat?.disappearingMessagesDuration && <Timer className="h-3 w-3 inline ml-1 text-green-200" />}
-            {activeChat?.isLocked && <Lock className="h-3 w-3 inline ml-1 text-green-200" />}
-            {mutedChats.has(activeChat?.id || '') && <BellOff className="h-3 w-3 inline ml-1 text-green-200" />}
+            {activeChat?.disappearingMessagesDuration && <Timer className="h-3 w-3 inline ml-1 text-[#246BFD]" />}
+            {activeChat?.isLocked && <Lock className="h-3 w-3 inline ml-1 text-[#246BFD]" />}
+            {mutedChats.has(activeChat?.id || '') && <BellOff className="h-3 w-3 inline ml-1 text-gray-400" />}
           </h3>
           {isOtherTyping ? (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-green-200">
+              <span className="text-xs text-[#246BFD]">
                 {(activeChat?.type === 'group' || activeChat?.type === 'community') ? (() => {
                   const typingUserIds = Array.from(chatTypingUsers || []);
                   const names = typingUserIds.map(id => getSenderName(id)).filter(n => n !== 'You');
@@ -626,19 +626,19 @@ export function ChatArea() {
           ) : (() => {
             if (activeChat?.type === 'channel') {
               const count = activeChat.participants.length;
-              return <p className="text-xs text-green-200">{count} subscriber{count !== 1 ? 's' : ''}</p>;
+              return <p className="text-xs text-gray-400">{count} subscriber{count !== 1 ? 's' : ''}</p>;
             }
             if (activeChat?.type === 'community') {
               const count = activeChat.participants.length;
-              return <p className="text-xs text-green-200">{count} member{count !== 1 ? 's' : ''}</p>;
+              return <p className="text-xs text-gray-400">{count} member{count !== 1 ? 's' : ''}</p>;
             }
             if (activeChat?.type === 'group') {
               const count = activeChat.participants.length;
-              return <p className="text-xs text-green-200">{count} participant{count !== 1 ? 's' : ''}</p>;
+              return <p className="text-xs text-gray-400">{count} participant{count !== 1 ? 's' : ''}</p>;
             }
             const otherUserId = activeChat?.participants.find(p => p.userId !== user?.id)?.userId;
             const isOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
-            return <p className={`text-xs ${isOnline ? 'text-green-200' : 'text-green-300/70'}`}>{isOnline ? 'online' : 'last seen recently'}</p>;
+            return <p className={`text-xs ${isOnline ? 'text-[#22C55E] font-medium' : 'text-gray-400'}`}>{isOnline ? 'online' : 'last seen recently'}</p>;
           })()}
         </div>
         <div className="flex items-center gap-1">
@@ -647,7 +647,7 @@ export function ChatArea() {
             size="icon"
             onClick={() => setShowSearchBar(!showSearchBar)}
             title="Search"
-            className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
+            className="text-gray-500 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full"
           >
             <Search className="h-5 w-5" />
           </Button>
@@ -658,7 +658,7 @@ export function ChatArea() {
               onClick={handleVoiceCall}
               disabled={callState !== 'idle'}
               title="Voice Call"
-              className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
+              className="text-gray-500 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full"
             >
               <Phone className="h-5 w-5" />
             </Button>
@@ -670,7 +670,7 @@ export function ChatArea() {
               onClick={handleVideoCall}
               disabled={callState !== 'idle'}
               title="Video Call"
-              className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
+              className="text-gray-500 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full"
             >
               <Video className="h-5 w-5" />
             </Button>
@@ -680,14 +680,14 @@ export function ChatArea() {
               variant="ghost"
               size="icon"
               onClick={() => setShowChatMenu(!showChatMenu)}
-              className="text-white/90 hover:text-white hover:bg-white/10 rounded-full"
+              className="text-gray-500 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full"
             >
               <MoreVertical className="h-5 w-5" />
             </Button>
             {showChatMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowChatMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl py-1 min-w-[200px] z-50 context-menu-enter">
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl py-1.5 min-w-[200px] z-50 context-menu-enter border border-gray-100">
                   {/* Context-sensitive menu items based on chat type */}
                   {activeChat?.type === 'channel' ? (
                     <>
@@ -796,7 +796,7 @@ export function ChatArea() {
           <div className="flex flex-col gap-3 p-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
-                <div className={`${i % 2 === 0 ? 'bg-[#d9fdd3]' : 'bg-white'} rounded-lg p-3 max-w-[60%] shadow-sm`}>
+                <div className={`${i % 2 === 0 ? 'bg-[#246BFD] text-white' : 'bg-white'} rounded-2xl p-3 max-w-[60%] shadow-sm`}>
                   <div className="skeleton h-3 w-32 mb-2" />
                   <div className="skeleton h-3 w-20" />
                 </div>
@@ -853,29 +853,29 @@ export function ChatArea() {
                     {/* Sender avatar in group messages */}
                     {!isOwn && (activeChat?.type === 'group' || activeChat?.type === 'community' || activeChat?.type === 'channel') && (
                       <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarFallback className="bg-[#00a884] text-white text-xs">
+                        <AvatarFallback className="echat-avatar text-white text-xs">
                           {getSenderName(message.senderId).slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     )}
                     <div
-                      className={`w-fit max-w-[70%] lg:max-w-[60%] px-3 py-1.5 rounded-lg shadow-sm ${
+                      className={`w-fit max-w-[70%] lg:max-w-[60%] px-3 py-2 rounded-2xl shadow-sm ${
                         isOwn
-                          ? 'bg-[#d9fdd3] rounded-tr-none'
-                          : 'bg-white rounded-tl-none'
+                          ? 'bg-[#246BFD] text-white rounded-br-md'
+                          : 'bg-white rounded-bl-md border border-gray-100'
                       } ${message.isDeleted ? 'opacity-60 italic' : ''}`}
                     >
                       {/* Sender name in group messages */}
                       {!isOwn && !message.isDeleted && (activeChat?.type === 'group' || activeChat?.type === 'community' || activeChat?.type === 'channel') && (
-                        <p className="text-xs font-medium text-[#00a884] mb-0.5">{getSenderName(message.senderId)}</p>
+                        <p className={`text-xs font-medium mb-0.5 ${isOwn ? 'text-blue-100' : 'text-[#246BFD]'}`}>{getSenderName(message.senderId)}</p>
                       )}
                       {/* Reply preview */}
                       {replyToMsg && !message.isDeleted && (
-                        <div className="border-l-4 border-[#00a884] bg-black/5 rounded px-2 py-1 mb-1 text-xs">
-                          <p className="font-medium text-[#008069] truncate">
+                        <div className={`border-l-4 border-[#246BFD] rounded px-2 py-1 mb-1 text-xs ${isOwn ? 'bg-white/15' : 'bg-[#246BFD]/5'}`}>
+                          <p className={`font-medium truncate ${isOwn ? 'text-blue-100' : 'text-[#246BFD]'}`}>
                             {getSenderName(replyToMsg.senderId)}
                           </p>
-                          <p className="text-gray-600 truncate">{replyToMsg.content}</p>
+                          <p className={`truncate ${isOwn ? 'text-blue-200' : 'text-gray-500'}`}>{replyToMsg.content}</p>
                         </div>
                       )}
                       {/* Forwarded indicator */}
@@ -893,16 +893,16 @@ export function ChatArea() {
                       ) : isMedia ? (
                         renderMediaContent(message)
                       ) : (
-                        <p className="text-sm break-words text-gray-800">{message.content}</p>
+                        <p className={`text-sm break-words ${isOwn ? 'text-white' : 'text-gray-800'}`}>{message.content}</p>
                       )}
                       <div className="flex items-center justify-end gap-1 mt-0.5">
                         {message.isStarred && !message.isDeleted && (
                           <Star className="h-2.5 w-2.5 text-yellow-500 fill-yellow-500" />
                         )}
                         {message.isEdited && !message.isDeleted && (
-                          <span className="text-[10px] text-gray-400">edited</span>
+                          <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>edited</span>
                         )}
-                        <span className="text-[10px] text-gray-500">
+                        <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>
                           {formatMessageTime(message.createdAt)}
                         </span>
                         {isOwn && getStatusIcon(message.status)}
@@ -959,7 +959,7 @@ export function ChatArea() {
         <div className="absolute bottom-24 right-6 z-10">
           <Button
             onClick={scrollToBottom}
-            className="rounded-full bg-white shadow-lg hover:bg-gray-50 text-gray-600 h-10 w-10 p-0 relative"
+            className="rounded-full bg-white shadow-lg hover:bg-[#E8F0FE] text-[#246BFD] h-10 w-10 p-0 relative border border-gray-100"
             size="icon"
           >
             <ChevronDown className="h-5 w-5" />
@@ -973,8 +973,8 @@ export function ChatArea() {
           <div className="flex items-center gap-3">
             <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-[#00a884] transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
+                    className="h-full bg-[#246BFD] transition-all duration-300 rounded-full"
+                    style={{ width: `${uploadProgress}%` }}
               />
             </div>
             <span className="text-sm text-gray-500">{uploadProgress}%</span>
@@ -1013,7 +1013,7 @@ export function ChatArea() {
           </Button>
           <Button
             onClick={stopRecording}
-            className="bg-[#00a884] hover:bg-[#008069] rounded-full"
+            className="bg-[#246BFD] hover:bg-[#1A56DB] rounded-full"
             size="icon"
           >
             <Send className="h-5 w-5" />
@@ -1023,9 +1023,9 @@ export function ChatArea() {
 
       {/* Reply Preview */}
       {replyingTo && (
-        <div className="px-4 py-2 bg-white border-t flex items-center gap-3">
-          <div className="border-l-4 border-[#00a884] pl-2 flex-1 min-w-0">
-            <p className="text-xs font-medium text-[#008069]">
+        <div className="px-4 py-2 bg-white border-t border-gray-100 flex items-center gap-3">
+          <div className="border-l-4 border-[#246BFD] pl-2 flex-1 min-w-0">
+            <p className="text-xs font-medium text-[#246BFD]">
               {replyingTo.senderId === user?.id ? 'You' : getSenderName(replyingTo.senderId)}
             </p>
             <p className="text-xs text-gray-500 truncate">{replyingTo.content}</p>
@@ -1038,7 +1038,7 @@ export function ChatArea() {
 
       {/* Message Input - hidden for channels where user is not admin */}
       {recordingState === 'idle' && !(activeChat?.type === 'channel' && !activeChat.participants.find(p => p.userId === user?.id && p.role === 'admin')) && (
-        <div className="px-4 py-3 bg-[#f0f2f5]">
+        <div className="px-4 py-3 bg-[#F7F8FC] border-t border-gray-100">
           <div className="flex items-end gap-2">
             {/* Attach Menu */}
             <div className="relative">
@@ -1046,13 +1046,13 @@ export function ChatArea() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
-                className="text-gray-500 hover:text-[#00a884] hover:bg-[#00a884]/10 rounded-full transition-colors"
+                className="text-gray-400 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full transition-colors"
               >
                 <Paperclip className="h-5 w-5" />
               </Button>
               
               {showAttachMenu && (
-                <div className="absolute bottom-12 left-0 bg-white rounded-xl shadow-xl p-2 flex flex-col gap-1 min-w-[170px] z-10 attach-menu-enter">
+                <div className="absolute bottom-12 left-0 bg-white rounded-2xl shadow-xl p-2 flex flex-col gap-1 min-w-[170px] z-10 attach-menu-enter border border-gray-100">
                   <button
                     onClick={() => imageInputRef.current?.click()}
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
@@ -1087,7 +1087,7 @@ export function ChatArea() {
                     }}
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
                   >
-                    <div className="w-8 h-8 bg-[#00a884] rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-[#246BFD] rounded-full flex items-center justify-center">
                       <Camera className="h-4 w-4 text-white" />
                     </div>
                     <span className="text-sm">Video Note</span>
@@ -1160,7 +1160,7 @@ export function ChatArea() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setViewOnceMode(!viewOnceMode)}
-                className={`rounded-full transition-colors ${viewOnceMode ? 'text-[#00a884] bg-[#00a884]/10' : 'text-gray-400 hover:text-[#00a884] hover:bg-[#00a884]/10'}`}
+                className={`rounded-full transition-colors ${viewOnceMode ? 'text-[#246BFD] bg-[#246BFD]/10' : 'text-gray-400 hover:text-[#246BFD] hover:bg-[#246BFD]/10'}`}
                 title={viewOnceMode ? 'View once: ON' : 'View once: OFF'}
               >
                 {viewOnceMode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -1173,14 +1173,14 @@ export function ChatArea() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="text-gray-500 hover:text-[#00a884] hover:bg-[#00a884]/10 rounded-full transition-colors"
+                className="text-gray-400 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full transition-colors"
               >
                 <Smile className="h-5 w-5" />
               </Button>
               {showEmojiPicker && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
-                  <div className="absolute bottom-12 left-0 bg-white rounded-xl shadow-xl z-20 w-[320px] max-h-[320px] flex flex-col">
+                  <div className="absolute bottom-12 left-0 bg-white rounded-2xl shadow-xl z-20 w-[320px] max-h-[320px] flex flex-col border border-gray-100">
                     <div className="flex border-b px-2 pt-2 gap-1 text-xs">
                       {[{label:'Smileys',key:'smileys'},{label:'People',key:'people'},{label:'Nature',key:'nature'},{label:'Food',key:'food'},{label:'Objects',key:'objects'},{label:'Symbols',key:'symbols'}].map(cat => (
                         <button key={cat.key} className="px-2 py-1.5 rounded-t hover:bg-gray-100 text-gray-500 font-medium whitespace-nowrap" onClick={() => {
@@ -1236,7 +1236,7 @@ export function ChatArea() {
             <div className="flex-1 relative">
                 <textarea
                   placeholder={viewOnceMode ? 'View once mode - media will disappear after viewing' : activeChat?.type === 'channel' ? 'Broadcast a message...' : activeChat?.type === 'group' ? 'Message group...' : activeChat?.type === 'community' ? 'Message community...' : 'Type a message'}
-                  className="w-full px-4 py-2.5 bg-white rounded-3xl border-0 focus:ring-2 focus:ring-[#00a884]/20 resize-none text-sm"
+                  className="w-full px-4 py-2.5 bg-white rounded-2xl border border-gray-200 focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] resize-none text-sm outline-none transition-all"
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
@@ -1249,7 +1249,7 @@ export function ChatArea() {
             {inputValue.trim() ? (
               <Button
                 onClick={handleSend}
-                className="send-btn bg-[#00a884] hover:bg-[#008069] rounded-full h-10 w-10 shadow-sm"
+                className="send-btn bg-[#246BFD] hover:bg-[#1A56DB] rounded-full h-10 w-10 shadow-md shadow-blue-500/20"
                 size="icon"
               >
                 <Send className="h-5 w-5" />
@@ -1259,7 +1259,7 @@ export function ChatArea() {
                 onClick={startAudioRecording}
                 variant="ghost"
                 size="icon"
-                className="text-gray-500 hover:text-[#00a884] hover:bg-[#00a884]/10 rounded-full h-10 w-10"
+                className="text-gray-400 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full h-10 w-10"
               >
                 <Mic className="h-5 w-5" />
               </Button>
@@ -1364,7 +1364,7 @@ function renderPollContent(message: { id?: string; content?: string; chatId?: st
     return (
       <div className="min-w-[200px]">
         <div className="flex items-center gap-2 mb-2">
-          <BarChart3 className="h-4 w-4 text-[#00a884]" />
+          <BarChart3 className="h-4 w-4 text-[#246BFD]" />
           <span className="font-medium text-sm">{poll.question}</span>
         </div>
         {poll.options?.map((opt: { text: string; votes: number; voters?: string[] }, i: number) => {
@@ -1373,7 +1373,7 @@ function renderPollContent(message: { id?: string; content?: string; chatId?: st
             <div key={i} className="mb-1.5">
               {/* Bug #8 fix: Add vote button for each poll option */}
               <button
-                className="w-full text-left hover:bg-[#00a884]/5 rounded px-1 py-0.5 transition-colors"
+                className="w-full text-left hover:bg-[#246BFD]/5 rounded px-1 py-0.5 transition-colors"
                 onClick={() => {
                   if (message.id && message.chatId) {
                     api.votePoll(message.chatId, message.id, i).catch(() => {});
@@ -1385,7 +1385,7 @@ function renderPollContent(message: { id?: string; content?: string; chatId?: st
                   <span>{opt.votes || 0} {totalVotes > 0 ? `(${pct}%)` : ''}</span>
                 </div>
                 <div className="h-1.5 bg-gray-200 rounded-full">
-                  <div className="h-full bg-[#00a884] rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                  <div className="h-full bg-[#246BFD] rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
                 </div>
               </button>
             </div>
@@ -1405,7 +1405,7 @@ function renderLocationContent(message: { content?: string }) {
     const loc = JSON.parse(message.content || '{}');
     return (
       <div className="min-w-[200px]">
-        <div className="bg-green-50 rounded-lg p-3 flex items-center gap-2">
+        <div className="bg-[#E8F0FE] rounded-xl p-3 flex items-center gap-2">
           <MapPin className="h-6 w-6 text-red-500" />
           <div>
             <p className="text-sm font-medium">{loc.name || 'Location'}</p>
@@ -1425,8 +1425,8 @@ function renderContactCardContent(message: { content?: string }) {
     const contact = JSON.parse(message.content || '{}');
     return (
       <div className="min-w-[200px]">
-        <div className="bg-blue-50 rounded-lg p-3 flex items-center gap-2">
-          <User className="h-6 w-6 text-blue-500" />
+        <div className="bg-[#E8F0FE] rounded-xl p-3 flex items-center gap-2">
+          <User className="h-6 w-6 text-[#246BFD]" />
           <div>
             <p className="text-sm font-medium">{contact.name || 'Contact'}</p>
             <p className="text-xs text-gray-500">{contact.phoneNumber || ''}</p>

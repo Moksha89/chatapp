@@ -46,7 +46,7 @@ fun ChatBackupScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -69,7 +69,7 @@ fun ChatBackupScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color(0xFF128C7E), modifier = Modifier.size(40.dp))
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color(0xFF1A56DB), modifier = Modifier.size(40.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text("Chat Backup", fontWeight = FontWeight.Bold)
@@ -100,7 +100,7 @@ fun ChatBackupScreen(
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Chat, contentDescription = null, tint = Color(0xFF128C7E))
+                            Icon(Icons.Default.Chat, contentDescription = null, tint = Color(0xFF1A56DB))
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(chat.name, modifier = Modifier.weight(1f))
                                 IconButton(onClick = {
@@ -110,7 +110,7 @@ fun ChatBackupScreen(
                                     // For now, show feedback that export was initiated
                                     exportStatus = "Chat '${chat.name}' export initiated. The backup will be available in your downloads."
                                 }) {
-                                Icon(Icons.Default.Download, contentDescription = "Export", tint = Color(0xFF128C7E))
+                                Icon(Icons.Default.Download, contentDescription = "Export", tint = Color(0xFF1A56DB))
                             }
                         }
                         Divider(modifier = Modifier.padding(start = 52.dp))

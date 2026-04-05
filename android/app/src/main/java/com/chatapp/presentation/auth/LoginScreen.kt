@@ -39,8 +39,8 @@ fun LoginScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF128C7E),
-                        Color(0xFF075E54)
+                        Color(0xFF1A56DB),
+                        Color(0xFF246BFD)
                     )
                 )
             ),
@@ -62,7 +62,7 @@ fun LoginScreen(
                     imageVector = Icons.Default.Message,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
-                    tint = Color(0xFF25D366)
+                    tint = Color(0xFF246BFD)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -116,7 +116,7 @@ fun LoginScreen(
                         Button(
                             onClick = { viewModel.sendOtp() },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF246BFD)),
                             enabled = !uiState.isLoading && uiState.phoneNumber.isNotBlank()
                         ) {
                             if (uiState.isLoading) {
@@ -165,7 +165,7 @@ fun LoginScreen(
                         Button(
                             onClick = { viewModel.verifyOtp() },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF246BFD)),
                             enabled = !uiState.isLoading && uiState.otp.length == 6
                         ) {
                             if (uiState.isLoading) {
@@ -211,7 +211,7 @@ fun LoginScreen(
                         Button(
                             onClick = { viewModel.register() },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF246BFD)),
                             enabled = !uiState.isLoading && uiState.displayName.isNotBlank()
                         ) {
                             if (uiState.isLoading) {

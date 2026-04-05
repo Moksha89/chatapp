@@ -36,7 +36,7 @@ fun BroadcastsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -45,7 +45,7 @@ fun BroadcastsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFF25D366)
+                containerColor = Color(0xFF246BFD)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "New Broadcast", tint = Color.White)
             }
@@ -57,7 +57,7 @@ fun BroadcastsScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF128C7E))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF1A56DB))
             } else if (uiState.broadcasts.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
@@ -88,7 +88,7 @@ fun BroadcastsScreen(
                                 Icon(
                                     Icons.Default.Campaign,
                                     contentDescription = null,
-                                    tint = Color(0xFF128C7E),
+                                    tint = Color(0xFF1A56DB),
                                     modifier = Modifier.size(40.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -126,7 +126,7 @@ fun BroadcastsScreen(
                 TextButton(
                     onClick = { viewModel.createBroadcast(name); showAddDialog = false },
                     enabled = name.isNotBlank()
-                ) { Text("Create", color = Color(0xFF128C7E)) }
+                ) { Text("Create", color = Color(0xFF1A56DB)) }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }

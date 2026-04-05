@@ -34,7 +34,7 @@ fun StorageDataScreen(
             text = { Text("This will clear cached media and temporary files. Your messages and chats will not be affected.") },
             confirmButton = {
                 TextButton(onClick = { showClearCacheDialog = false }) {
-                    Text("Clear", color = Color(0xFF128C7E))
+                    Text("Clear", color = Color(0xFF1A56DB))
                 }
             },
             dismissButton = {
@@ -55,7 +55,7 @@ fun StorageDataScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -71,7 +71,7 @@ fun StorageDataScreen(
             item {
                 Text(
                     text = "Auto-Download Media",
-                    color = Color(0xFF128C7E),
+                    color = Color(0xFF1A56DB),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
@@ -124,7 +124,7 @@ fun StorageDataScreen(
             item {
                 Text(
                     text = "Network Usage",
-                    color = Color(0xFF128C7E),
+                    color = Color(0xFF1A56DB),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -147,7 +147,7 @@ fun StorageDataScreen(
             item {
                 Text(
                     text = "Storage",
-                    color = Color(0xFF128C7E),
+                    color = Color(0xFF1A56DB),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -194,7 +194,7 @@ fun StorageToggle(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color(0xFF128C7E),
+            tint = Color(0xFF1A56DB),
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
@@ -215,7 +215,7 @@ fun StorageToggle(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF25D366)
+                checkedTrackColor = Color(0xFF246BFD)
             )
         )
     }
@@ -238,7 +238,7 @@ fun StorageActionItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color(0xFF128C7E),
+            tint = Color(0xFF1A56DB),
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))

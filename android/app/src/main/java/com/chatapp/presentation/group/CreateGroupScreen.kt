@@ -63,7 +63,7 @@ fun CreateGroupScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -99,7 +99,7 @@ fun CreateGroupScreen(
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape),
-                        color = Color(0xFF25D366)
+                        color = Color(0xFF246BFD)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -120,8 +120,8 @@ fun CreateGroupScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF128C7E),
-                            cursorColor = Color(0xFF128C7E)
+                            focusedBorderColor = Color(0xFF1A56DB),
+                            cursorColor = Color(0xFF1A56DB)
                         )
                     )
 
@@ -171,7 +171,7 @@ fun CreateGroupScreen(
 
                 if (uiState.isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFF128C7E))
+                        CircularProgressIndicator(color = Color(0xFF1A56DB))
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -188,7 +188,7 @@ fun CreateGroupScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape),
-                                    color = if (isSelected) Color(0xFF128C7E) else Color(0xFF25D366)
+                                    color = if (isSelected) Color(0xFF1A56DB) else Color(0xFF246BFD)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         if (isSelected) {

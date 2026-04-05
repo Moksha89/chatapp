@@ -49,7 +49,7 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF128C7E),
+                    containerColor = Color(0xFF1A56DB),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -74,7 +74,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape),
-                        color = Color(0xFF25D366)
+                        color = Color(0xFF246BFD)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
@@ -103,7 +103,7 @@ fun SettingsScreen(
                     Icon(
                         Icons.Default.QrCode,
                         contentDescription = "QR Code",
-                        tint = Color(0xFF128C7E)
+                        tint = Color(0xFF1A56DB)
                     )
                 }
                 Divider()
@@ -245,7 +245,7 @@ fun SettingsItem(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    tint: Color = Color(0xFF128C7E)
+    tint: Color = Color(0xFF1A56DB)
 ) {
     Row(
         modifier = Modifier

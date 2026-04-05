@@ -12,29 +12,32 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val WhatsAppGreen = Color(0xFF25D366)
-private val WhatsAppDarkGreen = Color(0xFF128C7E)
-private val WhatsAppTeal = Color(0xFF075E54)
+// E-Chat Design System Colors
+private val EChatPrimary = Color(0xFF246BFD)
+private val EChatPrimaryDark = Color(0xFF1A56DB)
+private val EChatSecondary = Color(0xFF6C5CE7)
 
 private val LightColorScheme = lightColorScheme(
-    primary = WhatsAppGreen,
+    primary = EChatPrimary,
     onPrimary = Color.White,
-    primaryContainer = WhatsAppDarkGreen,
+    primaryContainer = EChatPrimaryDark,
     onPrimaryContainer = Color.White,
-    secondary = WhatsAppTeal,
+    secondary = EChatSecondary,
     onSecondary = Color.White,
-    background = Color(0xFFF0F0F0),
-    onBackground = Color.Black,
+    background = Color(0xFFF7F8FC),
+    onBackground = Color(0xFF1A1A2E),
     surface = Color.White,
-    onSurface = Color.Black
+    onSurface = Color(0xFF1A1A2E),
+    surfaceVariant = Color(0xFFE8F0FE),
+    onSurfaceVariant = Color(0xFF6B7280)
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = WhatsAppGreen,
+    primary = EChatPrimary,
     onPrimary = Color.White,
-    primaryContainer = WhatsAppDarkGreen,
+    primaryContainer = EChatPrimaryDark,
     onPrimaryContainer = Color.White,
-    secondary = WhatsAppTeal,
+    secondary = EChatSecondary,
     onSecondary = Color.White,
     background = Color(0xFF121212),
     onBackground = Color.White,
@@ -53,7 +56,7 @@ fun WhatsAppBusinessChatTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = WhatsAppTeal.toArgb()
+            window.statusBarColor = EChatPrimary.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }

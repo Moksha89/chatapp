@@ -90,20 +90,20 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8">
+    <div className="min-h-screen bg-[#F7F8FC] flex items-center justify-center p-4" style={{backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(36, 107, 253, 0.06) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(108, 92, 231, 0.06) 0%, transparent 50%)'}}>
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 border border-gray-100/50">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 echat-gradient shadow-lg shadow-blue-500/20">
             <MessageSquare className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">WhatsApp Business</h1>
-          <p className="text-gray-500 mt-1">Sign in to continue</p>
+          <h1 className="text-2xl font-bold text-gray-900">E-Chat Business</h1>
+          <p className="text-gray-400 mt-1 text-sm">Sign in to continue messaging</p>
         </div>
 
         {phoneStep === 'phone' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
                 Phone Number
               </label>
               <input
@@ -111,7 +111,7 @@ export function LoginPage() {
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="+1234567890"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-3 bg-[#F7F8FC] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] outline-none transition-all"
                 onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
               />
             </div>
@@ -119,7 +119,7 @@ export function LoginPage() {
             <Button
               onClick={handleSendOtp}
               disabled={isLoading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium"
+              className="w-full bg-[#246BFD] hover:bg-[#1A56DB] text-white py-3 rounded-xl font-medium shadow-md shadow-blue-500/20 transition-all"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -137,16 +137,16 @@ export function LoginPage() {
           <div className="space-y-4">
             <button
               onClick={() => { setPhoneStep('phone'); setError(''); setOtp(''); }}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+              className="flex items-center gap-1 text-sm text-[#246BFD] hover:text-[#1A56DB] font-medium"
             >
               <ArrowLeft className="w-3 h-3" />
               Change number
             </button>
-            <p className="text-sm text-gray-600">
-              Enter the OTP sent to <strong>{phoneNumber}</strong>
+            <p className="text-sm text-gray-500">
+              Enter the OTP sent to <strong className="text-gray-700">{phoneNumber}</strong>
             </p>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
                 OTP Code
               </label>
               <input
@@ -155,7 +155,7 @@ export function LoginPage() {
                 onChange={(e) => setOtp(e.target.value)}
                 placeholder="123456"
                 maxLength={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-center text-2xl tracking-widest"
+                className="w-full px-4 py-3 bg-[#F7F8FC] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] outline-none text-center text-2xl tracking-widest transition-all"
                 onKeyDown={(e) => e.key === 'Enter' && handleVerifyOtp()}
               />
             </div>
@@ -163,7 +163,7 @@ export function LoginPage() {
             <Button
               onClick={handleVerifyOtp}
               disabled={isLoading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium"
+              className="w-full bg-[#246BFD] hover:bg-[#1A56DB] text-white py-3 rounded-xl font-medium shadow-md shadow-blue-500/20 transition-all"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -176,13 +176,13 @@ export function LoginPage() {
 
         {phoneStep === 'register' && (
           <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-700">
+            <div className="bg-[#E8F0FE] border border-[#246BFD]/20 rounded-xl p-3">
+              <p className="text-sm text-[#246BFD] font-medium">
                 New user! Please enter your name to create an account.
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
                 Your Name
               </label>
               <input
@@ -190,7 +190,7 @@ export function LoginPage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Enter your name"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-3 bg-[#F7F8FC] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] outline-none transition-all"
                 onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
               />
             </div>
@@ -198,7 +198,7 @@ export function LoginPage() {
             <Button
               onClick={handleRegister}
               disabled={isLoading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium"
+              className="w-full bg-[#246BFD] hover:bg-[#1A56DB] text-white py-3 rounded-xl font-medium shadow-md shadow-blue-500/20 transition-all"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -209,17 +209,17 @@ export function LoginPage() {
           </div>
         )}
 
-        <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
+        <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
           <button
             onClick={() => setMode('qr')}
-            className="w-full flex items-center justify-center gap-2 py-2 text-gray-600 hover:text-[#00a884] text-sm"
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-gray-500 hover:text-[#246BFD] text-sm font-medium transition-colors"
           >
             <Smartphone className="w-4 h-4" />
             Login with QR code instead
           </button>
           <a
             href="/version/download/android"
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#00a884] hover:bg-[#008069] text-white rounded-lg text-sm font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-[#246BFD] to-[#6C5CE7] hover:from-[#1A56DB] hover:to-[#5A4BD1] text-white rounded-xl text-sm font-medium transition-all shadow-md shadow-purple-500/20"
           >
             <Download className="w-4 h-4" />
             Download Android App
