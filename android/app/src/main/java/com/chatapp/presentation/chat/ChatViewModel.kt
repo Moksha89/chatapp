@@ -2,12 +2,16 @@ package com.chatapp.presentation.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import android.net.Uri
+import com.chatapp.data.api.ApiService
 import com.chatapp.data.socket.SocketEvent
 import com.chatapp.data.socket.SocketManager
 import com.chatapp.domain.model.Message
 import com.chatapp.domain.model.MessageStatus
 import com.chatapp.domain.model.MessageType
 import com.chatapp.domain.repository.ChatRepository
+import com.chatapp.presentation.media.MediaPickerHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +33,8 @@ data class ChatUiState(
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
-    private val socketManager: SocketManager
+    private val socketManager: SocketManager,
+    private val apiService: ApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -181,6 +186,31 @@ class ChatViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update { it.copy(error = error.message ?: "Failed to send message") }
                 }
+        }
+    }
+
+    fun sendMediaMessage(context: Context, uri: Uri, mediaType: String = "image") {
+        if (currentChatId.isEmpty()) return
+        viewModelScope.launch {
+            val file = MediaPickerHelper.getFileFromUri(context, uri)
+            if (file != null) {
+                val url = MediaPickerHelper.uploadFile(apiService, file)
+                if (url != null) {
+                    val messageType = when {
+                        mediaType.startsWith("image") -> "image"
+                        mediaType.startsWith("video") -> "video"
+                        mediaType.startsWith("audio") -> "audio"
+                        else -> "file"
+                    }
+                    sendMessage(url, null)
+                    socketManager.sendMessage(currentChatId, url, messageType, UUID.randomUUID().toString(), null)
+                } else {
+                    _uiState.update { it.copy(error = "Failed to upload file") }
+                }
+                file.delete()
+            } else {
+                _uiState.update { it.copy(error = "Failed to read file") }
+            }
         }
     }
 

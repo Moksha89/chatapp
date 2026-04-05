@@ -35,6 +35,9 @@ import com.chatapp.presentation.business.AutoRepliesScreen
 import com.chatapp.presentation.calling.CallScreen
 import com.chatapp.presentation.backup.ChatBackupScreen
 import com.chatapp.presentation.contacts.ContactSyncScreen
+import com.chatapp.presentation.settings.NotificationsScreen
+import com.chatapp.presentation.settings.StorageDataScreen
+import com.chatapp.presentation.settings.HelpScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -66,6 +69,9 @@ sealed class Screen(val route: String) {
     }
     object ChatBackup : Screen("chat_backup")
     object ContactSync : Screen("contact_sync")
+    object Notifications : Screen("notifications")
+    object StorageData : Screen("storage_data")
+    object Help : Screen("help")
 }
 
 @Composable
@@ -164,6 +170,11 @@ fun AppNavigation() {
                 onAutoReplies = { navController.navigate(Screen.AutoReplies.route) },
                 onOrders = { navController.navigate(Screen.Orders.route) },
                 onBroadcasts = { navController.navigate(Screen.Broadcasts.route) },
+                onNotifications = { navController.navigate(Screen.Notifications.route) },
+                onStorageData = { navController.navigate(Screen.StorageData.route) },
+                onHelp = { navController.navigate(Screen.Help.route) },
+                onChatBackup = { navController.navigate(Screen.ChatBackup.route) },
+                onContactSync = { navController.navigate(Screen.ContactSync.route) },
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
@@ -275,6 +286,18 @@ fun AppNavigation() {
 
         composable(Screen.ChatBackup.route) {
             ChatBackupScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Notifications.route) {
+            NotificationsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.StorageData.route) {
+            StorageDataScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Help.route) {
+            HelpScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.ContactSync.route) {

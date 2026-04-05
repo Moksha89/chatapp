@@ -78,13 +78,13 @@ fun ChatScreen(
     var showEmojiPicker by remember { mutableStateOf(false) }
     var showAttachMenu by remember { mutableStateOf(false) }
 
-    // Activity result launchers for attachments
+    // Activity result launchers for attachments with real file upload
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.sendMessage("[Image: ${it.lastPathSegment}]")
-            Toast.makeText(context, "Image selected", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Uploading image...", Toast.LENGTH_SHORT).show()
+            viewModel.sendMediaMessage(context, it, "image")
         }
     }
 
@@ -101,8 +101,8 @@ fun ChatScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.sendMessage("[Document: ${it.lastPathSegment}]")
-            Toast.makeText(context, "Document selected", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Uploading document...", Toast.LENGTH_SHORT).show()
+            viewModel.sendMediaMessage(context, it, "file")
         }
     }
 
