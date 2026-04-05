@@ -152,6 +152,18 @@ class AuthRepositoryImpl @Inject constructor(
         return prefs.getString(KEY_ACCESS_TOKEN, null)
     }
 
+    fun getCurrentUserId(): String {
+        return prefs.getString(KEY_USER_ID, null) ?: ""
+    }
+
+    fun getCurrentUserName(): String {
+        return prefs.getString(KEY_DISPLAY_NAME, null) ?: "User"
+    }
+
+    fun getCurrentPhoneNumber(): String {
+        return prefs.getString(KEY_PHONE_NUMBER, null) ?: ""
+    }
+
     fun getOrCreateDeviceId(): String {
         var deviceId = prefs.getString(KEY_DEVICE_ID, null)
         if (deviceId == null) {

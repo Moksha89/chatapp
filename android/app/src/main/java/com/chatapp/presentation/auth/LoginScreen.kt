@@ -142,25 +142,6 @@ fun LoginScreen(
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // User type selection
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            FilterChip(
-                                selected = uiState.isExistingUser == true,
-                                onClick = { viewModel.setExistingUser(true) },
-                                label = { Text("Existing User") }
-                            )
-                            FilterChip(
-                                selected = uiState.isExistingUser == false,
-                                onClick = { viewModel.setExistingUser(false) },
-                                label = { Text("New User") }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
 
                         Button(
                             onClick = { viewModel.verifyOtp() },

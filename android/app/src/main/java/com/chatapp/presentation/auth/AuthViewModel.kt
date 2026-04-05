@@ -108,17 +108,8 @@ class AuthViewModel @Inject constructor(
             return
         }
 
-        // If we know it's an existing user, try login directly
-        // Otherwise, go to register step
-        val isExisting = _uiState.value.isExistingUser
-        if (isExisting == true) {
-            login()
-        } else if (isExisting == false) {
-            _uiState.update { it.copy(step = AuthStep.REGISTER) }
-        } else {
-            // Try login first, if fails go to register
-            tryLoginThenRegister()
-        }
+        // Auto-detect: try login first, if user doesn't exist go to register
+        tryLoginThenRegister()
     }
 
     private fun tryLoginThenRegister() {

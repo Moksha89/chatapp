@@ -133,9 +133,12 @@ fun AppNavigation() {
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
             val chatName = backStackEntry.arguments?.getString("name") ?: "Chat"
+            val chatListViewModel: ChatListViewModel = hiltViewModel(navController.getBackStackEntry(Screen.ChatList.route))
+            val chatListState by chatListViewModel.uiState.collectAsState()
             ChatScreen(
                 chatId = chatId,
                 chatName = chatName,
+                currentUserId = chatListState.currentUserId,
                 onBack = { navController.popBackStack() },
                 onCall = { id ->
                     navController.navigate(Screen.VoiceCall.createRoute(id, chatName))
@@ -159,6 +162,8 @@ fun AppNavigation() {
         }
 
         composable(Screen.Settings.route) {
+            val chatListViewModel: ChatListViewModel = hiltViewModel(navController.getBackStackEntry(Screen.ChatList.route))
+            val chatListState by chatListViewModel.uiState.collectAsState()
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onBusinessProfile = { navController.navigate(Screen.BusinessProfile.route) },
@@ -175,6 +180,8 @@ fun AppNavigation() {
                 onHelp = { navController.navigate(Screen.Help.route) },
                 onChatBackup = { navController.navigate(Screen.ChatBackup.route) },
                 onContactSync = { navController.navigate(Screen.ContactSync.route) },
+                userName = chatListState.currentUserName,
+                phoneNumber = chatListState.currentPhoneNumber,
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
