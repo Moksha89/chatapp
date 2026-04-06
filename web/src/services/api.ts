@@ -1251,6 +1251,70 @@ class ApiService {
     return this.request<Array<{ id: string; chatId: string; content: string; scheduledAt: string; status: string }>>('/messages/scheduled');
   }
 
+  // ========== CONTACTS & SETTINGS (Enhanced features) ==========
+  async syncContacts(phoneNumbers: string[]) {
+    return this.request<Array<{ phoneNumber: string; userId: string; displayName: string }>>('/contacts/sync', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumbers }),
+    });
+  }
+
+  async inviteByPhone(phoneNumber: string) {
+    return this.request<{ sent: boolean }>('/contacts/invite', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    });
+  }
+
+  async getInviteLink() {
+    return this.request<{ inviteUrl: string; qrCode: string }>('/users/invite-link');
+  }
+
+  async getNotificationSettings() {
+    return this.request<{ messagePreview: boolean; sound: boolean; vibrate: boolean; groupNotifications: boolean; channelNotifications: boolean; callRingtone: string }>('/settings/notifications');
+  }
+
+  async updateNotificationSettings(settings: Record<string, boolean | string>) {
+    return this.request<{ success: boolean }>('/settings/notifications', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getStorageUsage() {
+    return this.request<{ total: number; messages: number; media: number; documents: number; perChat: Array<{ chatId: string; chatName: string; size: number }> }>('/settings/storage');
+  }
+
+  async clearChatStorage(chatId: string) {
+    return this.request<{ freed: number }>(`/settings/storage/${chatId}`, { method: 'DELETE' });
+  }
+
+  async getThemeSettings() {
+    return this.request<{ theme: string; wallpaper: string; chatBubbleColor: string; fontSize: string }>('/settings/theme');
+  }
+
+  async updateThemeSettings(settings: Record<string, string>) {
+    return this.request<{ success: boolean }>('/settings/theme', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getAppVersion() {
+    return this.request<{ current: string; latest: string; changelog: string; updateUrl: string }>('/version');
+  }
+
+  async createChatBackup(includeMedia: boolean = false) {
+    return this.request<{ backupId: string; size: number; createdAt: string }>('/settings/backup', {
+      method: 'POST',
+      body: JSON.stringify({ includeMedia }),
+    });
+  }
+
+  async getBackupHistory() {
+    return this.request<Array<{ id: string; size: number; createdAt: string; includeMedia: boolean }>>('/settings/backup/history');
+  }
+
   // ========== FRIENDS (ChitChat features) ==========
   async getFriends() {
     return this.request<Array<{ id: string; userId: string; friendId: string; status: string; createdAt: string }>>('/friends');

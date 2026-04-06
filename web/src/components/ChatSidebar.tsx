@@ -27,6 +27,13 @@ import { ProductCatalog } from './ProductCatalog';
 import { AutoReplySettings } from './AutoReplySettings';
 import { PrivacySettings } from './PrivacySettings';
 import { FriendsPanel } from './FriendsPanel';
+import { NotificationSettings } from './NotificationSettings';
+import { StorageManager } from './StorageManager';
+import { ThemeSettings } from './ThemeSettings';
+import { DataSaverSettings } from './DataSaverSettings';
+import { HelpSupportScreen } from './HelpSupportScreen';
+import { AutoUpdateSettings } from './AutoUpdateSettings';
+import { ChatBackupSettings } from './ChatBackupSettings';
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
@@ -47,6 +54,13 @@ export function ChatSidebar() {
   const [showAutoReply, setShowAutoReply] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showStorage, setShowStorage] = useState(false);
+  const [showThemes, setShowThemes] = useState(false);
+  const [showDataSaver, setShowDataSaver] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showAutoUpdate, setShowAutoUpdate] = useState(false);
+  const [showBackup, setShowBackup] = useState(false);
   const [showChannelDialog, setShowChannelDialog] = useState(false);
   const [showCommunityDialog, setShowCommunityDialog] = useState(false);
   const [channelName, setChannelName] = useState('');
@@ -313,6 +327,35 @@ export function ChatSidebar() {
               Privacy Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setShowNotifications(true)}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Notification Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowThemes(true)}>
+              <Tag className="mr-2 h-4 w-4" />
+              Chat Themes
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowStorage(true)}>
+              <Package className="mr-2 h-4 w-4" />
+              Storage & Data
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowBackup(true)}>
+              <Globe className="mr-2 h-4 w-4" />
+              Chat Backup
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowDataSaver(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              Data Saver
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowHelp(true)}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Help & Support
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowAutoUpdate(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              App Updates
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <a href="/version/download/android" className="flex items-center cursor-pointer">
                 <Download className="mr-2 h-4 w-4" />
@@ -518,6 +561,13 @@ export function ChatSidebar() {
       <AutoReplySettings isOpen={showAutoReply} onClose={() => setShowAutoReply(false)} />
       <PrivacySettings isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
       <FriendsPanel isOpen={showFriends} onClose={() => setShowFriends(false)} />
+      <NotificationSettings isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+      <StorageManager isOpen={showStorage} onClose={() => setShowStorage(false)} />
+      <ThemeSettings isOpen={showThemes} onClose={() => setShowThemes(false)} />
+      <DataSaverSettings isOpen={showDataSaver} onClose={() => setShowDataSaver(false)} />
+      <HelpSupportScreen isOpen={showHelp} onClose={() => setShowHelp(false)} />
+      <AutoUpdateSettings isOpen={showAutoUpdate} onClose={() => setShowAutoUpdate(false)} />
+      <ChatBackupSettings isOpen={showBackup} onClose={() => setShowBackup(false)} />
 
       {/* Chat Context Menu */}
       {contextMenu && (
