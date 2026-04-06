@@ -1120,7 +1120,7 @@ export function ChatArea() {
                           <Star className="h-2.5 w-2.5 text-yellow-500 fill-yellow-500" />
                         )}
                         {message.isEdited && !message.isDeleted && (
-                          <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'} cursor-help`} title={`Edited ${new Date(message.updatedAt || message.createdAt).toLocaleString()}`}>edited</span>
+                          <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'} cursor-help`} title={`Edited ${new Date(message.editedAt || message.createdAt).toLocaleString()}`}>edited</span>
                         )}
                         {activeChat?.disappearingMessagesDuration && !message.isDeleted && (
                           <Timer className={`h-2.5 w-2.5 ${isOwn ? 'text-blue-200' : 'text-gray-400'}`} />                        )}
