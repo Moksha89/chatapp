@@ -20,7 +20,8 @@ interface LabelsManagerProps {
 
 const PRESET_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280', '#000000'
+  '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280', '#000000',
+  '#246BFD', '#06b6d4', '#d946ef', '#f43f5e', '#84cc16'
 ];
 
 export function LabelsManager({ isOpen, onClose, chatId, chatLabels = [], onLabelsChange }: LabelsManagerProps) {
@@ -150,7 +151,10 @@ export function LabelsManager({ isOpen, onClose, chatId, chatLabels = [], onLabe
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-700">Your Labels</h3>
             {labels.length === 0 ? (
-              <p className="text-sm text-gray-500">No labels yet. Create one above.</p>
+              <div className="text-center py-4">
+                        <p className="text-sm text-gray-500 mb-2">No labels yet</p>
+                        <p className="text-[10px] text-gray-400">Labels help you organize chats by category, priority, or status</p>
+                      </div>
             ) : (
               labels.map(label => (
                 <div key={label.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50">

@@ -122,9 +122,16 @@ export function QuickRepliesManager({ isOpen, onClose }: QuickRepliesManagerProp
 
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-700">Your Quick Replies</h3>
-            <p className="text-xs text-gray-500 mb-2">Type the shortcode in chat to use these templates</p>
+            <p className="text-xs text-gray-500 mb-1">Type the shortcode in chat to use these templates</p>
+                    <div className="flex items-center gap-2 mb-2 text-[10px] text-gray-400">
+                      <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] font-mono">/shortcode</span>
+                      <span>in chat input to trigger quick reply</span>
+                    </div>
             {quickReplies.length === 0 ? (
-              <p className="text-sm text-gray-500">No quick replies yet. Create one above.</p>
+              <div className="text-center py-4">
+                        <p className="text-sm text-gray-500 mb-2">No quick replies yet</p>
+                        <p className="text-[10px] text-gray-400">Create shortcuts for messages you send often</p>
+                      </div>
             ) : (
               quickReplies.map(reply => (
                 <div key={reply.id} className="p-3 border rounded-lg">

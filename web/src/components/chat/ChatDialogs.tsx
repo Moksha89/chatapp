@@ -757,15 +757,43 @@ export function ChatDialogs(props: ChatDialogsProps) {
         </div>
       )}
 
-      {/* Chat Backup Dialog */}
+      {/* Chat Backup/Export Dialog - Enhanced */}
       {showBackupDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
-          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
-            <h3 className="font-semibold mb-3">Chat Backup</h3>
-            <p className="text-sm text-gray-500 mb-4">Download a backup of this chat conversation.</p>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center gap-2 mb-1">
+              <FileDown className="h-5 w-5 text-[#246BFD]" />
+              <h3 className="font-bold text-gray-900">Export Chat</h3>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">Download your conversation in multiple formats</p>
+
+            {/* Date range filter */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-xl">
+              <p className="text-[10px] font-medium text-gray-500 mb-2">Date Range (optional)</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] text-gray-400">From</label>
+                  <input type="date" className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs" />
+                </div>
+                <div>
+                  <label className="text-[9px] text-gray-400">To</label>
+                  <input type="date" className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs" />
+                </div>
+              </div>
+            </div>
+
+            {/* Include media toggle */}
+            <label className="flex items-center gap-2 mb-4 p-2.5 border rounded-xl cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-[#246BFD]" />
+              <div>
+                <p className="text-xs font-medium text-gray-700">Include media files</p>
+                <p className="text-[10px] text-gray-400">Photos, videos, and documents</p>
+              </div>
+            </label>
+
             <div className="space-y-2">
               <Button
-                className="w-full bg-[#246BFD] hover:bg-[#1A56DB]"
+                className="w-full bg-[#246BFD] hover:bg-[#1A56DB] rounded-xl"
                 onClick={async () => {
                   if (activeChat) {
                     try {
@@ -782,11 +810,11 @@ export function ChatDialogs(props: ChatDialogsProps) {
                   setShowBackupDialog(false);
                 }}
               >
-                <FileDown className="h-4 w-4 mr-2" /> Download as Text
+                <FileDown className="h-4 w-4 mr-2" /> Export as Text (.txt)
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full rounded-xl"
                 onClick={async () => {
                   if (activeChat) {
                     try {
@@ -803,11 +831,34 @@ export function ChatDialogs(props: ChatDialogsProps) {
                   setShowBackupDialog(false);
                 }}
               >
-                <Download className="h-4 w-4 mr-2" /> Download as JSON
+                <Download className="h-4 w-4 mr-2" /> Export as JSON
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full rounded-xl"
+                onClick={async () => {
+                  if (activeChat) {
+                    try {
+                      const data = await api.backupChat(activeChat.id, 'text');
+                      // Generate simple HTML/PDF-like export
+                      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chat Export</title><style>body{font-family:system-ui;max-width:600px;margin:0 auto;padding:20px}h1{color:#246BFD}p{margin:4px 0;padding:8px 12px;background:#f3f4f6;border-radius:8px;font-size:14px}</style></head><body><h1>Chat Export</h1><pre>${data.content}</pre></body></html>`;
+                      const blob = new Blob([htmlContent], { type: 'text/html' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = data.filename.replace('.txt', '.html');
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch { showError('Failed to export chat as HTML'); }
+                  }
+                  setShowBackupDialog(false);
+                }}
+              >
+                <FileDown className="h-4 w-4 mr-2" /> Export as HTML (printable)
               </Button>
             </div>
             <div className="flex justify-end mt-3">
-              <Button variant="outline" onClick={() => setShowBackupDialog(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowBackupDialog(false)} className="rounded-xl">Cancel</Button>
             </div>
           </div>
         </div>

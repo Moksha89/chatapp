@@ -1192,6 +1192,65 @@ class ApiService {
   }
 
 
+
+  // Enhanced Business - Message Templates
+  async getMessageTemplates() {
+    return this.request<Array<{ id: string; name: string; content: string; category: string; variables: string[] }>>('/business/templates');
+  }
+
+  async createMessageTemplate(data: { name: string; content: string; category: string }) {
+    return this.request<{ id: string }>('/business/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Enhanced Business - Payment Integration
+  async createPaymentLink(amount: number, currency: string, description: string) {
+    return this.request<{ paymentUrl: string; id: string }>('/business/payments/link', {
+      method: 'POST',
+      body: JSON.stringify({ amount, currency, description }),
+    });
+  }
+
+  async getPaymentHistory() {
+    return this.request<Array<{ id: string; amount: number; currency: string; status: string; createdAt: string }>>('/business/payments/history');
+  }
+
+  // Enhanced Business - Catalog Sharing
+  async getCatalogShareLink() {
+    return this.request<{ shareUrl: string; qrCode: string }>('/business/catalog/share');
+  }
+
+  // Enhanced Business - WhatsApp Flows
+  async getFlows() {
+    return this.request<Array<{ id: string; name: string; status: string; steps: number }>>('/business/flows');
+  }
+
+  async createFlow(data: { name: string; steps: Array<{ type: string; content: string; options?: string[] }> }) {
+    return this.request<{ id: string }>('/business/flows', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Enhanced Business - Broadcast Analytics
+  async getBroadcastAnalytics(broadcastId: string) {
+    return this.request<{ sent: number; delivered: number; read: number; replied: number }>(`/broadcasts/${broadcastId}/analytics`);
+  }
+
+  // Enhanced Business - Scheduled Messages
+  async scheduleMessage(chatId: string, content: string, scheduledAt: string) {
+    return this.request<{ id: string; scheduledAt: string }>(`/chats/${chatId}/messages/schedule`, {
+      method: 'POST',
+      body: JSON.stringify({ content, scheduledAt }),
+    });
+  }
+
+  async getScheduledMessages() {
+    return this.request<Array<{ id: string; chatId: string; content: string; scheduledAt: string; status: string }>>('/messages/scheduled');
+  }
+
   // ========== FRIENDS (ChitChat features) ==========
   async getFriends() {
     return this.request<Array<{ id: string; userId: string; friendId: string; status: string; createdAt: string }>>('/friends');
