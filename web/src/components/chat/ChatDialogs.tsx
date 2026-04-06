@@ -13,6 +13,15 @@ import {
   Upload,
   Users,
   LogOut,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Share2,
+  ChevronLeft,
+  ChevronRight,
+  Navigation,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { socketService } from '../../services/socket';
@@ -431,14 +440,27 @@ export function ChatDialogs(props: ChatDialogsProps) {
         </div>
       )}
 
-      {/* Location Picker Dialog */}
+      {/* Location Picker Dialog — enhanced with live location */}
       {showLocationPicker && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
-          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
-            <h3 className="font-semibold mb-3">Share Location</h3>
-            <p className="text-sm text-gray-500 mb-4">Share your current location or enter coordinates manually.</p>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg">Share Location</h3>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowLocationPicker(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {/* Map preview placeholder */}
+            <div className="w-full h-40 bg-gradient-to-br from-green-100 to-blue-100 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden">
+              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2740%27 height=%2740%27%3E%3Cpath d=%27M0 0h40v40H0z%27 fill=%27none%27 stroke=%27%23999%27 stroke-width=%270.5%27/%3E%3C/svg%3E")' }} />
+              <div className="text-center z-10">
+                <MapPin className="h-8 w-8 text-[#246BFD] mx-auto mb-1" />
+                <span className="text-xs text-gray-600">Your location</span>
+              </div>
+            </div>
+            {/* Send current location */}
             <Button
-              className="w-full bg-[#246BFD] hover:bg-[#1A56DB] mb-3"
+              className="w-full bg-[#246BFD] hover:bg-[#1A56DB] mb-2 rounded-xl h-11"
               onClick={() => {
                 if (navigator.geolocation) {
                   navigator.geolocation.getCurrentPosition(
@@ -459,95 +481,194 @@ export function ChatDialogs(props: ChatDialogsProps) {
                       setShowLocationPicker(false);
                     },
                     () => {
-                      const locData = JSON.stringify({ latitude: 0, longitude: 0, name: 'Location (permission denied)' });
-                      if (activeChat) {
-                        socketService.emit('message:send', {
-                          chatId: activeChat.id,
-                          content: locData,
-                          type: 'location',
-                          tempId: `temp-${Date.now()}`,
-                        });
-                      }
-                      setShowLocationPicker(false);
+                      showError('Location permission denied');
                     }
                   );
                 }
               }}
             >
-              <MapPin className="h-4 w-4 mr-2" /> Share Current Location
+              <Navigation className="h-4 w-4 mr-2" /> Send Current Location
             </Button>
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setShowLocationPicker(false)}>Cancel</Button>
+            {/* Live location sharing */}
+            <div className="border rounded-xl p-3 mb-2">
+              <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                Share Live Location
+              </p>
+              <div className="flex gap-2">
+                {[{label: '15 min', mins: 15}, {label: '1 hour', mins: 60}, {label: '8 hours', mins: 480}].map(opt => (
+                  <button
+                    key={opt.mins}
+                    className="flex-1 py-2 text-xs font-medium rounded-lg border border-gray-200 hover:border-[#246BFD] hover:text-[#246BFD] hover:bg-[#246BFD]/5 transition-colors"
+                    onClick={() => {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            const locData = JSON.stringify({
+                              latitude: pos.coords.latitude,
+                              longitude: pos.coords.longitude,
+                              name: 'Live Location',
+                              isLive: true,
+                              duration: opt.mins * 60,
+                              expiresAt: new Date(Date.now() + opt.mins * 60 * 1000).toISOString()
+                            });
+                            if (activeChat) {
+                              socketService.emit('message:send', {
+                                chatId: activeChat.id,
+                                content: locData,
+                                type: 'location',
+                                tempId: `temp-${Date.now()}`,
+                              });
+                            }
+                            setShowLocationPicker(false);
+                          },
+                          () => { showError('Location permission denied'); }
+                        );
+                      }
+                    }}
+                  >
+                    <Clock className="h-3 w-3 mx-auto mb-1" />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Contact Picker Dialog */}
-      {showContactPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
-          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col">
-            <h3 className="font-semibold mb-3">Share Contact</h3>
-            <div className="flex-1 overflow-y-auto space-y-1">
-              {contactPickerUsers.map(contactUser => (
-                <button
-                  key={contactUser.id}
-                  className="w-full px-3 py-2 text-left hover:bg-gray-100 rounded-lg flex items-center gap-3"
-                  onClick={() => {
-                    const contactData = JSON.stringify({
-                      name: contactUser.displayName,
-                      phoneNumber: contactUser.phoneNumber
-                    });
-                    if (activeChat) {
-                      socketService.emit('message:send', {
-                        chatId: activeChat.id,
-                        content: contactData,
-                        type: 'contact',
-                        tempId: `temp-${Date.now()}`,
-                      });
-                    }
-                    setShowContactPicker(false);
-                  }}
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-blue-500 text-white text-xs">
-                      {contactUser.displayName?.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{contactUser.displayName}</p>
-                    <p className="text-xs text-gray-500">{contactUser.phoneNumber}</p>
+      {/* Contact Picker Dialog — enhanced with multi-select and search */}
+      {showContactPicker && (() => {
+        const ContactPickerInner = () => {
+          const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+          const [contactSearch, setContactSearch] = useState('');
+          const filteredContacts = contactPickerUsers.filter(u =>
+            u.displayName.toLowerCase().includes(contactSearch.toLowerCase()) ||
+            u.phoneNumber.includes(contactSearch)
+          );
+          const toggleContact = (id: string) => {
+            setSelectedContacts(prev => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id); else next.add(id);
+              return next;
+            });
+          };
+          const sendContacts = () => {
+            const selected = contactPickerUsers.filter(u => selectedContacts.has(u.id));
+            selected.forEach(contactUser => {
+              const contactData = JSON.stringify({
+                name: contactUser.displayName,
+                phoneNumber: contactUser.phoneNumber
+              });
+              if (activeChat) {
+                socketService.emit('message:send', {
+                  chatId: activeChat.id,
+                  content: contactData,
+                  type: 'contact',
+                  tempId: `temp-${Date.now()}-${contactUser.id}`,
+                });
+              }
+            });
+            setShowContactPicker(false);
+          };
+          return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
+              <div className="bg-white rounded-2xl p-4 w-full max-w-md max-h-[70vh] flex flex-col shadow-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-lg">Share Contacts</h3>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowContactPicker(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Search */}
+                <div className="flex items-center gap-2 mb-3 bg-gray-50 rounded-xl px-3 py-2">
+                  <Search className="h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search contacts..."
+                    className="flex-1 bg-transparent text-sm outline-none"
+                    value={contactSearch}
+                    onChange={e => setContactSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                {/* Selected chips */}
+                {selectedContacts.size > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {contactPickerUsers.filter(u => selectedContacts.has(u.id)).map(u => (
+                      <span key={u.id} className="flex items-center gap-1 bg-[#246BFD]/10 text-[#246BFD] text-xs px-2 py-1 rounded-full">
+                        {u.displayName}
+                        <button onClick={() => toggleContact(u.id)} className="hover:text-red-500"><X className="h-3 w-3" /></button>
+                      </span>
+                    ))}
                   </div>
-                </button>
-              ))}
+                )}
+                {/* Contact list */}
+                <div className="flex-1 overflow-y-auto space-y-1">
+                  {filteredContacts.map(contactUser => (
+                    <button
+                      key={contactUser.id}
+                      className={`w-full px-3 py-2.5 text-left rounded-xl flex items-center gap-3 transition-colors ${
+                        selectedContacts.has(contactUser.id) ? 'bg-[#246BFD]/5 border border-[#246BFD]/20' : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => toggleContact(contactUser.id)}
+                    >
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="bg-[#246BFD] text-white text-xs">
+                          {contactUser.displayName?.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{contactUser.displayName}</p>
+                        <p className="text-xs text-gray-500">{contactUser.phoneNumber}</p>
+                      </div>
+                      {selectedContacts.has(contactUser.id) && (
+                        <CheckCircle2 className="h-5 w-5 text-[#246BFD]" />
+                      )}
+                    </button>
+                  ))}
+                  {filteredContacts.length === 0 && (
+                    <p className="text-center text-gray-400 text-sm py-6">No contacts found</p>
+                  )}
+                </div>
+                {/* Send button */}
+                <div className="flex gap-2 mt-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setShowContactPicker(false)}>Cancel</Button>
+                  <Button
+                    className="flex-1 bg-[#246BFD] hover:bg-[#1A56DB]"
+                    disabled={selectedContacts.size === 0}
+                    onClick={sendContacts}
+                  >
+                    Send {selectedContacts.size > 0 && `(${selectedContacts.size})`}
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end mt-3">
-              <Button variant="outline" onClick={() => setShowContactPicker(false)}>Cancel</Button>
-            </div>
-          </div>
-        </div>
-      )}
+          );
+        };
+        return <ContactPickerInner />;
+      })()}
 
-      {/* GIF Picker Dialog */}
+      {/* GIF Picker Dialog — enhanced with trending/categories */}
       {showGifPicker && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
-          <div className="bg-white rounded-lg p-4 w-full max-w-lg max-h-[70vh] flex flex-col">
+          <div className="bg-white rounded-2xl p-4 w-full max-w-lg max-h-[75vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold">Choose a GIF</h3>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setShowGifPicker(false); setGifSearchQuery(''); setGifResults([]); }}>
+              <h3 className="font-semibold text-lg">GIFs</h3>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setShowGifPicker(false); setGifSearchQuery(''); setGifResults([]); }}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex items-center gap-2 mb-3">
+            {/* Search bar */}
+            <div className="flex items-center gap-2 mb-3 bg-gray-50 rounded-xl px-3 py-2">
               <Search className="h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search GIFs..."
-                className="flex-1 text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#246BFD]/20"
+                placeholder="Search Tenor..."
+                className="flex-1 bg-transparent text-sm outline-none"
                 value={gifSearchQuery}
                 onChange={(e) => {
                   setGifSearchQuery(e.target.value);
-                  // Bug #6 fix: Debounce GIF search to avoid excessive API calls
                   if (gifDebounceRef.current) clearTimeout(gifDebounceRef.current);
                   const query = e.target.value;
                   if (query.trim()) {
@@ -555,31 +676,58 @@ export function ChatDialogs(props: ChatDialogsProps) {
                     gifDebounceRef.current = setTimeout(() => {
                       api.searchGifs(query).then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false));
                     }, 400);
+                  } else {
+                    setIsLoadingGifs(true);
+                    api.getTrendingGifs().then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false));
                   }
                 }}
                 autoFocus
               />
             </div>
+            {/* Category chips */}
+            <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+              {['Trending', 'Reactions', 'Love', 'Happy', 'Sad', 'Angry', 'Dance', 'Celebrate', 'Thumbs Up', 'Facepalm'].map(cat => (
+                <button
+                  key={cat}
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-[#246BFD]/10 hover:text-[#246BFD] rounded-full text-xs font-medium whitespace-nowrap transition-colors"
+                  onClick={() => {
+                    setGifSearchQuery(cat === 'Trending' ? '' : cat);
+                    setIsLoadingGifs(true);
+                    const searchFn = cat === 'Trending' ? api.getTrendingGifs() : api.searchGifs(cat);
+                    searchFn.then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false));
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            {/* GIF grid */}
             <div className="flex-1 overflow-y-auto">
               {isLoadingGifs ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="animate-pulse text-gray-500">Loading GIFs...</div>
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <div className="w-5 h-5 border-2 border-gray-300 border-t-[#246BFD] rounded-full animate-spin" />
+                    Loading GIFs...
+                  </div>
                 </div>
               ) : gifResults.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-sm">No GIFs found. Try a different search.</div>
+                <div className="text-center py-8">
+                  <p className="text-gray-500 text-sm">No GIFs found</p>
+                  <p className="text-gray-400 text-xs mt-1">Try a different search term</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
                   {gifResults.map(gif => (
                     <button
                       key={gif.id}
-                      className="aspect-square overflow-hidden rounded-lg hover:opacity-80 transition-opacity"
+                      className="aspect-square overflow-hidden rounded-xl hover:opacity-80 transition-opacity relative group"
                       onClick={() => {
                         const gifUrl = gif.media_formats?.gif?.url || gif.media_formats?.tinygif?.url || '';
                         if (activeChat && gifUrl) {
                           socketService.emit('message:send', {
                             chatId: activeChat.id,
                             content: gifUrl,
-                            type: 'image',
+                            type: 'gif',
                             tempId: `temp-${Date.now()}`,
                           });
                         }
@@ -594,6 +742,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                     </button>
                   ))}
                 </div>
@@ -720,33 +869,76 @@ export function ChatDialogs(props: ChatDialogsProps) {
         </div>
       )}
 
-      {/* Media Lightbox */}
-      {showMediaLightbox && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60]" onClick={() => setShowMediaLightbox(null)}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full z-10"
-            onClick={() => setShowMediaLightbox(null)}
-          >
-            <X className="h-6 w-6" />
-          </Button>
-          <img
-            src={showMediaLightbox}
-            alt="Media"
-            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <a
-            href={showMediaLightbox}
-            download
-            className="absolute bottom-4 right-4 text-white bg-white/20 hover:bg-white/30 rounded-full p-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Download className="h-5 w-5" />
-          </a>
-        </div>
-      )}
+      {/* Media Lightbox — enhanced with zoom, rotate, share */}
+      {showMediaLightbox && (() => {
+        const LightboxInner = () => {
+          const [zoom, setZoom] = useState(1);
+          const [rotation, setRotation] = useState(0);
+          return (
+            <div className="fixed inset-0 bg-black/95 flex flex-col z-[60]" onClick={() => setShowMediaLightbox(null)}>
+              {/* Top toolbar */}
+              <div className="flex items-center justify-between p-4 z-10" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setZoom(z => Math.max(0.5, z - 0.25))} className="text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors" title="Zoom out">
+                    <ZoomOut className="h-4 w-4" />
+                  </button>
+                  <span className="text-white text-xs font-mono min-w-[40px] text-center">{Math.round(zoom * 100)}%</span>
+                  <button onClick={() => setZoom(z => Math.min(3, z + 0.25))} className="text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors" title="Zoom in">
+                    <ZoomIn className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => setRotation(r => r + 90)} className="text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors" title="Rotate">
+                    <RotateCw className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={showMediaLightbox}
+                    download
+                    className="text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+                    onClick={e => e.stopPropagation()}
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (navigator.share) {
+                        navigator.share({ url: showMediaLightbox || '' }).catch(() => {});
+                      } else {
+                        navigator.clipboard.writeText(showMediaLightbox || '').then(() => {}).catch(() => {});
+                      }
+                    }}
+                    className="text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+                    title="Share"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => setShowMediaLightbox(null)} className="text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors" title="Close">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              {/* Image with zoom and rotation */}
+              <div className="flex-1 flex items-center justify-center overflow-hidden" onClick={e => e.stopPropagation()}>
+                <img
+                  src={showMediaLightbox}
+                  alt="Media"
+                  className="max-w-[90vw] max-h-[80vh] object-contain transition-transform duration-200 cursor-grab"
+                  style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }}
+                  onDoubleClick={() => setZoom(z => z === 1 ? 2 : 1)}
+                  draggable={false}
+                />
+              </div>
+              {/* Bottom hint */}
+              <div className="text-center pb-4" onClick={e => e.stopPropagation()}>
+                <p className="text-white/40 text-xs">Double-click to zoom · Scroll to adjust</p>
+              </div>
+            </div>
+          );
+        };
+        return <LightboxInner />;
+      })()}
 
       {/* Group Info Panel */}
       {showGroupInfo && activeChat?.type === 'group' && (

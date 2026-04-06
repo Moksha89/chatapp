@@ -60,7 +60,20 @@ import {
   AlertCircle,
   WifiOff,
   CalendarClock,
-  Link2
+  Link2,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Crop,
+  Type,
+  Palette,
+  Play,
+  Pause,
+  Volume2,
+  Scissors,
+  Sticker,
+  Navigation,
+  CameraIcon
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -144,6 +157,15 @@ export function ChatArea() {
   const [linkPreviews, setLinkPreviews] = useState<Map<string, { title: string; description: string; image?: string; url: string }>>(new Map());
   // Offline queue indicator
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  // Image quality/compression
+  const [imageQuality, setImageQuality] = useState(85);
+  const [showImageQualityPicker, setShowImageQualityPicker] = useState(false);
+  // Camera capture
+  const [showCameraCapture, setShowCameraCapture] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraMode, setCameraMode] = useState<'photo' | 'video'>('photo');
+  // Sticker picker
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
 
   // Fix #2: Persist mute notifications to localStorage
   useEffect(() => {
@@ -626,6 +648,81 @@ export function ChatArea() {
   const formatDateSeparator = fmtDateSep;
   const shouldShowDateSeparator = showDateSep;
 
+  // Image compression before upload
+  const compressImage = useCallback(async (file: File, quality: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new window.Image();
+      img.onload = () => {
+        // Max dimension 2048px (WhatsApp-style)
+        const maxDim = 2048;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', quality / 100);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  }, []);
+
+  // Enhanced upload with compression option
+  const handleImageUpload = useCallback(async (file: File) => {
+    const quality = imageQuality;
+    if (quality < 100 && file.type.startsWith('image/')) {
+      const compressed = await compressImage(file, quality);
+      uploadAndSendMedia(compressed, 'image');
+    } else {
+      uploadAndSendMedia(file, 'image');
+    }
+  }, [imageQuality, compressImage, uploadAndSendMedia]);
+
+  // Camera capture handler
+  const handleCameraCapture = useCallback(async (mode: 'photo' | 'video') => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: 1280, height: 720 }, 
+        audio: mode === 'video' 
+      });
+      setCameraStream(stream);
+      setShowCameraCapture(true);
+      setCameraMode(mode);
+    } catch {
+      showError('Camera access denied', 'Please allow camera permissions');
+    }
+  }, [showError]);
+
+  const capturePhoto = useCallback(() => {
+    if (!cameraStream) return;
+    const video = document.getElementById('camera-preview') as HTMLVideoElement;
+    if (!video) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    canvas.toBlob(async (blob) => {
+      if (blob) {
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        cameraStream.getTracks().forEach(t => t.stop());
+        setCameraStream(null);
+        setShowCameraCapture(false);
+        handleImageUpload(file);
+      }
+    }, 'image/jpeg', 0.92);
+  }, [cameraStream, handleImageUpload]);
+
   const renderMediaContent = (message: {
     type: string;
     content?: string;
@@ -633,6 +730,8 @@ export function ChatArea() {
     mediaType?: string;
     mediaName?: string;
     mediaSize?: number;
+    mediaDuration?: number;
+    isViewOnce?: boolean;
   }) => {
     const baseUrl = import.meta.env.VITE_API_URL || '';
     const mediaUrl = message.mediaUrl ? `${baseUrl}${message.mediaUrl}` : '';
@@ -640,47 +739,127 @@ export function ChatArea() {
     switch (message.type) {
       case 'image':
         return (
-          <div className="max-w-xs">
-            <img 
-              src={mediaUrl} 
-              alt={message.mediaName || 'Image'} 
-              className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setShowMediaLightbox(mediaUrl)}
-            />
+          <div className="max-w-xs relative group">
+            {message.isViewOnce ? (
+              <div className="w-48 h-48 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:from-gray-300 hover:to-gray-400 transition-all" onClick={() => setShowMediaLightbox(mediaUrl)}>
+                <Eye className="h-8 w-8 text-gray-500 mb-2" />
+                <span className="text-xs text-gray-600 font-medium">View once photo</span>
+                <span className="text-[10px] text-gray-400 mt-1">Tap to open</span>
+              </div>
+            ) : (
+              <>
+                <img 
+                  src={mediaUrl} 
+                  alt={message.mediaName || 'Image'} 
+                  className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setShowMediaLightbox(mediaUrl)}
+                  loading="lazy"
+                />
+                {/* Image overlay actions */}
+                <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <a href={mediaUrl} download={message.mediaName} className="bg-black/50 text-white rounded-full p-1.5 hover:bg-black/70" onClick={e => e.stopPropagation()}>
+                    <Download className="h-3 w-3" />
+                  </a>
+                </div>
+                {/* File size badge */}
+                {message.mediaSize && (
+                  <span className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded-full">{formatFileSize(message.mediaSize)}</span>
+                )}
+              </>
+            )}
           </div>
         );
       case 'video':
       case 'video-note':
         return (
-          <div className={message.type === 'video-note' ? 'w-48 h-48 rounded-full overflow-hidden' : 'max-w-xs'}>
-            <video 
-              src={mediaUrl} 
-              controls 
-              className={message.type === 'video-note' ? 'w-full h-full object-cover' : 'rounded-lg max-w-full'}
-            />
+          <div className={`relative group ${message.type === 'video-note' ? 'w-48 h-48 rounded-full overflow-hidden' : 'max-w-xs'}`}>
+            {message.isViewOnce ? (
+              <div className="w-48 h-48 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:from-gray-300 hover:to-gray-400 transition-all">
+                <Video className="h-8 w-8 text-gray-500 mb-2" />
+                <span className="text-xs text-gray-600 font-medium">View once video</span>
+                <span className="text-[10px] text-gray-400 mt-1">Tap to open</span>
+              </div>
+            ) : (
+              <>
+                <video 
+                  src={mediaUrl} 
+                  controls 
+                  preload="metadata"
+                  className={message.type === 'video-note' ? 'w-full h-full object-cover' : 'rounded-lg max-w-full'}
+                />
+                {/* Duration & size overlay */}
+                {(message.mediaDuration || message.mediaSize) && message.type !== 'video-note' && (
+                  <div className="absolute bottom-8 left-2 flex gap-2">
+                    {message.mediaDuration && <span className="bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">{Math.floor(message.mediaDuration / 60)}:{String(Math.floor(message.mediaDuration % 60)).padStart(2, '0')}</span>}
+                    {message.mediaSize && <span className="bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">{formatFileSize(message.mediaSize)}</span>}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         );
-      case 'audio':
+      case 'audio': {
+        const AudioPlayer = () => {
+          const [playbackRate, setPlaybackRate] = useState(1);
+          const audioRef = useRef<HTMLAudioElement>(null);
+          const rates = [1, 1.5, 2];
+          const cycleRate = () => {
+            const nextIdx = (rates.indexOf(playbackRate) + 1) % rates.length;
+            const newRate = rates[nextIdx];
+            setPlaybackRate(newRate);
+            if (audioRef.current) audioRef.current.playbackRate = newRate;
+          };
+          return (
+            <div className="flex items-center gap-2 min-w-[220px] bg-white/20 rounded-xl px-3 py-2">
+              <audio ref={audioRef} src={mediaUrl} controls className="w-full h-8" style={{ minWidth: '150px' }} />
+              <button onClick={cycleRate} className="text-[10px] font-bold bg-gray-200 hover:bg-gray-300 rounded-full px-2 py-1 whitespace-nowrap transition-colors" title="Playback speed">
+                {playbackRate}x
+              </button>
+            </div>
+          );
+        };
+        return <AudioPlayer />;
+      }
+      case 'sticker':
         return (
-          <div className="flex items-center gap-3 min-w-[200px]">
-            <audio src={mediaUrl} controls className="w-full h-10" />
+          <div className="w-32 h-32">
+            <img src={mediaUrl} alt="Sticker" className="w-full h-full object-contain" />
           </div>
         );
-      case 'file':
+      case 'gif':
+        return (
+          <div className="max-w-xs">
+            <img src={mediaUrl || message.content} alt="GIF" className="rounded-lg max-w-full h-auto" loading="lazy" />
+          </div>
+        );
+      case 'file': {
+        const ext = (message.mediaName || '').split('.').pop()?.toLowerCase() || '';
+        const getFileIcon = () => {
+          if (['pdf'].includes(ext)) return <FileText className="h-8 w-8 text-red-500" />;
+          if (['doc','docx'].includes(ext)) return <FileText className="h-8 w-8 text-blue-600" />;
+          if (['xls','xlsx','csv'].includes(ext)) return <FileText className="h-8 w-8 text-green-600" />;
+          if (['ppt','pptx'].includes(ext)) return <FileText className="h-8 w-8 text-orange-500" />;
+          if (['zip','rar','7z','tar','gz'].includes(ext)) return <FileDown className="h-8 w-8 text-yellow-600" />;
+          return <FileText className="h-8 w-8 text-gray-500" />;
+        };
         return (
           <a 
             href={mediaUrl} 
             download={message.mediaName}
-            className="flex items-center gap-3 p-3 bg-white/50 rounded-lg hover:bg-white/70 transition-colors"
+            className="flex items-center gap-3 p-3 bg-white/50 rounded-xl hover:bg-white/70 transition-colors min-w-[200px]"
           >
-            <FileText className="h-8 w-8 text-gray-500" />
+            {getFileIcon()}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{message.mediaName}</p>
-              <p className="text-xs text-gray-500">{formatFileSize(message.mediaSize || 0)}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold text-gray-400">{ext}</span>
+                <span className="text-[10px] text-gray-400">{formatFileSize(message.mediaSize || 0)}</span>
+              </div>
             </div>
-            <Download className="h-5 w-5 text-gray-400" />
+            <Download className="h-5 w-5 text-gray-400 hover:text-[#246BFD] transition-colors" />
           </a>
         );
+      }
       default:
         return <p className="text-sm break-words">{message.content}</p>;
     }
@@ -1274,7 +1453,13 @@ export function ChatArea() {
               </Button>
               
               {showAttachMenu && (
-                <div className="absolute bottom-12 left-0 bg-white rounded-2xl shadow-xl p-2 flex flex-col gap-1 min-w-[170px] z-10 attach-menu-enter border border-gray-100">
+                <div className="absolute bottom-12 left-0 bg-white rounded-2xl shadow-xl p-2 flex flex-col gap-1 min-w-[180px] z-10 attach-menu-enter border border-gray-100 max-h-[400px] overflow-y-auto">
+                  {/* Image quality selector */}
+                  <div className="px-3 py-1.5 flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400 font-medium">Image quality: {imageQuality}%</span>
+                    <input type="range" min={20} max={100} step={5} value={imageQuality} onChange={e => setImageQuality(Number(e.target.value))} className="w-16 h-1 accent-[#246BFD]" />
+                  </div>
+                  <div className="h-px bg-gray-100" />
                   <button
                     onClick={() => imageInputRef.current?.click()}
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
@@ -1282,7 +1467,10 @@ export function ChatArea() {
                     <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
                       <Image className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-sm">Photo</span>
+                    <div>
+                      <span className="text-sm">Photo</span>
+                      <span className="text-[10px] text-gray-400 block">Auto-compressed</span>
+                    </div>
                   </button>
                   <button
                     onClick={() => videoInputRef.current?.click()}
@@ -1294,14 +1482,45 @@ export function ChatArea() {
                     <span className="text-sm">Video</span>
                   </button>
                   <button
+                    onClick={() => { setShowAttachMenu(false); handleCameraCapture('photo'); }}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
+                  >
+                    <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center">
+                      <Camera className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm">Camera</span>
+                  </button>
+                  <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
                   >
                     <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                       <FileText className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-sm">Document</span>
+                    <div>
+                      <span className="text-sm">Document</span>
+                      <span className="text-[10px] text-gray-400 block">Up to 100MB</span>
+                    </div>
                   </button>
+                  <button
+                    onClick={() => { setShowAttachMenu(false); setShowStickerPicker(true); }}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
+                  >
+                    <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+                      <Sticker className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm">Sticker</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowAttachMenu(false); setShowGifPicker(true); setIsLoadingGifs(true); api.getTrendingGifs().then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false)); }}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
+                  >
+                    <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center">
+                      <Smile className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm">GIF</span>
+                  </button>
+                  <div className="h-px bg-gray-100" />
                   <button
                     onClick={() => {
                       setShowAttachMenu(false);
@@ -1341,15 +1560,6 @@ export function ChatArea() {
                     </div>
                     <span className="text-sm">Contact</span>
                   </button>
-                  <button
-                    onClick={() => { setShowAttachMenu(false); setShowGifPicker(true); setIsLoadingGifs(true); api.getTrendingGifs().then(r => { setGifResults(r); setIsLoadingGifs(false); }).catch(() => setIsLoadingGifs(false)); }}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg text-left"
-                  >
-                    <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center">
-                      <Smile className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="text-sm">GIF</span>
-                  </button>
                 </div>
               )}
             </div>
@@ -1361,7 +1571,14 @@ export function ChatArea() {
               accept="image/*"
               multiple
               className="hidden"
-              onChange={(e) => handleFileSelect(e, 'image')}
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                  Array.from(files).forEach(file => handleImageUpload(file));
+                }
+                e.target.value = '';
+                setShowAttachMenu(false);
+              }}
             />
             <input
               ref={videoInputRef}
@@ -1578,6 +1795,74 @@ export function ChatArea() {
       )}
 
       {/* All dialogs extracted to ChatDialogs component */}
+      {/* Camera Capture Dialog */}
+      {showCameraCapture && cameraStream && (
+        <div className="fixed inset-0 bg-black z-[70] flex flex-col">
+          <div className="flex items-center justify-between p-4">
+            <h3 className="text-white font-semibold text-lg">Camera</h3>
+            <div className="flex items-center gap-3">
+              <div className="flex bg-white/20 rounded-full p-1">
+                <button onClick={() => setCameraMode('photo')} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${cameraMode === 'photo' ? 'bg-white text-black' : 'text-white'}`}>Photo</button>
+                <button onClick={() => setCameraMode('video')} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${cameraMode === 'video' ? 'bg-white text-black' : 'text-white'}`}>Video</button>
+              </div>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 rounded-full" onClick={() => { cameraStream.getTracks().forEach(t => t.stop()); setCameraStream(null); setShowCameraCapture(false); }}>
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <video id="camera-preview" autoPlay playsInline muted className="max-w-full max-h-full rounded-lg" ref={el => { if (el && cameraStream) el.srcObject = cameraStream; }} />
+          </div>
+          <div className="flex items-center justify-center p-6 gap-4">
+            <button onClick={capturePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-transparent hover:bg-white/20 transition-colors flex items-center justify-center">
+              <div className={`w-12 h-12 rounded-full ${cameraMode === 'photo' ? 'bg-white' : 'bg-red-500'}`} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sticker Picker Dialog */}
+      {showStickerPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-4 w-full max-w-md max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-lg">Stickers</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowStickerPicker(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+              {['Love', 'Funny', 'Greetings', 'Animals', 'Food', 'Sports'].map(pack => (
+                <button key={pack} className="px-3 py-1.5 bg-gray-100 hover:bg-[#246BFD]/10 hover:text-[#246BFD] rounded-full text-xs font-medium whitespace-nowrap transition-colors">{pack}</button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="grid grid-cols-4 gap-3 p-2">
+                {['😀','😍','🥰','😎','🤩','😇','🥳','🤗','👋','👍','👏','🎉','❤️','🔥','⭐','🌈','🦄','🐱','🐶','🌸','🎂','🍕','🎵','💎','🚀','🎯','💪','🏆','🌟','☀️','🌙','💫'].map((sticker, i) => (
+                  <button
+                    key={i}
+                    className="w-16 h-16 flex items-center justify-center text-3xl hover:bg-gray-100 rounded-xl transition-colors"
+                    onClick={() => {
+                      if (activeChat) {
+                        socketService.emit('message:send', {
+                          chatId: activeChat.id,
+                          content: sticker,
+                          type: 'sticker',
+                          tempId: `temp-${Date.now()}`,
+                        });
+                      }
+                      setShowStickerPicker(false);
+                    }}
+                  >
+                    {sticker}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ChatDialogs
         activeChat={activeChat}
         userId={user?.id || ''}
