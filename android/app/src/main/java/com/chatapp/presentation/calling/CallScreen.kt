@@ -42,12 +42,16 @@ fun CallScreen(
     var isConnected by remember { mutableStateOf(false) }
     var callState by remember { mutableStateOf(if (isIncoming) "ringing" else "connecting") }
 
-    // Simulate call connection
+    // Show "User unavailable" after timeout instead of fake connecting
     LaunchedEffect(callState) {
         if (callState == "connecting") {
-            kotlinx.coroutines.delay(2000)
-            callState = "connected"
-            isConnected = true
+            kotlinx.coroutines.delay(8000)
+            if (!isConnected) {
+                callState = "unavailable"
+            }
+        } else if (callState == "unavailable") {
+            kotlinx.coroutines.delay(3000)
+            onEndCall()
         }
     }
 
@@ -222,11 +226,12 @@ fun CallScreen(
                     Text(
                         text = when {
                             isIncoming && !isConnected -> "Incoming ${callType} call..."
-                            callState == "connecting" -> "Connecting..."
+                            callState == "unavailable" -> "User unavailable"
+                            callState == "connecting" -> "Calling..."
                             isConnected -> formatDuration(callDuration)
                             else -> "Calling..."
                         },
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = if (callState == "unavailable") Color(0xFFFF6B6B) else Color.White.copy(alpha = 0.7f),
                         fontSize = 16.sp
                     )
 

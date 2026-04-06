@@ -35,6 +35,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
 import android.net.Uri
 import android.provider.MediaStore
 import android.widget.Toast
@@ -122,6 +123,22 @@ fun ChatScreen(
     // Load messages when screen opens
     LaunchedEffect(chatId) {
         viewModel.loadMessages(chatId, currentUserId)
+    }
+
+    // Play notification sound when new messages arrive from others
+    val previousMessageCount = remember { mutableIntStateOf(uiState.messages.size) }
+    LaunchedEffect(uiState.messages.size) {
+        if (uiState.messages.size > previousMessageCount.intValue && previousMessageCount.intValue > 0) {
+            val lastMessage = uiState.messages.lastOrNull()
+            if (lastMessage != null && lastMessage.senderId != currentUserId) {
+                try {
+                    val notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    val ringtone = RingtoneManager.getRingtone(context, notificationUri)
+                    ringtone?.play()
+                } catch (_: Exception) {}
+            }
+        }
+        previousMessageCount.intValue = uiState.messages.size
     }
 
     // Show error snackbar
@@ -623,7 +640,7 @@ fun MessageBubble(
                     bottomEnd = if (isOwn) 0.dp else 12.dp
                 ),
                 color = if (message.isDeleted) Color.LightGray.copy(alpha = 0.5f)
-                        else if (isOwn) Color(0xFFE8F0FE) else Color.White,
+                        else if (isOwn) Color(0xFF246BFD) else Color.White,
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .combinedClickable(
@@ -631,16 +648,21 @@ fun MessageBubble(
                         onLongClick = onLongPress
                     )
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                     if (message.isDeleted) {
                         Text(
                             text = "This message was deleted",
                             fontStyle = FontStyle.Italic,
-                            color = Color.Gray
+                            color = if (isOwn) Color.White.copy(alpha = 0.7f) else Color.Gray
                         )
                     } else {
-                        Text(text = message.content ?: "")
+                        Text(
+                            text = message.content ?: "",
+                            color = if (isOwn) Color.White else Color(0xFF1A1A2E),
+                            fontSize = 15.sp
+                        )
                     }
+                    Spacer(modifier = Modifier.height(2.dp))
                     Row(
                         modifier = Modifier.align(Alignment.End),
                         verticalAlignment = Alignment.CenterVertically
@@ -649,18 +671,18 @@ fun MessageBubble(
                             Text(
                                 text = "edited",
                                 fontSize = 10.sp,
-                                color = Color.Gray,
+                                color = if (isOwn) Color.White.copy(alpha = 0.6f) else Color.Gray,
                                 fontStyle = FontStyle.Italic
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                         }
                         Text(
                             text = timeString,
-                            fontSize = 11.sp,
-                            color = Color.Gray
+                            fontSize = 10.sp,
+                            color = if (isOwn) Color.White.copy(alpha = 0.6f) else Color.Gray
                         )
                         if (isOwn) {
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
                             Icon(
                                 imageVector = when (message.status) {
                                     MessageStatus.READ -> Icons.Default.DoneAll
@@ -668,8 +690,8 @@ fun MessageBubble(
                                     else -> Icons.Default.Done
                                 },
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = if (message.status == MessageStatus.READ) Color(0xFF34B7F1) else Color.Gray
+                                modifier = Modifier.size(14.dp),
+                                tint = if (message.status == MessageStatus.READ) Color(0xFF90CAF9) else Color.White.copy(alpha = 0.6f)
                             )
                         }
                     }

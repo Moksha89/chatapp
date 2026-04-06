@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,8 +34,79 @@ fun UserProfileScreen(
 ) {
     var isMuted by remember { mutableStateOf(false) }
     var isBlocked by remember { mutableStateOf(false) }
+    var showBlockDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var blockActionDone by remember { mutableStateOf(false) }
+    var reportActionDone by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Block confirmation dialog
+    if (showBlockDialog) {
+        AlertDialog(
+            onDismissRequest = { showBlockDialog = false },
+            title = { Text(if (isBlocked) "Unblock $chatName?" else "Block $chatName?") },
+            text = { 
+                Text(
+                    if (isBlocked) "You will be able to receive messages from $chatName again."
+                    else "Blocked contacts can no longer send you messages or call you."
+                ) 
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    isBlocked = !isBlocked
+                    blockActionDone = true
+                    showBlockDialog = false
+                    onBlock()
+                }) {
+                    Text(if (isBlocked) "Unblock" else "Block", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Report confirmation dialog
+    if (showReportDialog) {
+        AlertDialog(
+            onDismissRequest = { showReportDialog = false },
+            title = { Text("Report $chatName?") },
+            text = { Text("This contact will be reported for inappropriate behavior. You can also block them.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    reportActionDone = true
+                    showReportDialog = false
+                }) {
+                    Text("Report", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReportDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Show snackbar for actions
+    LaunchedEffect(blockActionDone) {
+        if (blockActionDone) {
+            snackbarHostState.showSnackbar(if (isBlocked) "$chatName blocked" else "$chatName unblocked")
+            blockActionDone = false
+        }
+    }
+    LaunchedEffect(reportActionDone) {
+        if (reportActionDone) {
+            snackbarHostState.showSnackbar("$chatName reported")
+            reportActionDone = false
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Contact Info") },
@@ -286,10 +358,7 @@ fun UserProfileScreen(
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        TextButton(onClick = {
-                            isBlocked = !isBlocked
-                            onBlock()
-                        }) {
+                        TextButton(onClick = { showBlockDialog = true }) {
                             Text(
                                 text = if (isBlocked) "Unblock $chatName" else "Block $chatName",
                                 color = Color.Red,
@@ -309,7 +378,7 @@ fun UserProfileScreen(
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        TextButton(onClick = { }) {
+                        TextButton(onClick = { showReportDialog = true }) {
                             Text(
                                 text = "Report $chatName",
                                 color = Color.Red,
