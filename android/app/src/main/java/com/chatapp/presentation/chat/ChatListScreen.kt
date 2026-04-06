@@ -202,6 +202,7 @@ fun ChatListScreen(
                     selectedTabIndex = selectedTab,
                     containerColor = Color(0xFF246BFD),
                     contentColor = Color.White,
+                    modifier = Modifier.background(Color(0xFF246BFD)),
                     indicator = @Composable { tabPositions ->
                         TabRowDefaults.Indicator(
                             modifier = Modifier.fillMaxWidth(),
@@ -578,13 +579,15 @@ fun ChatOptionsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White
+            color = Color.White,
+            contentColor = Color(0xFF1A1A2E)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = chat.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
+                    color = Color(0xFF1A1A2E),
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -598,7 +601,7 @@ fun ChatOptionsDialog(
                 ) {
                     Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF246BFD))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (chat.isPinned) "Unpin Chat" else "Pin Chat")
+                    Text(if (chat.isPinned) "Unpin Chat" else "Pin Chat", color = Color(0xFF1A1A2E))
                 }
 
                 // Label
@@ -611,7 +614,7 @@ fun ChatOptionsDialog(
                 ) {
                     Icon(Icons.Default.Label, contentDescription = null, tint = Color(0xFF4CAF50))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Add Label")
+                    Text("Add Label", color = Color(0xFF1A1A2E))
                 }
 
                 // Mute
@@ -628,7 +631,7 @@ fun ChatOptionsDialog(
                         tint = Color(0xFF607D8B)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (chat.isMuted) "Unmute" else "Mute")
+                    Text(if (chat.isMuted) "Unmute" else "Mute", color = Color(0xFF1A1A2E))
                 }
 
                 // Archive
@@ -641,7 +644,7 @@ fun ChatOptionsDialog(
                 ) {
                     Icon(Icons.Default.Archive, contentDescription = null, tint = Color(0xFF795548))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (chat.isArchived) "Unarchive" else "Archive")
+                    Text(if (chat.isArchived) "Unarchive" else "Archive", color = Color(0xFF1A1A2E))
                 }
 
                 Divider(modifier = Modifier.padding(vertical = 4.dp))
@@ -701,13 +704,15 @@ fun LabelAssignDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White
+            color = Color.White,
+            contentColor = Color(0xFF1A1A2E)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Assign Labels",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
+                    color = Color(0xFF1A1A2E),
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -732,7 +737,7 @@ fun LabelAssignDialog(
                             modifier = Modifier.size(12.dp)
                         ) {}
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(label.name)
+                        Text(label.name, color = Color(0xFF1A1A2E))
                     }
                 }
 
