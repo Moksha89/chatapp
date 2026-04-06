@@ -683,7 +683,7 @@ private fun CountryPickerDialog(
                             )
                         }
                         if (index < filteredCountries.size - 1) {
-                            HorizontalDivider(color = Color(0xFFF0F0F0))
+                            Divider(color = Color(0xFFF0F0F0))
                         }
                     }
                 }
