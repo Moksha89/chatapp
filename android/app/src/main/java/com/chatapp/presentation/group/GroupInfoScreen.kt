@@ -230,7 +230,7 @@ fun GroupInfoScreen(
                     } else {
                         Text(
                             text = groupDescription.ifBlank { "Add group description" },
-                            color = if (groupDescription.isBlank()) Color.Gray else Color.Black,
+                            color = if (groupDescription.isBlank()) Color.Gray else Color.Unspecified,
                             modifier = Modifier.clickable { isEditingDescription = true }
                         )
                     }

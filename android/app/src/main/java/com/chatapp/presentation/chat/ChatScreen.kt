@@ -764,13 +764,15 @@ fun MessageMenuDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White
+            color = Color.White,
+            contentColor = Color(0xFF1A1A2E)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 // Quick reactions row
                 Text(
                     text = "React",
                     fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1A1A2E),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 LazyRow(
@@ -804,7 +806,7 @@ fun MessageMenuDialog(
                 ) {
                     Icon(Icons.Default.Reply, contentDescription = null, tint = Color(0xFF246BFD))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Reply")
+                    Text("Reply", color = Color(0xFF1A1A2E))
                 }
 
                 // Forward
@@ -825,7 +827,7 @@ fun MessageMenuDialog(
                 ) {
                     Icon(Icons.Default.Forward, contentDescription = null, tint = Color(0xFF246BFD))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Forward")
+                    Text("Forward", color = Color(0xFF1A1A2E))
                 }
 
                 // Star
@@ -851,7 +853,7 @@ fun MessageMenuDialog(
                         tint = Color(0xFFFFC107)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (isStarred) "Unstar" else "Star")
+                    Text(if (isStarred) "Unstar" else "Star", color = Color(0xFF1A1A2E))
                 }
 
                 // Copy
@@ -870,7 +872,7 @@ fun MessageMenuDialog(
                 ) {
                     Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color(0xFF607D8B))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Copy")
+                    Text("Copy", color = Color(0xFF1A1A2E))
                 }
                 
                 // Edit (own messages only, within 15 min)
@@ -886,7 +888,7 @@ fun MessageMenuDialog(
                         ) {
                             Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF1A56DB))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Edit")
+                            Text("Edit", color = Color(0xFF1A1A2E))
                         }
                     }
                 }
@@ -918,13 +920,15 @@ fun EditMessageDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White
+            color = Color.White,
+            contentColor = Color(0xFF1A1A2E)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Edit Message",
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    color = Color(0xFF1A1A2E)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
@@ -967,13 +971,15 @@ fun DeleteMessageDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White
+            color = Color.White,
+            contentColor = Color(0xFF1A1A2E)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Delete Message",
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    color = Color(0xFF1A1A2E)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 

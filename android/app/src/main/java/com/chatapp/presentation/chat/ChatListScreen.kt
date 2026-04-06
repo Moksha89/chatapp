@@ -756,7 +756,7 @@ fun LabelAssignDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Done")
+                    Text("Done", color = Color(0xFF246BFD))
                 }
             }
         }
