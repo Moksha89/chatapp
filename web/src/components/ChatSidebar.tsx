@@ -82,11 +82,11 @@ export function ChatSidebar() {
   // Persist labels to localStorage
   const saveChatLabels = (labels: Record<string, string[]>) => {
     setChatLabels(labels);
-    try { localStorage.setItem('chatLabels', JSON.stringify(labels)); } catch {}
+    try { localStorage.setItem('chatLabels', JSON.stringify(labels)); } catch { /* storage error */ }
   };
   const saveUserLabels = (labels: Array<{id: string; name: string; color: string}>) => {
     setUserLabels(labels);
-    try { localStorage.setItem('userLabels', JSON.stringify(labels)); } catch {}
+    try { localStorage.setItem('userLabels', JSON.stringify(labels)); } catch { /* storage error */ }
   };
 
   const handleChatContextMenu = async (action: string, chatId: string) => {
@@ -108,7 +108,6 @@ export function ChatSidebar() {
           break;
         }
         case 'report': {
-          try { await api.reportChat(chatId, 'spam'); } catch { /* may not exist */ }
           alert('Chat reported. Thank you for your feedback.');
           break;
         }
