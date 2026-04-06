@@ -65,6 +65,7 @@ class ChatRepositoryImpl @Inject constructor(
         messageQueueManager.queueMessage(chatId, content, tempId, replyToMessageId)
         
         // Return a pending message immediately for optimistic UI update
+        // Note: senderId is set to empty here - the ViewModel must override it with the actual currentUserId
         return Result.success(Message(
             id = tempId,
             chatId = chatId,

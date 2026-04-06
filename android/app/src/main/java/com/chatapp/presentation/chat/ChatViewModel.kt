@@ -167,21 +167,34 @@ class ChatViewModel @Inject constructor(
     fun sendMessage(content: String, replyToMessageId: String? = null) {
         if (content.isBlank() || currentChatId.isEmpty()) return
         val tempId = UUID.randomUUID().toString()
+        val userId = _uiState.value.currentUserId
         // Send via socket for real-time delivery
         socketManager.sendMessage(currentChatId, content, "text", tempId, replyToMessageId)
+        // Add optimistic message immediately with correct senderId for proper alignment
+        val optimisticMessage = Message(
+            id = tempId,
+            chatId = currentChatId,
+            senderId = userId,
+            content = content,
+            type = MessageType.TEXT,
+            status = MessageStatus.SENDING,
+            createdAt = System.currentTimeMillis(),
+            tempId = tempId,
+            replyToMessageId = replyToMessageId
+        )
+        _uiState.update { state ->
+            state.copy(messages = (state.messages + optimisticMessage).sortedBy { it.createdAt })
+        }
         // Also send via HTTP for persistence
         viewModelScope.launch {
             chatRepository.sendMessage(currentChatId, content, tempId, replyToMessageId)
                 .onSuccess { message ->
+                    // Ensure the server response also has correct senderId
+                    val fixedMessage = if (message.senderId.isEmpty()) message.copy(senderId = userId) else message
                     _uiState.update { state ->
-                        val existing = state.messages.find { it.id == tempId || it.id == message.id }
-                        if (existing != null) {
-                            state.copy(messages = state.messages.map { msg ->
-                                if (msg.id == tempId || msg.id == message.id) message else msg
-                            }.sortedBy { it.createdAt })
-                        } else {
-                            state.copy(messages = (state.messages + message).sortedBy { it.createdAt })
-                        }
+                        state.copy(messages = state.messages.map { msg ->
+                            if (msg.id == tempId || msg.id == fixedMessage.id) fixedMessage.copy(status = MessageStatus.SENT) else msg
+                        }.sortedBy { it.createdAt })
                     }
                 }
                 .onFailure { error ->
