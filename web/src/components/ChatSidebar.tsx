@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
+import { useCall } from '../context/CallContext';
+import type { CallHistoryEntry } from '../context/CallContext';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2, Plus, UserPlus, UsersRound } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2, Plus, UserPlus, UsersRound, Phone, PhoneMissed, Video, Trash, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +32,9 @@ export function ChatSidebar() {
   const { user, logout } = useAuth();
   const { chats, activeChat, selectChat, isLoadingChats, refreshChats, typingUsers, onlineUsers } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
-  const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities' | 'labels'>('all');
+  const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities' | 'labels' | 'calls'>('all');
+  const [callFilter, setCallFilter] = useState<'all' | 'missed' | 'incoming' | 'outgoing'>('all');
+  const { callHistory, clearCallHistory, initiateCall } = useCall();
   const [showNewChat, setShowNewChat] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
@@ -352,7 +356,7 @@ export function ChatSidebar() {
           />
         </div>
         <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-none filter-pills-container" style={{ scrollbarWidth: 'none' }}>
-          {(['all', 'unread', 'groups', 'channels', 'communities', 'labels'] as const).map((filter) => (
+          {(['all', 'unread', 'groups', 'channels', 'communities', 'labels', 'calls'] as const).map((filter) => (
             <button
               key={filter}
               className={`filter-pill px-3 py-1.5 text-xs rounded-full capitalize font-medium whitespace-nowrap flex-shrink-0 transition-all duration-200 ${
@@ -362,14 +366,22 @@ export function ChatSidebar() {
               }`}
               onClick={() => setChatFilter(filter)}
             >
-              {filter === 'labels' ? `Labels` : filter}
+              {filter === 'calls' ? '📞 Calls' : filter === 'labels' ? 'Labels' : filter}
             </button>
           ))}
         </div>
       </div>
 
       <ScrollArea className="flex-1">
-        {isLoadingChats ? (
+        {chatFilter === 'calls' ? (
+          <CallHistoryView
+            callHistory={callHistory}
+            callFilter={callFilter}
+            setCallFilter={setCallFilter}
+            clearCallHistory={clearCallHistory}
+            initiateCall={initiateCall}
+          />
+        ) : isLoadingChats ? (
           <div className="p-3 space-y-3">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex items-center gap-3">
@@ -674,6 +686,161 @@ export function ChatSidebar() {
               >Create</button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Call History View component
+function CallHistoryView({
+  callHistory,
+  callFilter,
+  setCallFilter,
+  clearCallHistory,
+  initiateCall,
+}: {
+  callHistory: CallHistoryEntry[];
+  callFilter: 'all' | 'missed' | 'incoming' | 'outgoing';
+  setCallFilter: (f: 'all' | 'missed' | 'incoming' | 'outgoing') => void;
+  clearCallHistory: () => void;
+  initiateCall: (userId: string, userName: string, callType: 'audio' | 'video') => Promise<void>;
+}) {
+  const filtered = callHistory.filter(entry => {
+    if (callFilter === 'missed') return entry.status === 'missed' || entry.status === 'no-answer';
+    if (callFilter === 'incoming') return entry.direction === 'incoming';
+    if (callFilter === 'outgoing') return entry.direction === 'outgoing';
+    return true;
+  });
+
+  const formatCallDuration = (seconds: number) => {
+    if (seconds === 0) return '';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  };
+
+  const formatCallTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return date.toLocaleDateString([], { weekday: 'short' });
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const getCallIcon = (entry: CallHistoryEntry) => {
+    if (entry.status === 'missed' || entry.status === 'no-answer') {
+      return <PhoneMissed className="w-4 h-4 text-red-500" />;
+    }
+    if (entry.direction === 'incoming') {
+      return <ArrowDownLeft className="w-4 h-4 text-green-500" />;
+    }
+    return <ArrowUpRight className="w-4 h-4 text-blue-500" />;
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Call filter sub-tabs */}
+      <div className="px-3 py-2 flex items-center justify-between border-b border-gray-100">
+        <div className="flex gap-1">
+          {(['all', 'missed', 'incoming', 'outgoing'] as const).map(f => (
+            <button
+              key={f}
+              className={`px-2.5 py-1 text-[11px] rounded-full capitalize font-medium transition-colors ${
+                callFilter === f
+                  ? 'bg-[#246BFD] text-white'
+                  : 'text-gray-500 hover:bg-gray-100'
+              }`}
+              onClick={() => setCallFilter(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        {callHistory.length > 0 && (
+          <button
+            onClick={clearCallHistory}
+            className="text-red-500 hover:text-red-600 p-1 rounded-full hover:bg-red-50 transition-colors"
+            title="Clear call history"
+          >
+            <Trash className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Call entries */}
+      {filtered.length === 0 ? (
+        <div className="p-8 text-center">
+          <Phone className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-500 text-sm font-medium">No call history</p>
+          <p className="text-gray-400 text-xs mt-1">
+            {callFilter === 'all' ? 'Your calls will appear here' : `No ${callFilter} calls`}
+          </p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto">
+          {filtered.map(entry => (
+            <div
+              key={entry.id}
+              className="flex items-center p-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50"
+            >
+              {/* Avatar */}
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#246BFD] to-blue-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-semibold text-sm">
+                  {entry.peerName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+
+              {/* Call info */}
+              <div className="ml-3 flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className={`font-medium text-sm truncate ${
+                    (entry.status === 'missed' || entry.status === 'no-answer') ? 'text-red-600' : 'text-gray-900'
+                  }`}>
+                    {entry.peerName}
+                  </span>
+                  {entry.isGroupCall && (
+                    <Users className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {getCallIcon(entry)}
+                  <span className="text-xs text-gray-500">
+                    {entry.callType === 'video' ? 'Video' : 'Voice'}
+                    {entry.status === 'missed' ? ' · Missed' : ''}
+                    {entry.status === 'no-answer' ? ' · No answer' : ''}
+                    {entry.status === 'rejected' ? ' · Declined' : ''}
+                    {entry.duration > 0 ? ` · ${formatCallDuration(entry.duration)}` : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* Time & callback */}
+              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                <span className="text-[11px] text-gray-400">{formatCallTime(entry.timestamp)}</span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); initiateCall(entry.peerId, entry.peerName, 'audio'); }}
+                    className="w-8 h-8 rounded-full hover:bg-green-50 flex items-center justify-center transition-colors"
+                    title="Voice call"
+                  >
+                    <Phone className="w-4 h-4 text-green-600" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); initiateCall(entry.peerId, entry.peerName, 'video'); }}
+                    className="w-8 h-8 rounded-full hover:bg-blue-50 flex items-center justify-center transition-colors"
+                    title="Video call"
+                  >
+                    <Video className="w-4 h-4 text-[#246BFD]" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
