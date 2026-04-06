@@ -61,19 +61,7 @@ import {
   WifiOff,
   CalendarClock,
   Link2,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-  Crop,
-  Type,
-  Palette,
-  Play,
-  Pause,
-  Volume2,
-  Scissors,
-  Sticker,
-  Navigation,
-  CameraIcon
+  Sticker
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -159,7 +147,6 @@ export function ChatArea() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   // Image quality/compression
   const [imageQuality, setImageQuality] = useState(85);
-  const [showImageQualityPicker, setShowImageQualityPicker] = useState(false);
   // Camera capture
   const [showCameraCapture, setShowCameraCapture] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);

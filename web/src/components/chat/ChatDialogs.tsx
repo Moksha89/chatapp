@@ -17,8 +17,6 @@ import {
   ZoomOut,
   RotateCw,
   Share2,
-  ChevronLeft,
-  ChevronRight,
   Navigation,
   Clock,
   CheckCircle2,
