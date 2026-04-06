@@ -115,7 +115,7 @@ fun QrScannerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -135,7 +135,7 @@ fun QrScannerScreen(
                     imageVector = Icons.Default.QrCodeScanner,
                     contentDescription = null,
                     modifier = Modifier.size(80.dp),
-                    tint = Color(0xFF246BFD)
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
@@ -153,12 +153,12 @@ fun QrScannerScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     onClick = onBack,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A56DB))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Done")
                 }
             } else if (isPairing || isLoading) {
-                CircularProgressIndicator(color = Color(0xFF1A56DB))
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Linking device...",
@@ -169,7 +169,7 @@ fun QrScannerScreen(
                     imageVector = Icons.Default.QrCodeScanner,
                     contentDescription = null,
                     modifier = Modifier.size(80.dp),
-                    tint = Color(0xFF1A56DB)
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
@@ -188,12 +188,12 @@ fun QrScannerScreen(
 
                 if (pairingError != null || errorMessage != null) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
                             text = pairingError ?: errorMessage ?: "",
-                            color = Color(0xFFB71C1C),
+                            color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(16.dp),
                             textAlign = TextAlign.Center
                         )
@@ -216,7 +216,7 @@ fun QrScannerScreen(
                             permissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A56DB)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null)

@@ -237,7 +237,7 @@ fun ChatScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape),
-                                color = Color(0xFF246BFD)
+                                color = MaterialTheme.colorScheme.primary
                             ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
@@ -252,7 +252,7 @@ fun ChatScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(10.dp)
-                                        .background(Color(0xFF4CAF50), CircleShape)
+                                        .background(MaterialTheme.colorScheme.tertiary, CircleShape)
                                         .align(Alignment.BottomEnd)
                                 )
                             }
@@ -283,7 +283,7 @@ fun ChatScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     actionIconContentColor = Color.White
                 ),
@@ -319,7 +319,7 @@ fun ChatScreen(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFF246BFD))
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else {
                 val listState = rememberLazyListState()
@@ -378,14 +378,14 @@ fun ChatScreen(
                             modifier = Modifier
                                 .width(4.dp)
                                 .height(40.dp)
-                                .background(Color(0xFF246BFD))
+                                .background(MaterialTheme.colorScheme.primary)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Reply to",
                                 fontSize = 12.sp,
-                                color = Color(0xFF246BFD),
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
@@ -418,26 +418,26 @@ fun ChatScreen(
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        AttachmentOption(Icons.Default.Image, "Gallery", Color(0xFF4CAF50)) {
+                        AttachmentOption(Icons.Default.Image, "Gallery", MaterialTheme.colorScheme.tertiary) {
                             showAttachMenu = false
                             galleryLauncher.launch("image/*")
                         }
-                        AttachmentOption(Icons.Default.CameraAlt, "Camera", Color(0xFF2196F3)) {
+                        AttachmentOption(Icons.Default.CameraAlt, "Camera", MaterialTheme.colorScheme.primary) {
                             showAttachMenu = false
                             cameraLauncher.launch(null)
                         }
-                        AttachmentOption(Icons.Default.InsertDriveFile, "Document", Color(0xFF9C27B0)) {
+                        AttachmentOption(Icons.Default.InsertDriveFile, "Document", MaterialTheme.colorScheme.secondary) {
                             showAttachMenu = false
                             documentLauncher.launch(arrayOf("*/*"))
                         }
-                        AttachmentOption(Icons.Default.LocationOn, "Location", Color(0xFFFF5722)) {
+                        AttachmentOption(Icons.Default.LocationOn, "Location", MaterialTheme.colorScheme.secondary) {
                             showAttachMenu = false
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q="))
                             try { context.startActivity(intent) } catch (_: Exception) {
                                 Toast.makeText(context, "No map app found", Toast.LENGTH_SHORT).show()
                             }
                         }
-                        AttachmentOption(Icons.Default.Person, "Contact", Color(0xFF607D8B)) {
+                        AttachmentOption(Icons.Default.Person, "Contact", MaterialTheme.colorScheme.onSurfaceVariant) {
                             showAttachMenu = false
                             val intent = Intent(Intent.ACTION_PICK, android.provider.ContactsContract.Contacts.CONTENT_URI)
                             try { context.startActivity(intent) } catch (_: Exception) {
@@ -482,7 +482,7 @@ fun ChatScreen(
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedTextColor = MaterialTheme.colorScheme.onSurface,
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            cursorColor = Color(0xFF246BFD),
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         )
@@ -501,7 +501,7 @@ fun ChatScreen(
                                 showEmojiPicker = false
                             }
                         },
-                        containerColor = Color(0xFF246BFD),
+                        containerColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
@@ -601,7 +601,7 @@ fun SwipeableMessageBubble(
                 Icon(
                     Icons.Default.Reply,
                     contentDescription = "Reply",
-                    tint = Color(0xFF246BFD).copy(alpha = (animatedOffsetX / swipeThreshold).coerceIn(0f, 1f)),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = (animatedOffsetX / swipeThreshold).coerceIn(0f, 1f)),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -648,7 +648,7 @@ fun MessageBubble(
                     bottomEnd = if (isOwn) 0.dp else 12.dp
                 ),
                 color = if (message.isDeleted) Color.LightGray.copy(alpha = 0.5f)
-                        else if (isOwn) Color(0xFF246BFD) else MaterialTheme.colorScheme.surface,
+                        else if (isOwn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .combinedClickable(
@@ -699,7 +699,7 @@ fun MessageBubble(
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = if (message.status == MessageStatus.READ) Color(0xFF90CAF9) else Color.White.copy(alpha = 0.6f)
+                                tint = if (message.status == MessageStatus.READ) MaterialTheme.colorScheme.primaryContainer else Color.White.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -804,7 +804,7 @@ fun MessageMenuDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Reply, contentDescription = null, tint = Color(0xFF246BFD))
+                    Icon(Icons.Default.Reply, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("Reply", color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -825,7 +825,7 @@ fun MessageMenuDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Forward, contentDescription = null, tint = Color(0xFF246BFD))
+                    Icon(Icons.Default.Forward, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("Forward", color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -870,7 +870,7 @@ fun MessageMenuDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color(0xFF607D8B))
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("Copy", color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -886,7 +886,7 @@ fun MessageMenuDialog(
                                 .padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF1A56DB))
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text("Edit", color = MaterialTheme.colorScheme.onSurface)
                         }
@@ -950,7 +950,7 @@ fun EditMessageDialog(
                         onClick = onSave,
                         enabled = content.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF246BFD)
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
                         Text("Save")

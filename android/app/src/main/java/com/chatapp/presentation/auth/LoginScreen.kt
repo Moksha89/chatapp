@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,7 +21,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -80,9 +80,7 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState.isLoggedIn) {
-        if (uiState.isLoggedIn) {
-            onLoginSuccess()
-        }
+        if (uiState.isLoggedIn) onLoginSuccess()
     }
 
     var selectedCountry by remember { mutableStateOf(countries[0]) }
@@ -93,60 +91,69 @@ fun LoginScreen(
 
     val photoLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        profilePhotoUri = uri
-    }
+    ) { uri: Uri? -> profilePhotoUri = uri }
 
     if (showCountryPicker) {
         CountryPickerDialog(
             countries = countries,
             onDismiss = { showCountryPicker = false },
-            onSelect = { country ->
-                selectedCountry = country
-                showCountryPicker = false
-            }
+            onSelect = { selectedCountry = it; showCountryPicker = false }
         )
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        when (uiState.step) {
-                            AuthStep.PHONE -> "Login"
-                            AuthStep.OTP -> "Login"
-                            AuthStep.REGISTER -> "Register"
-                        },
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF246BFD),
-                    titleContentColor = Color.White
-                ),
-                navigationIcon = {
-                    if (uiState.step != AuthStep.PHONE) {
-                        IconButton(onClick = { viewModel.goBack() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                        }
-                    }
-                }
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            when (uiState.step) {
-                AuthStep.PHONE -> {
-                    PhoneInputStep(
+            // Top header bar
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (uiState.step != AuthStep.PHONE) {
+                        IconButton(onClick = { viewModel.goBack() }) {
+                            Icon(Icons.Default.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(48.dp))
+                    }
+                    Text(
+                        text = when (uiState.step) {
+                            AuthStep.PHONE -> "Enter your phone number"
+                            AuthStep.OTP -> "Verify your number"
+                            AuthStep.REGISTER -> "Profile info"
+                        },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+            }
+
+            // Content
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                when (uiState.step) {
+                    AuthStep.PHONE -> PhoneInputStep(
                         phoneNumber = localPhone,
                         onPhoneChange = { localPhone = it },
                         selectedCountry = selectedCountry,
@@ -161,10 +168,7 @@ fun LoginScreen(
                             viewModel.sendOtp()
                         }
                     )
-                }
-
-                AuthStep.OTP -> {
-                    OtpInputStep(
+                    AuthStep.OTP -> OtpInputStep(
                         otp = uiState.otp,
                         onOtpChange = { if (it.length <= 6) viewModel.updateOtp(it) },
                         phoneNumber = uiState.phoneNumber,
@@ -174,10 +178,7 @@ fun LoginScreen(
                         onResend = { viewModel.sendOtp() },
                         onChangeNumber = { viewModel.goBack() }
                     )
-                }
-
-                AuthStep.REGISTER -> {
-                    RegisterStep(
+                    AuthStep.REGISTER -> RegisterStep(
                         displayName = uiState.displayName,
                         onNameChange = { viewModel.updateDisplayName(it) },
                         isBusiness = uiState.isBusiness,
@@ -194,6 +195,7 @@ fun LoginScreen(
     }
 }
 
+// ── Phone Step ──────────────────────────────────────────────────────
 @Composable
 private fun PhoneInputStep(
     phoneNumber: String,
@@ -206,67 +208,67 @@ private fun PhoneInputStep(
     error: String?,
     onSendOtp: () -> Unit
 ) {
-    Spacer(modifier = Modifier.height(32.dp))
-
-    Box(
-        modifier = Modifier
-            .size(120.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFE8F0FE)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Phone,
-            contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = Color(0xFF246BFD)
-        )
-    }
-
     Spacer(modifier = Modifier.height(24.dp))
 
     Text(
-        text = "Enter your\nmobile phone",
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
+        text = "Abhi will need to verify your phone number. " +
+               "Carrier charges may apply.",
+        fontSize = 14.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
-        lineHeight = 28.sp
+        lineHeight = 20.sp
     )
 
-    Spacer(modifier = Modifier.height(32.dp))
+    Spacer(modifier = Modifier.height(24.dp))
 
+    // Country selector
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCountryClick() },
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = selectedCountry.flag, fontSize = 22.sp)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = selectedCountry.name,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                Icons.Default.ArrowDropDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // Phone input row
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            modifier = Modifier
-                .clickable { onCountryClick() }
-                .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0xFFF7F8FC),
-            border = ButtonDefaults.outlinedButtonBorder
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = selectedCountry.flag, fontSize = 20.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = selectedCountry.dialCode,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Icon(
-                    Icons.Default.ArrowDropDown,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = selectedCountry.dialCode,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+            )
         }
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -274,18 +276,16 @@ private fun PhoneInputStep(
         OutlinedTextField(
             value = phoneNumber,
             onValueChange = { onPhoneChange(it.filter { c -> c.isDigit() }) },
-            modifier = Modifier
-                .weight(1f)
-                .height(56.dp),
-            placeholder = { Text("Phone number", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            modifier = Modifier.weight(1f),
+            placeholder = { Text("Phone number") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF246BFD),
-                unfocusedBorderColor = Color(0xFFE0E0E0),
-                focusedContainerColor = Color(0xFFF7F8FC),
-                unfocusedContainerColor = Color(0xFFF7F8FC)
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             )
         )
     }
@@ -301,14 +301,18 @@ private fun PhoneInputStep(
         Checkbox(
             checked = acceptedTerms,
             onCheckedChange = onTermsChange,
-            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF246BFD))
+            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
         )
-        Text(text = "I accept to Conditions", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = "I agree to the Terms of Service and Privacy Policy",
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 
     error?.let {
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = it, color = Color(0xFFD32F2F), fontSize = 13.sp)
+        Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -318,18 +322,23 @@ private fun PhoneInputStep(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF246BFD)),
-        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(28.dp),
         enabled = !isLoading && phoneNumber.isNotBlank() && acceptedTerms
     ) {
         if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp
+            )
         } else {
-            Text("Send OTP", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text("Next", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
+// ── OTP Step ────────────────────────────────────────────────────────
 @Composable
 private fun OtpInputStep(
     otp: String,
@@ -341,48 +350,27 @@ private fun OtpInputStep(
     onResend: () -> Unit,
     onChangeNumber: () -> Unit
 ) {
-    Spacer(modifier = Modifier.height(32.dp))
-
-    Box(
-        modifier = Modifier
-            .size(120.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFE8F0FE)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Lock,
-            contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = Color(0xFF246BFD)
-        )
-    }
-
     Spacer(modifier = Modifier.height(24.dp))
 
     Text(
-        text = "Enter OTP Code",
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
-    )
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Text(
-        text = "Code sent to $phoneNumber",
+        text = "Waiting to automatically detect an SMS\nsent to $phoneNumber.",
         fontSize = 14.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
+        textAlign = TextAlign.Center,
+        lineHeight = 20.sp
     )
 
-    Spacer(modifier = Modifier.height(32.dp))
+    TextButton(onClick = onChangeNumber) {
+        Text("Wrong number?", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
 
     OtpInputRow(otpValue = otp, onOtpChange = onOtpChange, otpLength = 6)
 
     error?.let {
         Spacer(modifier = Modifier.height(12.dp))
-        Text(text = it, color = Color(0xFFD32F2F), fontSize = 13.sp)
+        Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -392,37 +380,36 @@ private fun OtpInputStep(
         Text(
             text = "Resend",
             fontSize = 14.sp,
-            color = Color(0xFF246BFD),
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.clickable { onResend() }
         )
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(32.dp))
 
     Button(
         onClick = onVerify,
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF246BFD)),
-        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(28.dp),
         enabled = !isLoading && otp.length == 6
     ) {
         if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp
+            )
         } else {
             Text("Verify", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
     }
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    TextButton(onClick = onChangeNumber) {
-        Text("Change Phone Number", color = Color(0xFF246BFD))
-    }
 }
 
+// ── OTP Input Row ───────────────────────────────────────────────────
 @Composable
 private fun OtpInputRow(
     otpValue: String,
@@ -436,9 +423,7 @@ private fun OtpInputRow(
         onValueChange = { newValue ->
             if (newValue.length <= otpLength && newValue.all { it.isDigit() }) {
                 onOtpChange(newValue)
-                if (newValue.length == otpLength) {
-                    focusManager.clearFocus()
-                }
+                if (newValue.length == otpLength) focusManager.clearFocus()
             }
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -457,29 +442,45 @@ private fun OtpInputRow(
                             .height(56.dp)
                             .border(
                                 width = if (isFocused) 2.dp else 1.dp,
-                                color = if (isFocused) Color(0xFF246BFD)
-                                else if (char != null) Color(0xFF246BFD).copy(alpha = 0.5f)
-                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                color = when {
+                                    isFocused -> MaterialTheme.colorScheme.primary
+                                    char != null -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                },
                                 shape = RoundedCornerShape(12.dp)
                             )
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                RoundedCornerShape(12.dp)
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = char?.toString() ?: "",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = TextAlign.Center
-                        )
+                        if (char != null) {
+                            Text(
+                                text = char.toString(),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                        } else if (isFocused) {
+                            Divider(
+                                modifier = Modifier
+                                    .width(20.dp)
+                                    .padding(top = 2.dp),
+                                thickness = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
         },
-        cursorBrush = SolidColor(Color(0xFF246BFD))
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
     )
 }
 
+// ── Register Step ───────────────────────────────────────────────────
 @Composable
 private fun RegisterStep(
     displayName: String,
@@ -492,13 +493,24 @@ private fun RegisterStep(
     error: String?,
     onRegister: () -> Unit
 ) {
-    Spacer(modifier = Modifier.height(32.dp))
+    Spacer(modifier = Modifier.height(24.dp))
 
+    Text(
+        text = "Please provide your name and an optional\nprofile photo",
+        fontSize = 14.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        lineHeight = 20.sp
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // Avatar
     Box(
         modifier = Modifier
-            .size(120.dp)
+            .size(100.dp)
             .clip(CircleShape)
-            .background(Color(0xFFE8F0FE))
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .clickable { onPickPhoto() },
         contentAlignment = Alignment.Center
     ) {
@@ -506,47 +518,28 @@ private fun RegisterStep(
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = Color(0xFF246BFD)
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .size(32.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF4CAF50)),
+                    .background(MaterialTheme.colorScheme.tertiary),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                Icon(Icons.Default.Check, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onTertiary)
             }
         } else {
             Icon(
                 imageVector = Icons.Default.CameraAlt,
                 contentDescription = "Pick photo",
-                modifier = Modifier.size(48.dp),
-                tint = Color(0xFF246BFD)
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
         }
     }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Text(
-        text = "Add Profile Photo",
-        fontSize = 14.sp,
-        color = Color(0xFF246BFD),
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.clickable { onPickPhoto() }
-    )
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    Text(
-        text = "Enter your name",
-        fontSize = 22.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
-    )
 
     Spacer(modifier = Modifier.height(24.dp))
 
@@ -554,17 +547,17 @@ private fun RegisterStep(
         value = displayName,
         onValueChange = onNameChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Your name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        placeholder = { Text("Type your name here") },
         singleLine = true,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Color(0xFF246BFD),
-            unfocusedBorderColor = Color(0xFFE0E0E0),
-            focusedContainerColor = Color(0xFFF7F8FC),
-            unfocusedContainerColor = Color(0xFFF7F8FC)
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ),
         leadingIcon = {
-            Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF246BFD))
+            Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.primary)
         }
     )
 
@@ -573,20 +566,26 @@ private fun RegisterStep(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onBusinessChange(!isBusiness) },
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onBusinessChange(!isBusiness) }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = isBusiness,
             onCheckedChange = onBusinessChange,
-            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF246BFD))
+            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
         )
-        Text(text = "This is a business account", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = "This is a business account",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 
     error?.let {
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = it, color = Color(0xFFD32F2F), fontSize = 13.sp)
+        Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -596,19 +595,23 @@ private fun RegisterStep(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF246BFD)),
-        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(28.dp),
         enabled = !isLoading && displayName.isNotBlank()
     ) {
         if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp
+            )
         } else {
-            Text("Create Account", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text("Next", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ── Country Picker Dialog ───────────────────────────────────────────
 @Composable
 private fun CountryPickerDialog(
     countries: List<Country>,
@@ -634,7 +637,7 @@ private fun CountryPickerDialog(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Select Country",
+                    text = "Choose a country",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -645,21 +648,21 @@ private fun CountryPickerDialog(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search country...") },
+                    placeholder = { Text("Search") },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF246BFD),
-                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     )
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                androidx.compose.foundation.lazy.LazyColumn {
+                LazyColumn {
                     items(filteredCountries.size) { index ->
                         val country = filteredCountries[index]
                         Row(
@@ -685,7 +688,7 @@ private fun CountryPickerDialog(
                             )
                         }
                         if (index < filteredCountries.size - 1) {
-                            Divider(color = Color(0xFFF0F0F0))
+                            Divider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }

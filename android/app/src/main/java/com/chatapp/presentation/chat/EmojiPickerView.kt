@@ -45,7 +45,7 @@ fun EmojiPickerView(
             ScrollableTabRow(
                 selectedTabIndex = selectedCategory,
                 containerColor = Color.Transparent,
-                contentColor = Color(0xFF1A56DB),
+                contentColor = MaterialTheme.colorScheme.primary,
                 edgePadding = 0.dp
             ) {
                 categories.forEachIndexed { index, (name, _) ->

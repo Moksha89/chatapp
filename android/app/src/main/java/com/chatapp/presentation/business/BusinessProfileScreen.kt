@@ -66,7 +66,7 @@ fun BusinessProfileScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -92,7 +92,7 @@ fun BusinessProfileScreen(
                 modifier = Modifier
                     .size(100.dp)
                     .clip(CircleShape),
-                color = Color(0xFF246BFD)
+                color = MaterialTheme.colorScheme.primary
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -113,7 +113,7 @@ fun BusinessProfileScreen(
                 leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF1A56DB))
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -125,7 +125,7 @@ fun BusinessProfileScreen(
                 leadingIcon = { Icon(Icons.Default.Description, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF1A56DB))
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -137,7 +137,7 @@ fun BusinessProfileScreen(
                 leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF1A56DB))
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -149,7 +149,7 @@ fun BusinessProfileScreen(
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF1A56DB))
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -161,7 +161,7 @@ fun BusinessProfileScreen(
                 leadingIcon = { Icon(Icons.Default.Language, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF1A56DB))
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -173,13 +173,13 @@ fun BusinessProfileScreen(
                 leadingIcon = { Icon(Icons.Default.Category, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF1A56DB))
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             if (uiState.isLoading) {
-                CircularProgressIndicator(color = Color(0xFF1A56DB))
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
     }

@@ -59,7 +59,7 @@ fun ChatSearchScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB)
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             )
         }
@@ -104,7 +104,7 @@ fun ChatSearchScreen(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape),
-                            color = Color(0xFF246BFD)
+                            color = MaterialTheme.colorScheme.primary
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(

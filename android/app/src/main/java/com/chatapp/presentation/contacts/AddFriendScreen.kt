@@ -64,7 +64,7 @@ fun AddFriendScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF246BFD),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -107,8 +107,8 @@ fun AddFriendScreen(
                     onSearch = { focusManager.clearFocus() }
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF246BFD),
-                    cursorColor = Color(0xFF246BFD)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
 
@@ -116,7 +116,7 @@ fun AddFriendScreen(
             Text(
                 text = "Contacts on Abhi",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color = Color(0xFF246BFD),
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp
             )
@@ -126,7 +126,7 @@ fun AddFriendScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFF246BFD))
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (filteredUsers.isEmpty()) {
                 Box(
@@ -178,7 +178,7 @@ fun AddFriendScreen(
                             .fillMaxWidth()
                             .padding(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF246BFD)
+                            containerColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -214,7 +214,7 @@ fun AddFriendContactItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape),
-            color = Color(0xFF246BFD)
+            color = MaterialTheme.colorScheme.primary
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
@@ -249,7 +249,7 @@ fun AddFriendContactItem(
             checked = isSelected,
             onCheckedChange = { onClick() },
             colors = CheckboxDefaults.colors(
-                checkedColor = Color(0xFF246BFD)
+                checkedColor = MaterialTheme.colorScheme.primary
             )
         )
     }

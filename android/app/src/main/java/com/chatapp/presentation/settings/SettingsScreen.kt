@@ -55,7 +55,7 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -80,7 +80,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape),
-                        color = Color(0xFF246BFD)
+                        color = MaterialTheme.colorScheme.primary
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
@@ -109,7 +109,7 @@ fun SettingsScreen(
                     Icon(
                         Icons.Default.QrCode,
                         contentDescription = "QR Code",
-                        tint = Color(0xFF1A56DB)
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
                 Divider()
@@ -243,7 +243,7 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.Default.Fingerprint,
                         contentDescription = null,
-                        tint = Color(0xFF1A56DB),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -275,7 +275,7 @@ fun SettingsScreen(
                                 BiometricHelper.setBiometricEnabled(context, false)
                             }
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF1A56DB))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
                     )
                 }
             }
@@ -312,7 +312,7 @@ fun SettingsItem(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    tint: Color = Color(0xFF1A56DB)
+    tint: Color = MaterialTheme.colorScheme.primary
 ) {
     Row(
         modifier = Modifier

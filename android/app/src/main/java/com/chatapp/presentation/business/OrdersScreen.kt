@@ -36,7 +36,7 @@ fun OrdersScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -49,7 +49,7 @@ fun OrdersScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF1A56DB))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             } else if (uiState.orders.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
@@ -81,7 +81,7 @@ fun OrdersScreen(
                                     StatusChip(order.status)
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("Total: $${String.format("%.2f", order.totalAmount)}", color = Color(0xFF1A56DB), fontWeight = FontWeight.Bold)
+                                Text("Total: $${String.format("%.2f", order.totalAmount)}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text("Items: ${order.itemCount}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                             }

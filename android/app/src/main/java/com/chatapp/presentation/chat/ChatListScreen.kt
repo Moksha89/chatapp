@@ -146,7 +146,7 @@ fun ChatListScreen(
                         newLabelName = ""
                         showCreateLabelDialog = false
                     }
-                }) { Text("Create", color = Color(0xFF246BFD)) }
+                }) { Text("Create", color = MaterialTheme.colorScheme.primary) }
             },
             dismissButton = {
                 TextButton(onClick = { showCreateLabelDialog = false; newLabelName = "" }) { Text("Cancel") }
@@ -167,17 +167,17 @@ fun ChatListScreen(
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF246BFD),
-                        titleContentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     actions = {
                         IconButton(onClick = onSearch) {
-                            Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
+                            Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onPrimary)
                         }
                         // + button with Add Friend / Create Group popup
                         Box {
                             IconButton(onClick = { showPlusMenu = true }) {
-                                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                                Icon(Icons.Default.Add, contentDescription = "Add", tint = MaterialTheme.colorScheme.onPrimary)
                             }
                             DropdownMenu(
                                 expanded = showPlusMenu,
@@ -186,12 +186,12 @@ fun ChatListScreen(
                                 DropdownMenuItem(
                                     text = { Text("Add Friend") },
                                     onClick = { showPlusMenu = false; onAddFriend() },
-                                    leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Color(0xFF246BFD)) }
+                                    leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Create Group") },
                                     onClick = { showPlusMenu = false; onCreateGroup("group") },
-                                    leadingIcon = { Icon(Icons.Default.GroupAdd, contentDescription = null, tint = Color(0xFF246BFD)) }
+                                    leadingIcon = { Icon(Icons.Default.GroupAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                                 )
                             }
                         }
@@ -200,13 +200,13 @@ fun ChatListScreen(
                 // Tab Row
                 TabRow(
                     selectedTabIndex = selectedTab,
-                    containerColor = Color(0xFF246BFD),
-                    contentColor = Color.White,
-                    modifier = Modifier.background(Color(0xFF246BFD)),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.primary),
                     indicator = @Composable { tabPositions ->
                         TabRowDefaults.Indicator(
                             modifier = Modifier.fillMaxWidth(),
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 ) {
@@ -214,14 +214,14 @@ fun ChatListScreen(
                         Tab(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
-                            selectedContentColor = Color.White,
-                            unselectedContentColor = Color.White.copy(alpha = 0.7f),
+                            selectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                            unselectedContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
                             text = {
                                 Text(
                                     text = title,
                                     fontSize = 13.sp,
                                     fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (selectedTab == index) Color.White else Color.White.copy(alpha = 0.7f)
+                                    color = if (selectedTab == index) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                                 )
                             }
                         )
@@ -240,20 +240,20 @@ fun ChatListScreen(
                     selected = selectedBottomTab == 0,
                     onClick = { selectedBottomTab = 0 },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF246BFD),
-                        selectedTextColor = Color(0xFF246BFD),
-                        indicatorColor = Color(0xFFE8F0FE)
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Call, contentDescription = "Calls") },
                     label = { Text("Calls", fontSize = 11.sp) },
                     selected = selectedBottomTab == 1,
-                    onClick = { selectedBottomTab = 1 /* Call history - TODO: needs call log screen */ },
+                    onClick = { selectedBottomTab = 1 },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF246BFD),
-                        selectedTextColor = Color(0xFF246BFD),
-                        indicatorColor = Color(0xFFE8F0FE)
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 )
                 NavigationBarItem(
@@ -262,9 +262,9 @@ fun ChatListScreen(
                     selected = selectedBottomTab == 2,
                     onClick = { selectedBottomTab = 2; onAddFriend() },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF246BFD),
-                        selectedTextColor = Color(0xFF246BFD),
-                        indicatorColor = Color(0xFFE8F0FE)
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 )
                 NavigationBarItem(
@@ -273,9 +273,9 @@ fun ChatListScreen(
                     selected = selectedBottomTab == 3,
                     onClick = { selectedBottomTab = 3; onSettings() },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF246BFD),
-                        selectedTextColor = Color(0xFF246BFD),
-                        indicatorColor = Color(0xFFE8F0FE)
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 )
             }
@@ -301,7 +301,7 @@ fun ChatListScreen(
             if (uiState.isLoading && uiState.chats.isEmpty()) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = Color(0xFF246BFD)
+                    color = MaterialTheme.colorScheme.primary
                 )
             } else if (selectedTab == 3) {
                 // Labels tab
@@ -364,14 +364,14 @@ fun ChatListScreen(
                                 Icon(
                                     Icons.Default.Archive,
                                     contentDescription = null,
-                                    tint = Color(0xFF246BFD),
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
                                     text = "Archived",
                                     fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF246BFD)
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
@@ -424,20 +424,20 @@ fun ChatListItemView(
                     .size(48.dp)
                     .clip(CircleShape),
                 color = when (chat.type) {
-                    "group", "community" -> Color(0xFF4CAF50)
-                    "channel" -> Color(0xFFFF9800)
-                    else -> Color(0xFF246BFD)
+                    "group", "community" -> MaterialTheme.colorScheme.tertiary
+                    "channel" -> MaterialTheme.colorScheme.secondary
+                    else -> MaterialTheme.colorScheme.primary
                 }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     if (chat.type == "group" || chat.type == "community") {
-                        Icon(Icons.Default.Group, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Group, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
                     } else if (chat.type == "channel") {
-                        Icon(Icons.Default.Campaign, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Campaign, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
                     } else {
                         Text(
                             text = chat.name.firstOrNull()?.toString() ?: "?",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
@@ -482,7 +482,7 @@ fun ChatListItemView(
                             Icons.Default.PushPin,
                             contentDescription = "Pinned",
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF246BFD)
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
@@ -496,7 +496,7 @@ fun ChatListItemView(
                 Text(
                     text = chat.lastMessageTime,
                     fontSize = 12.sp,
-                    color = if (chat.unreadCount > 0) Color(0xFF246BFD) else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (chat.unreadCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -546,13 +546,13 @@ fun ChatListItemView(
                 if (chat.unreadCount > 0) {
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFF246BFD),
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = chat.unreadCount.toString(),
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 fontSize = 12.sp
                             )
                         }
@@ -599,7 +599,7 @@ fun ChatOptionsDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF246BFD))
+                    Icon(Icons.Default.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(if (chat.isPinned) "Unpin Chat" else "Pin Chat", color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -612,7 +612,7 @@ fun ChatOptionsDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Label, contentDescription = null, tint = Color(0xFF4CAF50))
+                    Icon(Icons.Default.Label, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("Add Label", color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -628,7 +628,7 @@ fun ChatOptionsDialog(
                     Icon(
                         if (chat.isMuted) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
                         contentDescription = null,
-                        tint = Color(0xFF607D8B)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(if (chat.isMuted) "Unmute" else "Mute", color = MaterialTheme.colorScheme.onSurface)
@@ -642,7 +642,7 @@ fun ChatOptionsDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Archive, contentDescription = null, tint = Color(0xFF795548))
+                    Icon(Icons.Default.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(if (chat.isArchived) "Unarchive" else "Archive", color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -657,9 +657,9 @@ fun ChatOptionsDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Delete Chat", color = Color.Red)
+                    Text("Delete Chat", color = MaterialTheme.colorScheme.error)
                 }
 
                 // Block
@@ -670,9 +670,9 @@ fun ChatOptionsDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Block, contentDescription = null, tint = Color.Red)
+                    Icon(Icons.Default.Block, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (chat.isBlocked) "Unblock" else "Block", color = Color.Red)
+                    Text(if (chat.isBlocked) "Unblock" else "Block", color = MaterialTheme.colorScheme.error)
                 }
 
                 // Report
@@ -683,9 +683,9 @@ fun ChatOptionsDialog(
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Flag, contentDescription = null, tint = Color.Red)
+                    Icon(Icons.Default.Flag, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Report", color = Color.Red)
+                    Text("Report", color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -747,16 +747,16 @@ fun LabelAssignDialog(
                     onClick = onCreateNew,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF246BFD))
+                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Create New Label", color = Color(0xFF246BFD))
+                    Text("Create New Label", color = MaterialTheme.colorScheme.primary)
                 }
 
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Done", color = Color(0xFF246BFD))
+                    Text("Done", color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -779,9 +779,9 @@ fun LabelsTabContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF246BFD))
+                Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Create New Label", color = Color(0xFF246BFD))
+                Text("Create New Label", color = MaterialTheme.colorScheme.primary)
             }
             Divider()
         }
@@ -830,12 +830,12 @@ fun LabelsTabContent(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape),
-                                color = Color(0xFF246BFD)
+                                color = MaterialTheme.colorScheme.primary
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
                                         text = chat.name.firstOrNull()?.toString() ?: "?",
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp
                                     )

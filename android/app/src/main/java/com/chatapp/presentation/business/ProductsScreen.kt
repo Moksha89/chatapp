@@ -39,7 +39,7 @@ fun ProductsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -48,7 +48,7 @@ fun ProductsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFF246BFD)
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Product", tint = Color.White)
             }
@@ -62,7 +62,7 @@ fun ProductsScreen(
             if (uiState.isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = Color(0xFF1A56DB)
+                    color = MaterialTheme.colorScheme.primary
                 )
             } else if (uiState.products.isEmpty()) {
                 Column(
@@ -122,10 +122,10 @@ fun ProductCard(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(RoundedCornerShape(8.dp)),
-                color = Color(0xFFE8F5E9)
+                color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Inventory, contentDescription = null, tint = Color(0xFF1A56DB))
+                    Icon(Icons.Default.Inventory, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
 
@@ -139,7 +139,7 @@ fun ProductCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     "${product.currency} ${String.format("%.2f", product.price)}",
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -193,7 +193,7 @@ fun AddProductDialog(
             TextButton(
                 onClick = { onAdd(name, description, price.toDoubleOrNull() ?: 0.0) },
                 enabled = name.isNotBlank() && price.isNotBlank()
-            ) { Text("Add", color = Color(0xFF1A56DB)) }
+            ) { Text("Add", color = MaterialTheme.colorScheme.primary) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

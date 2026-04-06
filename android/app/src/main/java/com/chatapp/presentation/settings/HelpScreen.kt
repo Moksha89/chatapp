@@ -47,7 +47,7 @@ fun HelpScreen(
             text = { Text(selectedFaq!!.second) },
             confirmButton = {
                 TextButton(onClick = { showFaqDialog = false }) {
-                    Text("Got it", color = Color(0xFF1A56DB))
+                    Text("Got it", color = MaterialTheme.colorScheme.primary)
                 }
             }
         )
@@ -63,7 +63,7 @@ fun HelpScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -79,7 +79,7 @@ fun HelpScreen(
             item {
                 Text(
                     text = "Help Center",
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
@@ -131,7 +131,7 @@ fun HelpScreen(
             item {
                 Text(
                     text = "Frequently Asked Questions",
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -157,7 +157,7 @@ fun HelpScreen(
             item {
                 Text(
                     text = "App Info",
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -174,7 +174,7 @@ fun HelpScreen(
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        tint = Color(0xFF1A56DB),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -216,7 +216,7 @@ fun HelpItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color(0xFF1A56DB),
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))

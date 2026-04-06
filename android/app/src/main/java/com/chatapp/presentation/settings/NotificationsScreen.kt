@@ -36,7 +36,7 @@ fun NotificationsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -52,7 +52,7 @@ fun NotificationsScreen(
             item {
                 Text(
                     text = "Message Notifications",
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
@@ -92,7 +92,7 @@ fun NotificationsScreen(
             item {
                 Text(
                     text = "Group Notifications",
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -114,7 +114,7 @@ fun NotificationsScreen(
             item {
                 Text(
                     text = "Calls",
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -136,7 +136,7 @@ fun NotificationsScreen(
             item {
                 Text(
                     text = "General",
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
@@ -205,7 +205,7 @@ fun NotificationToggle(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF246BFD)
+                checkedTrackColor = MaterialTheme.colorScheme.primary
             )
         )
     }

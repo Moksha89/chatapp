@@ -36,7 +36,7 @@ fun BroadcastsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -45,7 +45,7 @@ fun BroadcastsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFF246BFD)
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "New Broadcast", tint = Color.White)
             }
@@ -57,7 +57,7 @@ fun BroadcastsScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF1A56DB))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             } else if (uiState.broadcasts.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
@@ -88,7 +88,7 @@ fun BroadcastsScreen(
                                 Icon(
                                     Icons.Default.Campaign,
                                     contentDescription = null,
-                                    tint = Color(0xFF1A56DB),
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(40.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -126,7 +126,7 @@ fun BroadcastsScreen(
                 TextButton(
                     onClick = { viewModel.createBroadcast(name); showAddDialog = false },
                     enabled = name.isNotBlank()
-                ) { Text("Create", color = Color(0xFF1A56DB)) }
+                ) { Text("Create", color = MaterialTheme.colorScheme.primary) }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }

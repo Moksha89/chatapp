@@ -122,7 +122,7 @@ fun CallScreen(
                         modifier = Modifier
                             .size(160.dp)
                             .clip(CircleShape),
-                        color = Color(0xFF246BFD).copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
@@ -156,7 +156,7 @@ fun CallScreen(
                     .padding(top = 48.dp, end = 16.dp)
                     .size(100.dp, 140.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF246BFD))
+                    .background(MaterialTheme.colorScheme.primary)
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -200,7 +200,7 @@ fun CallScreen(
                             .then(
                                 if (!isConnected) Modifier.scale(pulseScale) else Modifier
                             ),
-                        color = Color(0xFF246BFD)
+                        color = MaterialTheme.colorScheme.primary
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
@@ -342,7 +342,7 @@ fun CallScreen(
                                 callState = "connected"
                                 onAcceptCall()
                             },
-                            containerColor = Color(0xFF246BFD),
+                            containerColor = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(64.dp)
                         ) {
                             Icon(Icons.Default.Call, contentDescription = "Accept", tint = Color.White, modifier = Modifier.size(32.dp))

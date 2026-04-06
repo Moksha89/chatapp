@@ -36,7 +36,7 @@ fun QuickRepliesScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -45,7 +45,7 @@ fun QuickRepliesScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFF246BFD)
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Quick Reply", tint = Color.White)
             }
@@ -57,7 +57,7 @@ fun QuickRepliesScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF1A56DB))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             } else if (uiState.quickReplies.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
@@ -89,7 +89,7 @@ fun QuickRepliesScreen(
                                     Text(
                                         "/${qr.shortcut}",
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1A56DB)
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(qr.message, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, maxLines = 2)
@@ -150,7 +150,7 @@ fun AddQuickReplyDialog(
             TextButton(
                 onClick = { onAdd(shortcut, message) },
                 enabled = shortcut.isNotBlank() && message.isNotBlank()
-            ) { Text("Add", color = Color(0xFF1A56DB)) }
+            ) { Text("Add", color = MaterialTheme.colorScheme.primary) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

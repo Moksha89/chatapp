@@ -116,7 +116,7 @@ fun UserProfileScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White
                 )
             )
@@ -141,7 +141,7 @@ fun UserProfileScreen(
                     modifier = Modifier
                         .size(100.dp)
                         .clip(CircleShape),
-                    color = Color(0xFF246BFD)
+                    color = MaterialTheme.colorScheme.primary
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
@@ -167,7 +167,7 @@ fun UserProfileScreen(
                 Text(
                     text = "Online",
                     fontSize = 14.sp,
-                    color = Color(0xFF246BFD)
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -206,7 +206,7 @@ fun UserProfileScreen(
                     Text(
                         text = "About",
                         fontSize = 14.sp,
-                        color = Color(0xFF6B7280)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -240,12 +240,12 @@ fun UserProfileScreen(
                         Text(
                             text = "0",
                             fontSize = 14.sp,
-                            color = Color(0xFF6B7280)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Icon(
                             Icons.Default.ChevronRight,
                             contentDescription = null,
-                            tint = Color(0xFF6B7280)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -278,7 +278,7 @@ fun UserProfileScreen(
                                 onMute()
                             },
                             colors = SwitchDefaults.colors(
-                                checkedTrackColor = Color(0xFF246BFD)
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
@@ -298,7 +298,7 @@ fun UserProfileScreen(
                         Text(
                             text = "Default",
                             fontSize = 14.sp,
-                            color = Color(0xFF6B7280)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -320,7 +320,7 @@ fun UserProfileScreen(
                     Icon(
                         Icons.Default.Lock,
                         contentDescription = null,
-                        tint = Color(0xFF6B7280),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -333,7 +333,7 @@ fun UserProfileScreen(
                         Text(
                             text = "Messages are end-to-end encrypted. Tap to verify.",
                             fontSize = 13.sp,
-                            color = Color(0xFF6B7280)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -405,12 +405,12 @@ fun ProfileActionButton(
             onClick = onClick,
             modifier = Modifier
                 .size(48.dp)
-                .background(Color(0xFFE8F0FE), CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
         ) {
             Icon(
                 icon,
                 contentDescription = label,
-                tint = Color(0xFF246BFD),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -418,7 +418,7 @@ fun ProfileActionButton(
         Text(
             text = label,
             fontSize = 12.sp,
-            color = Color(0xFF246BFD)
+            color = MaterialTheme.colorScheme.primary
         )
     }
 }

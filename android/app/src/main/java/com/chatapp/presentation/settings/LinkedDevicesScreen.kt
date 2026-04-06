@@ -44,7 +44,7 @@ fun LinkedDevicesScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -53,7 +53,7 @@ fun LinkedDevicesScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onLinkNewDevice,
-                containerColor = Color(0xFF246BFD)
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(
                     Icons.Default.Add,
@@ -74,7 +74,7 @@ fun LinkedDevicesScreen(
                     .fillMaxWidth()
                     .padding(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE8F5E9)
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             ) {
                 Row(
@@ -84,13 +84,13 @@ fun LinkedDevicesScreen(
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        tint = Color(0xFF1A56DB)
+                        tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Use ChatApp on other devices by linking them to your phone. Tap + to scan a QR code.",
                         fontSize = 14.sp,
-                        color = Color(0xFF2E7D32)
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
@@ -101,7 +101,7 @@ fun LinkedDevicesScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFFFEBEE)
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     )
                 ) {
                     Row(
@@ -128,7 +128,7 @@ fun LinkedDevicesScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFF1A56DB))
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (uiState.devices.isEmpty()) {
                 Box(
@@ -163,7 +163,7 @@ fun LinkedDevicesScreen(
                 Text(
                     text = "Devices",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = Color(0xFF1A56DB),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp
                 )
@@ -236,7 +236,7 @@ fun DeviceItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape),
-            color = if (device.isCurrentDevice) Color(0xFF246BFD) else MaterialTheme.colorScheme.surfaceVariant
+            color = if (device.isCurrentDevice) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -264,7 +264,7 @@ fun DeviceItem(
                 if (device.isCurrentDevice) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
-                        color = Color(0xFF246BFD),
+                        color = MaterialTheme.colorScheme.primary,
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
@@ -287,13 +287,13 @@ fun DeviceItem(
                     Surface(
                         modifier = Modifier.size(8.dp),
                         shape = CircleShape,
-                        color = Color(0xFF4CAF50)
+                        color = MaterialTheme.colorScheme.tertiary
                     ) {}
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Active",
                         fontSize = 12.sp,
-                        color = Color(0xFF4CAF50)
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 } else if (device.lastSeen != null) {
                     Spacer(modifier = Modifier.width(8.dp))

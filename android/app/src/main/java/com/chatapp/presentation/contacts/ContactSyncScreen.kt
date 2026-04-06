@@ -45,7 +45,7 @@ fun ContactSyncScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -63,7 +63,7 @@ fun ContactSyncScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF1A56DB))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             } else if (uiState.contacts.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
@@ -75,7 +75,7 @@ fun ContactSyncScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = { viewModel.syncContacts() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A56DB))
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Icon(Icons.Default.Sync, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -93,7 +93,7 @@ fun ContactSyncScreen(
                             Text(
                                 "On Abhi Chat",
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1A56DB),
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(16.dp)
                             )
                         }
@@ -139,7 +139,7 @@ fun ContactRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape),
-            color = if (contact.isRegistered) Color(0xFF246BFD) else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (contact.isRegistered) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
@@ -156,7 +156,7 @@ fun ContactRow(
         }
         if (showInvite) {
             TextButton(onClick = {}) {
-                Text("Invite", color = Color(0xFF1A56DB))
+                Text("Invite", color = MaterialTheme.colorScheme.primary)
             }
         }
     }

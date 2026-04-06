@@ -76,7 +76,7 @@ fun GroupInfoScreen(
                             .padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(selected = showRoleDialog!!.role == "admin", onClick = null, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF246BFD)))
+                        RadioButton(selected = showRoleDialog!!.role == "admin", onClick = null, colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary))
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text("Group Admin", fontWeight = FontWeight.Medium)
@@ -95,7 +95,7 @@ fun GroupInfoScreen(
                             .padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(selected = showRoleDialog!!.role == "member", onClick = null, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF246BFD)))
+                        RadioButton(selected = showRoleDialog!!.role == "member", onClick = null, colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary))
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text("Member", fontWeight = FontWeight.Medium)
@@ -136,7 +136,7 @@ fun GroupInfoScreen(
                     Text("Share this link to invite people to this group:")
                     Spacer(modifier = Modifier.height(8.dp))
                     Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = inviteLink, modifier = Modifier.padding(12.dp), fontSize = 13.sp, color = Color(0xFF246BFD))
+                        Text(text = inviteLink, modifier = Modifier.padding(12.dp), fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             },
@@ -149,7 +149,7 @@ fun GroupInfoScreen(
                     }
                     context.startActivity(Intent.createChooser(sendIntent, "Share invite link"))
                     showShareLinkDialog = false
-                }) { Text("Share", color = Color(0xFF246BFD)) }
+                }) { Text("Share", color = MaterialTheme.colorScheme.primary) }
             },
             dismissButton = { TextButton(onClick = { showShareLinkDialog = false }) { Text("Close") } }
         )
@@ -179,7 +179,7 @@ fun GroupInfoScreen(
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -198,7 +198,7 @@ fun GroupInfoScreen(
                     modifier = Modifier.fillMaxWidth().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Surface(modifier = Modifier.size(80.dp).clip(CircleShape), color = Color(0xFF4CAF50)) {
+                    Surface(modifier = Modifier.size(80.dp).clip(CircleShape), color = MaterialTheme.colorScheme.tertiary) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Group, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
                         }
@@ -224,7 +224,7 @@ fun GroupInfoScreen(
                                 IconButton(onClick = {
                                     isEditingDescription = false
                                     Toast.makeText(context, "Description updated", Toast.LENGTH_SHORT).show()
-                                }) { Icon(Icons.Default.Check, contentDescription = "Save", tint = Color(0xFF246BFD)) }
+                                }) { Icon(Icons.Default.Check, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary) }
                             }
                         )
                     } else {
@@ -245,36 +245,36 @@ fun GroupInfoScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onAddMembers() }) {
-                        Surface(shape = CircleShape, color = Color(0xFF246BFD).copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) {
-                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Color(0xFF246BFD)) }
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) {
+                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Add", fontSize = 12.sp, color = Color(0xFF246BFD))
+                        Text("Add", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { showShareLinkDialog = true }) {
-                        Surface(shape = CircleShape, color = Color(0xFF246BFD).copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) {
-                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Link, contentDescription = null, tint = Color(0xFF246BFD)) }
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) {
+                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Invite Link", fontSize = 12.sp, color = Color(0xFF246BFD))
+                        Text("Invite Link", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable {
                         Toast.makeText(context, "Notifications muted", Toast.LENGTH_SHORT).show()
                     }) {
-                        Surface(shape = CircleShape, color = Color(0xFF246BFD).copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) {
-                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.VolumeOff, contentDescription = null, tint = Color(0xFF246BFD)) }
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) {
+                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.VolumeOff, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Mute", fontSize = 12.sp, color = Color(0xFF246BFD))
+                        Text("Mute", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable {
                         Toast.makeText(context, "Search in chat", Toast.LENGTH_SHORT).show()
                     }) {
-                        Surface(shape = CircleShape, color = Color(0xFF246BFD).copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) {
-                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF246BFD)) }
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) {
+                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Search", fontSize = 12.sp, color = Color(0xFF246BFD))
+                        Text("Search", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -311,11 +311,11 @@ fun GroupInfoScreen(
                     modifier = Modifier.fillMaxWidth().clickable { onAddMembers() }.padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = Color(0xFF246BFD)) {
+                    Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Add Participants", color = Color(0xFF246BFD), fontWeight = FontWeight.Medium)
+                    Text("Add Participants", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -325,11 +325,11 @@ fun GroupInfoScreen(
                     modifier = Modifier.fillMaxWidth().clickable { showShareLinkDialog = true }.padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = Color(0xFF246BFD)) {
+                    Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
                         Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Link, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Invite via Link", color = Color(0xFF246BFD), fontWeight = FontWeight.Medium)
+                    Text("Invite via Link", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -340,7 +340,7 @@ fun GroupInfoScreen(
                     modifier = Modifier.fillMaxWidth().clickable { if (member.id != "1") showMemberMenu = true }.padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(modifier = Modifier.size(40.dp).clip(CircleShape), color = Color(0xFF246BFD)) {
+                    Surface(modifier = Modifier.size(40.dp).clip(CircleShape), color = MaterialTheme.colorScheme.primary) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(text = member.name.firstOrNull()?.toString() ?: "?", color = Color.White, fontWeight = FontWeight.Bold)
                         }
@@ -353,8 +353,8 @@ fun GroupInfoScreen(
                         }
                     }
                     if (member.role == "admin") {
-                        Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFF246BFD).copy(alpha = 0.1f)) {
-                            Text("Admin", fontSize = 11.sp, color = Color(0xFF246BFD), fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                        Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
+                            Text("Admin", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                         }
                     }
                     if (showMemberMenu && member.id != "1") {

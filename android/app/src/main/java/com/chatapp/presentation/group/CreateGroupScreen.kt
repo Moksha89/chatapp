@@ -64,7 +64,7 @@ fun CreateGroupScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF246BFD),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -100,7 +100,7 @@ fun CreateGroupScreen(
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape),
-                        color = Color(0xFF246BFD)
+                        color = MaterialTheme.colorScheme.primary
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -122,8 +122,8 @@ fun CreateGroupScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF246BFD),
-                            cursorColor = Color(0xFF246BFD)
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                     )
 
@@ -135,7 +135,7 @@ fun CreateGroupScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = groupName.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF246BFD)
+                            containerColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -194,7 +194,7 @@ fun CreateGroupScreen(
 
                 if (uiState.isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFF246BFD))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -211,7 +211,7 @@ fun CreateGroupScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape),
-                                    color = if (isSelected) Color(0xFF246BFD) else Color(0xFF90CAF9)
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         if (isSelected) {

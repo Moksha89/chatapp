@@ -38,7 +38,7 @@ fun LabelsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
@@ -47,7 +47,7 @@ fun LabelsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFF246BFD)
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Label", tint = Color.White)
             }
@@ -59,7 +59,7 @@ fun LabelsScreen(
                 .padding(paddingValues)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF1A56DB))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.primary)
             } else if (uiState.labels.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
@@ -154,7 +154,7 @@ fun AddLabelDialog(
             TextButton(
                 onClick = { onAdd(name, selectedColor) },
                 enabled = name.isNotBlank()
-            ) { Text("Add", color = Color(0xFF1A56DB)) }
+            ) { Text("Add", color = MaterialTheme.colorScheme.primary) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -166,6 +166,6 @@ fun parseColor(hex: String): Color {
     return try {
         Color(android.graphics.Color.parseColor(hex))
     } catch (_: Exception) {
-        Color(0xFF1A56DB)
+        Color(0xFF246BFD)
     }
 }
