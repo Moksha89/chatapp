@@ -577,13 +577,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // Apply noise cancellation to existing audio tracks
       if (localStream) {
         localStream.getAudioTracks().forEach(track => {
-          if (track.getConstraints) {
-            track.applyConstraints({
-              echoCancellation: newVal,
-              noiseSuppression: newVal,
-              autoGainControl: newVal,
-            }).catch(() => {});
-          }
+          track.applyConstraints({
+            echoCancellation: newVal,
+            noiseSuppression: newVal,
+            autoGainControl: newVal,
+          }).catch(() => {});
         });
       }
       return newVal;
