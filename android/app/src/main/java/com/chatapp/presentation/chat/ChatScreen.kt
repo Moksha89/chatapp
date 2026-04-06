@@ -310,7 +310,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color(0xFFF7F8FC))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             if (uiState.isLoading) {
                 Box(
@@ -366,7 +366,7 @@ fun ChatScreen(
             if (replyToMessage != null) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFE8E8E8)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         modifier = Modifier
@@ -391,7 +391,7 @@ fun ChatScreen(
                             Text(
                                 text = replyToMessage?.content?.take(50) ?: "",
                                 fontSize = 14.sp,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1
                             )
                         }
@@ -399,7 +399,7 @@ fun ChatScreen(
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = "Cancel reply",
-                                tint = Color.Gray
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -410,7 +410,7 @@ fun ChatScreen(
             if (showAttachMenu) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFF5F5F5)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         modifier = Modifier
@@ -450,7 +450,7 @@ fun ChatScreen(
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFFF7F8FC)
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier
@@ -462,7 +462,7 @@ fun ChatScreen(
                         Icon(
                             if (showEmojiPicker) Icons.Default.Keyboard else Icons.Default.EmojiEmotions,
                             contentDescription = "Emoji",
-                            tint = Color.Gray
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -473,15 +473,15 @@ fun ChatScreen(
                             if (newText.isNotEmpty()) viewModel.sendTypingStart()
                             else viewModel.sendTypingStop()
                         },
-                        placeholder = { Text("Type a message") },
+                        placeholder = { Text("Type a message", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(24.dp)),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                             cursorColor = Color(0xFF246BFD),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
@@ -489,7 +489,7 @@ fun ChatScreen(
                     )
 
                     IconButton(onClick = { showAttachMenu = !showAttachMenu; showEmojiPicker = false }) {
-                        Icon(Icons.Default.AttachFile, contentDescription = "Attach", tint = Color.Gray)
+                        Icon(Icons.Default.AttachFile, contentDescription = "Attach", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
                     FloatingActionButton(
@@ -541,7 +541,7 @@ fun AttachmentOption(
             Icon(icon, contentDescription = label, tint = Color.White)
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(label, fontSize = 11.sp, color = Color.Gray)
+        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -648,11 +648,11 @@ fun MessageBubble(
                     bottomEnd = if (isOwn) 0.dp else 12.dp
                 ),
                 color = if (message.isDeleted) Color.LightGray.copy(alpha = 0.5f)
-                        else if (isOwn) Color(0xFF246BFD) else Color.White,
+                        else if (isOwn) Color(0xFF246BFD) else MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .combinedClickable(
-                        onClick = { onLongPress() },
+                        onClick = { /* Single tap does nothing - use long press for menu */ },
                         onLongClick = onLongPress
                     )
             ) {
@@ -666,7 +666,7 @@ fun MessageBubble(
                     } else {
                         Text(
                             text = message.content ?: "",
-                            color = if (isOwn) Color.White else Color(0xFF1A1A2E),
+                            color = if (isOwn) Color.White else MaterialTheme.colorScheme.onSurface,
                             fontSize = 15.sp
                         )
                     }
@@ -734,7 +734,7 @@ fun MessageBubble(
                                 Text(
                                     text = users.size.toString(),
                                     fontSize = 11.sp,
-                                    color = Color.Gray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -920,15 +920,15 @@ fun EditMessageDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            contentColor = Color(0xFF1A1A2E)
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Edit Message",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp,
-                    color = Color(0xFF1A1A2E)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
@@ -943,7 +943,7 @@ fun EditMessageDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -971,15 +971,15 @@ fun DeleteMessageDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            contentColor = Color(0xFF1A1A2E)
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Delete Message",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp,
-                    color = Color(0xFF1A1A2E)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -1003,7 +1003,7 @@ fun DeleteMessageDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Cancel")
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

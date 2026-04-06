@@ -72,9 +72,9 @@ fun ChatSearchScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Search for chats and messages", color = Color.Gray)
+                    Text("Search for chats and messages", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else if (filteredChats.isEmpty()) {
@@ -84,7 +84,7 @@ fun ChatSearchScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No results found", color = Color.Gray)
+                Text("No results found", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(
@@ -120,7 +120,7 @@ fun ChatSearchScreen(
                             Text(chat.name, fontWeight = FontWeight.SemiBold)
                             Text(
                                 chat.lastMessage,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis

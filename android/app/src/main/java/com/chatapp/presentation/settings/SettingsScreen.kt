@@ -101,7 +101,7 @@ fun SettingsScreen(
                         if (phoneNumber.isNotEmpty()) {
                             Text(
                                 text = phoneNumber,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp
                             )
                         }
@@ -248,8 +248,8 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Fingerprint Lock", fontWeight = FontWeight.Medium, fontSize = 16.sp)
-                        Text("Require fingerprint to open app", fontSize = 14.sp, color = Color.Gray)
+                        Text("Fingerprint Lock", fontWeight = FontWeight.Medium, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Require fingerprint to open app", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = biometricLockEnabled,
@@ -333,12 +333,12 @@ fun SettingsItem(
                 text = title,
                 fontWeight = FontWeight.Medium,
                 fontSize = 16.sp,
-                color = if (tint == Color.Red) Color.Red else Color.Unspecified
+                color = if (tint == Color.Red) Color.Red else MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = subtitle,
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

@@ -167,7 +167,7 @@ fun StorageDataScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Media auto-download settings apply when using mobile data or Wi-Fi.",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
@@ -207,7 +207,7 @@ fun StorageToggle(
             Text(
                 text = subtitle,
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Switch(
@@ -251,13 +251,13 @@ fun StorageActionItem(
             Text(
                 text = subtitle,
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Icon(
             Icons.Default.ChevronRight,
             contentDescription = null,
-            tint = Color.Gray
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

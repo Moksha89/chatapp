@@ -96,7 +96,7 @@ fun PrivacySettingsScreen(
                             Text(
                                 text = "If turned off, you won't send or receive read receipts. Read receipts are always sent for group chats.",
                                 fontSize = 14.sp,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
@@ -129,7 +129,7 @@ fun PrivacySettingsScreen(
                     item {
                         Text(
                             text = "No blocked contacts",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                         )
@@ -150,7 +150,7 @@ fun PrivacySettingsScreen(
                 item {
                     Text(
                         text = "Blocked contacts will no longer be able to call you or send you messages.",
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
@@ -196,7 +196,7 @@ fun BlockedUserItem(
             Text(
                 text = user.phoneNumber,
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         TextButton(onClick = onUnblock) {

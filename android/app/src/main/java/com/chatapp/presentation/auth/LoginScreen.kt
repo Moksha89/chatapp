@@ -139,7 +139,7 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -264,7 +264,7 @@ private fun PhoneInputStep(
                     Icons.Default.ArrowDropDown,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
-                    tint = Color.Gray
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -277,7 +277,7 @@ private fun PhoneInputStep(
             modifier = Modifier
                 .weight(1f)
                 .height(56.dp),
-            placeholder = { Text("Phone number", color = Color.Gray) },
+            placeholder = { Text("Phone number", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
@@ -303,7 +303,7 @@ private fun PhoneInputStep(
             onCheckedChange = onTermsChange,
             colors = CheckboxDefaults.colors(checkedColor = Color(0xFF246BFD))
         )
-        Text(text = "I accept to Conditions", fontSize = 14.sp, color = Color.Gray)
+        Text(text = "I accept to Conditions", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     error?.let {
@@ -372,7 +372,7 @@ private fun OtpInputStep(
     Text(
         text = "Code sent to $phoneNumber",
         fontSize = 14.sp,
-        color = Color.Gray,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center
     )
 
@@ -388,7 +388,7 @@ private fun OtpInputStep(
     Spacer(modifier = Modifier.height(24.dp))
 
     Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-        Text("Didn't receive code? ", fontSize = 14.sp, color = Color.Gray)
+        Text("Didn't receive code? ", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             text = "Resend",
             fontSize = 14.sp,
@@ -554,7 +554,7 @@ private fun RegisterStep(
         value = displayName,
         onValueChange = onNameChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Your name", color = Color.Gray) },
+        placeholder = { Text("Your name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
@@ -581,7 +581,7 @@ private fun RegisterStep(
             onCheckedChange = onBusinessChange,
             colors = CheckboxDefaults.colors(checkedColor = Color(0xFF246BFD))
         )
-        Text(text = "This is a business account", fontSize = 14.sp, color = Color.Gray)
+        Text(text = "This is a business account", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     error?.let {
@@ -627,6 +627,7 @@ private fun CountryPickerDialog(
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = Color.White,
+            contentColor = Color(0xFF1A1A2E),
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.7f)
@@ -636,6 +637,7 @@ private fun CountryPickerDialog(
                     text = "Select Country",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A2E),
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -647,7 +649,7 @@ private fun CountryPickerDialog(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+                        Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF246BFD),
@@ -678,7 +680,7 @@ private fun CountryPickerDialog(
                             Text(
                                 text = country.dialCode,
                                 fontSize = 14.sp,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium
                             )
                         }

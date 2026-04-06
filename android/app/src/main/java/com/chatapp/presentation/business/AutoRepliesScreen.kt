@@ -63,10 +63,10 @@ fun AutoRepliesScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                    Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No auto-replies yet", color = Color.Gray)
-                    Text("Set up automatic responses", color = Color.Gray, fontSize = 14.sp)
+                    Text("No auto-replies yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Set up automatic responses", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(
@@ -88,7 +88,7 @@ fun AutoRepliesScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("Trigger: ${reply.trigger}", fontWeight = FontWeight.Bold, color = Color(0xFF1A56DB))
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Response: ${reply.response}", color = Color.Gray, fontSize = 14.sp, maxLines = 2)
+                                    Text("Response: ${reply.response}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, maxLines = 2)
                                 }
                                 IconButton(onClick = { viewModel.deleteAutoReply(reply.id) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)

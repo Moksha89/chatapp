@@ -85,7 +85,7 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -144,7 +144,7 @@ fun SplashScreen(
                             text = "Abhi",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A1A2E)
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -183,7 +183,7 @@ fun SplashScreen(
                     text = "Stay Connected",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1A1A2E),
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.alpha(logoAlpha)
                 )
                 Text(
@@ -200,7 +200,7 @@ fun SplashScreen(
                 Text(
                     text = "Version 2.1.0",
                     fontSize = 12.sp,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.alpha(logoAlpha)
                 )
             }

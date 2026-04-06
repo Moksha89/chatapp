@@ -69,9 +69,9 @@ fun ContactSyncScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.Contacts, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                    Icon(Icons.Default.Contacts, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No contacts yet", color = Color.Gray)
+                    Text("No contacts yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = { viewModel.syncContacts() },
@@ -108,7 +108,7 @@ fun ContactSyncScreen(
                             Text(
                                 "Invite to Abhi Chat",
                                 fontWeight = FontWeight.Bold,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(16.dp)
                             )
                         }
@@ -152,7 +152,7 @@ fun ContactRow(
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(contact.displayName, fontWeight = FontWeight.Medium)
-            Text(contact.phoneNumber, color = Color.Gray, fontSize = 13.sp)
+            Text(contact.phoneNumber, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
         }
         if (showInvite) {
             TextButton(onClick = {}) {

@@ -231,7 +231,7 @@ fun ChatListScreen(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp
             ) {
                 NavigationBarItem(
@@ -249,7 +249,7 @@ fun ChatListScreen(
                     icon = { Icon(Icons.Default.Call, contentDescription = "Calls") },
                     label = { Text("Calls", fontSize = 11.sp) },
                     selected = selectedBottomTab == 1,
-                    onClick = { selectedBottomTab = 1 },
+                    onClick = { selectedBottomTab = 1 /* Call history - TODO: needs call log screen */ },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color(0xFF246BFD),
                         selectedTextColor = Color(0xFF246BFD),
@@ -325,7 +325,7 @@ fun ChatListScreen(
                         },
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
-                        tint = Color.Gray
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -334,7 +334,7 @@ fun ChatListScreen(
                             2 -> "No channels yet"
                             else -> "No chats yet"
                         },
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -343,7 +343,7 @@ fun ChatListScreen(
                             2 -> "Create a channel to broadcast messages"
                             else -> "Start a new conversation"
                         },
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
                 }
@@ -377,7 +377,7 @@ fun ChatListScreen(
                                 Text(
                                     text = "$archivedCount",
                                     fontSize = 13.sp,
-                                    color = Color.Gray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Divider()
@@ -458,7 +458,7 @@ fun ChatListItemView(
                             Icons.Default.VolumeOff,
                             contentDescription = "Muted",
                             modifier = Modifier.size(12.dp),
-                            tint = Color.Gray
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -537,7 +537,7 @@ fun ChatListItemView(
                 Text(
                     text = chat.lastMessage,
                     fontSize = 14.sp,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -579,15 +579,15 @@ fun ChatOptionsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            contentColor = Color(0xFF1A1A2E)
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = chat.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = Color(0xFF1A1A2E),
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -601,7 +601,7 @@ fun ChatOptionsDialog(
                 ) {
                     Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF246BFD))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (chat.isPinned) "Unpin Chat" else "Pin Chat", color = Color(0xFF1A1A2E))
+                    Text(if (chat.isPinned) "Unpin Chat" else "Pin Chat", color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 // Label
@@ -614,7 +614,7 @@ fun ChatOptionsDialog(
                 ) {
                     Icon(Icons.Default.Label, contentDescription = null, tint = Color(0xFF4CAF50))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Add Label", color = Color(0xFF1A1A2E))
+                    Text("Add Label", color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 // Mute
@@ -631,7 +631,7 @@ fun ChatOptionsDialog(
                         tint = Color(0xFF607D8B)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (chat.isMuted) "Unmute" else "Mute", color = Color(0xFF1A1A2E))
+                    Text(if (chat.isMuted) "Unmute" else "Mute", color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 // Archive
@@ -644,7 +644,7 @@ fun ChatOptionsDialog(
                 ) {
                     Icon(Icons.Default.Archive, contentDescription = null, tint = Color(0xFF795548))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (chat.isArchived) "Unarchive" else "Archive", color = Color(0xFF1A1A2E))
+                    Text(if (chat.isArchived) "Unarchive" else "Archive", color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 Divider(modifier = Modifier.padding(vertical = 4.dp))
@@ -704,15 +704,15 @@ fun LabelAssignDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            contentColor = Color(0xFF1A1A2E)
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Assign Labels",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = Color(0xFF1A1A2E),
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -737,7 +737,7 @@ fun LabelAssignDialog(
                             modifier = Modifier.size(12.dp)
                         ) {}
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(label.name, color = Color(0xFF1A1A2E))
+                        Text(label.name, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 
@@ -813,7 +813,7 @@ fun LabelsTabContent(
                     Text(
                         text = "${labelChats.size} chats",
                         fontSize = 13.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -849,7 +849,7 @@ fun LabelsTabContent(
                     Text(
                         text = "No chats with this label",
                         fontSize = 13.sp,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 44.dp, bottom = 4.dp)
                     )
                 }

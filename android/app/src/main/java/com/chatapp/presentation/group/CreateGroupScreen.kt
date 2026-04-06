@@ -155,7 +155,7 @@ fun CreateGroupScreen(
                             "Channels are for broadcasting to large audiences"
                         else
                             "Groups allow multiple people to chat together",
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
                 }
@@ -228,7 +228,7 @@ fun CreateGroupScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(contact.displayName, fontWeight = FontWeight.Medium)
-                                    Text(contact.phoneNumber, fontSize = 12.sp, color = Color.Gray)
+                                    Text(contact.phoneNumber, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             Divider(modifier = Modifier.padding(start = 68.dp))

@@ -65,10 +65,10 @@ fun LabelsScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.Label, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                    Icon(Icons.Default.Label, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No labels yet", color = Color.Gray)
-                    Text("Labels help organize your chats", color = Color.Gray, fontSize = 14.sp)
+                    Text("No labels yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Labels help organize your chats", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -130,7 +130,7 @@ fun AddLabelDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Color", fontSize = 14.sp, color = Color.Gray)
+                Text("Color", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     colors.forEach { color ->

@@ -127,13 +127,13 @@ fun UserProfileScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .background(Color(0xFFF7F8FC))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // Profile header
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -159,7 +159,7 @@ fun UserProfileScreen(
                     text = chatName,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A2E)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -200,7 +200,7 @@ fun UserProfileScreen(
             // About section
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -212,7 +212,7 @@ fun UserProfileScreen(
                     Text(
                         text = "Hey there! I'm using Abhi Chat",
                         fontSize = 16.sp,
-                        color = Color(0xFF1A1A2E)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -222,7 +222,7 @@ fun UserProfileScreen(
             // Media, Links, Docs
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier
@@ -234,7 +234,7 @@ fun UserProfileScreen(
                     Text(
                         text = "Media, Links and Docs",
                         fontSize = 16.sp,
-                        color = Color(0xFF1A1A2E)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -256,7 +256,7 @@ fun UserProfileScreen(
             // Notifications & Media visibility
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -268,7 +268,7 @@ fun UserProfileScreen(
                             Text(
                                 text = "Mute Notifications",
                                 fontSize = 16.sp,
-                                color = Color(0xFF1A1A2E)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         Switch(
@@ -293,7 +293,7 @@ fun UserProfileScreen(
                         Text(
                             text = "Media Visibility",
                             fontSize = 16.sp,
-                            color = Color(0xFF1A1A2E)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Default",
@@ -309,7 +309,7 @@ fun UserProfileScreen(
             // Encryption
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier
@@ -328,7 +328,7 @@ fun UserProfileScreen(
                         Text(
                             text = "Encryption",
                             fontSize = 16.sp,
-                            color = Color(0xFF1A1A2E)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Messages are end-to-end encrypted. Tap to verify.",
@@ -344,7 +344,7 @@ fun UserProfileScreen(
             // Block / Report
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(

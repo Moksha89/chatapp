@@ -55,10 +55,10 @@ fun OrdersScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                    Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No orders yet", color = Color.Gray)
-                    Text("Orders will appear here", color = Color.Gray, fontSize = 14.sp)
+                    Text("No orders yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Orders will appear here", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(
@@ -83,7 +83,7 @@ fun OrdersScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text("Total: $${String.format("%.2f", order.totalAmount)}", color = Color(0xFF1A56DB), fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Items: ${order.itemCount}", color = Color.Gray, fontSize = 13.sp)
+                                Text("Items: ${order.itemCount}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                             }
                         }
                     }

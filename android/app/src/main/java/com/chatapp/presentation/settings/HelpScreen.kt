@@ -180,7 +180,7 @@ fun HelpScreen(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text("Version", fontWeight = FontWeight.Medium, fontSize = 16.sp)
-                        Text("1.0.0 (Build 1)", fontSize = 14.sp, color = Color.Gray)
+                        Text("1.0.0 (Build 1)", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -189,7 +189,7 @@ fun HelpScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
                     text = "Abhi Chat",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
@@ -229,13 +229,13 @@ fun HelpItem(
             Text(
                 text = subtitle,
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Icon(
             Icons.Default.ChevronRight,
             contentDescription = null,
-            tint = Color.Gray
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

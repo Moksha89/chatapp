@@ -142,20 +142,20 @@ fun LinkedDevicesScreen(
                             Icons.Default.Devices,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = Color.Gray
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "No linked devices",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Tap + to link a new device by scanning a QR code",
                             fontSize = 14.sp,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -280,7 +280,7 @@ fun DeviceItem(
                 Text(
                     text = device.deviceType.replaceFirstChar { it.uppercase() },
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (device.isActive) {
                     Spacer(modifier = Modifier.width(8.dp))
@@ -300,7 +300,7 @@ fun DeviceItem(
                     Text(
                         text = "Last seen: ${formatLastSeen(device.lastSeen)}",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

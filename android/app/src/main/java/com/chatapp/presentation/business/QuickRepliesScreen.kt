@@ -63,10 +63,10 @@ fun QuickRepliesScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.Reply, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                    Icon(Icons.Default.Reply, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No quick replies yet", color = Color.Gray)
-                    Text("Create shortcuts for common messages", color = Color.Gray, fontSize = 14.sp)
+                    Text("No quick replies yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Create shortcuts for common messages", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(
@@ -92,7 +92,7 @@ fun QuickRepliesScreen(
                                         color = Color(0xFF1A56DB)
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(qr.message, color = Color.Gray, fontSize = 14.sp, maxLines = 2)
+                                    Text(qr.message, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, maxLines = 2)
                                 }
                                 IconButton(onClick = { viewModel.deleteQuickReply(qr.id) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)

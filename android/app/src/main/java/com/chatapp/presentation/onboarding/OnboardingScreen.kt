@@ -80,7 +80,7 @@ fun OnboardingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -95,7 +95,7 @@ fun OnboardingScreen(
                 TextButton(onClick = onSkip) {
                     Text(
                         "Skip",
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
                 }
@@ -130,7 +130,7 @@ fun OnboardingScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
-                    text = if (pagerState.currentPage == slides.size - 1) "Get started" else "Get started",
+                    text = if (pagerState.currentPage == slides.size - 1) "Get started" else "Next",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -147,7 +147,7 @@ fun OnboardingScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onSkip) {
-                    Text("Skip", color = Color.Gray, fontSize = 14.sp)
+                    Text("Skip", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
 
                 // Dot indicators
@@ -260,7 +260,7 @@ private fun OnboardingSlideContent(slide: OnboardingSlide) {
             text = slide.title,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1A1A2E),
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
 
@@ -270,7 +270,7 @@ private fun OnboardingSlideContent(slide: OnboardingSlide) {
         Text(
             text = slide.description,
             fontSize = 15.sp,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             lineHeight = 22.sp
         )

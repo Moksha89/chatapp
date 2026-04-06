@@ -63,10 +63,10 @@ fun BroadcastsScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                    Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No broadcast lists yet", color = Color.Gray)
-                    Text("Send messages to multiple contacts at once", color = Color.Gray, fontSize = 14.sp)
+                    Text("No broadcast lists yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Send messages to multiple contacts at once", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(
@@ -96,7 +96,7 @@ fun BroadcastsScreen(
                                     Text(broadcast.name, fontWeight = FontWeight.SemiBold)
                                     Text(
                                         "${broadcast.recipientCount} recipients",
-                                        color = Color.Gray,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 13.sp
                                     )
                                 }

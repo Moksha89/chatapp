@@ -73,7 +73,7 @@ fun ChatBackupScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text("Chat Backup", fontWeight = FontWeight.Bold)
-                        Text("Export your chats as JSON files", color = Color.Gray, fontSize = 13.sp)
+                        Text("Export your chats as JSON files", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     }
                 }
             }
@@ -89,7 +89,7 @@ fun ChatBackupScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No chats to export", color = Color.Gray)
+                    Text("No chats to export", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {

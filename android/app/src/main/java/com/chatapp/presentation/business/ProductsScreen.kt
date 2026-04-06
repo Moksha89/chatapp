@@ -69,10 +69,10 @@ fun ProductsScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                    Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No products yet", color = Color.Gray)
-                    Text("Add products to your catalog", color = Color.Gray, fontSize = 14.sp)
+                    Text("No products yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Add products to your catalog", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(
@@ -134,7 +134,7 @@ fun ProductCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(product.name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                 if (product.description.isNotEmpty()) {
-                    Text(product.description, color = Color.Gray, fontSize = 13.sp, maxLines = 2)
+                    Text(product.description, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, maxLines = 2)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(

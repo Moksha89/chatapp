@@ -88,7 +88,7 @@ fun AddFriendScreen(
                     .padding(16.dp),
                 placeholder = { Text("Search by phone number or name") },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+                    Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -138,12 +138,12 @@ fun AddFriendScreen(
                             Icons.Default.PersonSearch,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = Color.Gray
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = if (searchQuery.isEmpty()) "No contacts found" else "No results for \"$searchQuery\"",
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -239,7 +239,7 @@ fun AddFriendContactItem(
             Text(
                 text = user.phoneNumber,
                 fontSize = 14.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
         }

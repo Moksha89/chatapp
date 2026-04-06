@@ -165,7 +165,7 @@ fun NotificationsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Notification settings are saved locally on this device.",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
@@ -197,7 +197,7 @@ fun NotificationToggle(
             Text(
                 text = subtitle,
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Switch(

@@ -148,7 +148,7 @@ fun QrScannerScreen(
                     text = "The web device is now connected to your account.",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
@@ -182,7 +182,7 @@ fun QrScannerScreen(
                     text = "Open http://173.208.132.8 on your computer, click 'Login with QR Code', and scan the QR code to link your device.",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(32.dp))
 

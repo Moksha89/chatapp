@@ -80,7 +80,7 @@ fun GroupInfoScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text("Group Admin", fontWeight = FontWeight.Medium)
-                            Text("Can add/remove members, change settings", fontSize = 12.sp, color = Color.Gray)
+                            Text("Can add/remove members, change settings", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Row(
@@ -99,7 +99,7 @@ fun GroupInfoScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text("Member", fontWeight = FontWeight.Medium)
-                            Text("Can send messages and media", fontSize = 12.sp, color = Color.Gray)
+                            Text("Can send messages and media", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -204,15 +204,15 @@ fun GroupInfoScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(text = groupName, fontWeight = FontWeight.Bold, fontSize = 22.sp)
-                    Text(text = "Group \u00B7 ${members.size} participants", color = Color.Gray, fontSize = 14.sp)
+                    Text(text = groupName, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = "Group \u00B7 ${members.size} participants", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             }
 
             // Description
             item {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Description", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Gray)
+                    Text("Description", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
                     if (isEditingDescription) {
                         OutlinedTextField(
@@ -287,8 +287,8 @@ fun GroupInfoScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Media, Links, and Docs", fontWeight = FontWeight.Medium)
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                    Text("Media, Links, and Docs", fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Divider()
             }
@@ -300,8 +300,8 @@ fun GroupInfoScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("${members.size} Participants", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Gray)
-                    Icon(Icons.Default.Search, contentDescription = "Search members", tint = Color.Gray, modifier = Modifier.size(20.dp))
+                    Text("${members.size} Participants", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Default.Search, contentDescription = "Search members", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -347,9 +347,9 @@ fun GroupInfoScreen(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = if (member.id == "1") "${member.name} (You)" else member.name, fontWeight = FontWeight.Medium)
+                        Text(text = if (member.id == "1") "${member.name} (You)" else member.name, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                         if (member.phoneNumber.isNotBlank()) {
-                            Text(member.phoneNumber, fontSize = 12.sp, color = Color.Gray)
+                            Text(member.phoneNumber, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     if (member.role == "admin") {
