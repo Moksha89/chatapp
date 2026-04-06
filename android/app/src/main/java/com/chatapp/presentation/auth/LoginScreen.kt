@@ -38,37 +38,192 @@ data class Country(
     val flag: String
 )
 
+private val POPULAR_COUNTRY_CODES = listOf("IN", "US", "GB", "CA", "AU", "DE", "FR", "AE", "SA", "SG")
+private const val RESEND_COOLDOWN = 30
+
 private val countries = listOf(
-    Country("India", "IN", "+91", "\uD83C\uDDEE\uD83C\uDDF3"),
-    Country("United States", "US", "+1", "\uD83C\uDDFA\uD83C\uDDF8"),
-    Country("United Kingdom", "GB", "+44", "\uD83C\uDDEC\uD83C\uDDE7"),
-    Country("Canada", "CA", "+1", "\uD83C\uDDE8\uD83C\uDDE6"),
+    Country("Afghanistan", "AF", "+93", "\uD83C\uDDE6\uD83C\uDDEB"),
+    Country("Albania", "AL", "+355", "\uD83C\uDDE6\uD83C\uDDF1"),
+    Country("Algeria", "DZ", "+213", "\uD83C\uDDE9\uD83C\uDDFF"),
+    Country("Andorra", "AD", "+376", "\uD83C\uDDE6\uD83C\uDDE9"),
+    Country("Angola", "AO", "+244", "\uD83C\uDDE6\uD83C\uDDF4"),
+    Country("Argentina", "AR", "+54", "\uD83C\uDDE6\uD83C\uDDF7"),
+    Country("Armenia", "AM", "+374", "\uD83C\uDDE6\uD83C\uDDF2"),
     Country("Australia", "AU", "+61", "\uD83C\uDDE6\uD83C\uDDFA"),
-    Country("Germany", "DE", "+49", "\uD83C\uDDE9\uD83C\uDDEA"),
-    Country("France", "FR", "+33", "\uD83C\uDDEB\uD83C\uDDF7"),
-    Country("Japan", "JP", "+81", "\uD83C\uDDEF\uD83C\uDDF5"),
-    Country("China", "CN", "+86", "\uD83C\uDDE8\uD83C\uDDF3"),
-    Country("Brazil", "BR", "+55", "\uD83C\uDDE7\uD83C\uDDF7"),
-    Country("Mexico", "MX", "+52", "\uD83C\uDDF2\uD83C\uDDFD"),
-    Country("South Korea", "KR", "+82", "\uD83C\uDDF0\uD83C\uDDF7"),
-    Country("Italy", "IT", "+39", "\uD83C\uDDEE\uD83C\uDDF9"),
-    Country("Spain", "ES", "+34", "\uD83C\uDDEA\uD83C\uDDF8"),
-    Country("Russia", "RU", "+7", "\uD83C\uDDF7\uD83C\uDDFA"),
-    Country("Indonesia", "ID", "+62", "\uD83C\uDDEE\uD83C\uDDE9"),
-    Country("Turkey", "TR", "+90", "\uD83C\uDDF9\uD83C\uDDF7"),
-    Country("Saudi Arabia", "SA", "+966", "\uD83C\uDDF8\uD83C\uDDE6"),
-    Country("United Arab Emirates", "AE", "+971", "\uD83C\uDDE6\uD83C\uDDEA"),
-    Country("Singapore", "SG", "+65", "\uD83C\uDDF8\uD83C\uDDEC"),
-    Country("Malaysia", "MY", "+60", "\uD83C\uDDF2\uD83C\uDDFE"),
-    Country("Thailand", "TH", "+66", "\uD83C\uDDF9\uD83C\uDDED"),
-    Country("Philippines", "PH", "+63", "\uD83C\uDDF5\uD83C\uDDED"),
-    Country("Nigeria", "NG", "+234", "\uD83C\uDDF3\uD83C\uDDEC"),
-    Country("South Africa", "ZA", "+27", "\uD83C\uDDFF\uD83C\uDDE6"),
-    Country("Egypt", "EG", "+20", "\uD83C\uDDEA\uD83C\uDDEC"),
-    Country("Pakistan", "PK", "+92", "\uD83C\uDDF5\uD83C\uDDF0"),
+    Country("Austria", "AT", "+43", "\uD83C\uDDE6\uD83C\uDDF9"),
+    Country("Azerbaijan", "AZ", "+994", "\uD83C\uDDE6\uD83C\uDDFF"),
+    Country("Bahamas", "BS", "+1242", "\uD83C\uDDE7\uD83C\uDDF8"),
+    Country("Bahrain", "BH", "+973", "\uD83C\uDDE7\uD83C\uDDED"),
     Country("Bangladesh", "BD", "+880", "\uD83C\uDDE7\uD83C\uDDE9"),
+    Country("Barbados", "BB", "+1246", "\uD83C\uDDE7\uD83C\uDDE7"),
+    Country("Belarus", "BY", "+375", "\uD83C\uDDE7\uD83C\uDDFE"),
+    Country("Belgium", "BE", "+32", "\uD83C\uDDE7\uD83C\uDDEA"),
+    Country("Belize", "BZ", "+501", "\uD83C\uDDE7\uD83C\uDDFF"),
+    Country("Benin", "BJ", "+229", "\uD83C\uDDE7\uD83C\uDDEF"),
+    Country("Bhutan", "BT", "+975", "\uD83C\uDDE7\uD83C\uDDF9"),
+    Country("Bolivia", "BO", "+591", "\uD83C\uDDE7\uD83C\uDDF4"),
+    Country("Bosnia and Herzegovina", "BA", "+387", "\uD83C\uDDE7\uD83C\uDDE6"),
+    Country("Botswana", "BW", "+267", "\uD83C\uDDE7\uD83C\uDDFC"),
+    Country("Brazil", "BR", "+55", "\uD83C\uDDE7\uD83C\uDDF7"),
+    Country("Brunei", "BN", "+673", "\uD83C\uDDE7\uD83C\uDDF3"),
+    Country("Bulgaria", "BG", "+359", "\uD83C\uDDE7\uD83C\uDDEC"),
+    Country("Burkina Faso", "BF", "+226", "\uD83C\uDDE7\uD83C\uDDEB"),
+    Country("Burundi", "BI", "+257", "\uD83C\uDDE7\uD83C\uDDEE"),
+    Country("Cambodia", "KH", "+855", "\uD83C\uDDF0\uD83C\uDDED"),
+    Country("Cameroon", "CM", "+237", "\uD83C\uDDE8\uD83C\uDDF2"),
+    Country("Canada", "CA", "+1", "\uD83C\uDDE8\uD83C\uDDE6"),
+    Country("Cape Verde", "CV", "+238", "\uD83C\uDDE8\uD83C\uDDFB"),
+    Country("Central African Republic", "CF", "+236", "\uD83C\uDDE8\uD83C\uDDEB"),
+    Country("Chad", "TD", "+235", "\uD83C\uDDF9\uD83C\uDDE9"),
+    Country("Chile", "CL", "+56", "\uD83C\uDDE8\uD83C\uDDF1"),
+    Country("China", "CN", "+86", "\uD83C\uDDE8\uD83C\uDDF3"),
+    Country("Colombia", "CO", "+57", "\uD83C\uDDE8\uD83C\uDDF4"),
+    Country("Comoros", "KM", "+269", "\uD83C\uDDF0\uD83C\uDDF2"),
+    Country("Congo", "CG", "+242", "\uD83C\uDDE8\uD83C\uDDEC"),
+    Country("Costa Rica", "CR", "+506", "\uD83C\uDDE8\uD83C\uDDF7"),
+    Country("Croatia", "HR", "+385", "\uD83C\uDDED\uD83C\uDDF7"),
+    Country("Cuba", "CU", "+53", "\uD83C\uDDE8\uD83C\uDDFA"),
+    Country("Cyprus", "CY", "+357", "\uD83C\uDDE8\uD83C\uDDFE"),
+    Country("Czech Republic", "CZ", "+420", "\uD83C\uDDE8\uD83C\uDDFF"),
+    Country("Denmark", "DK", "+45", "\uD83C\uDDE9\uD83C\uDDF0"),
+    Country("Djibouti", "DJ", "+253", "\uD83C\uDDE9\uD83C\uDDEF"),
+    Country("Dominican Republic", "DO", "+1809", "\uD83C\uDDE9\uD83C\uDDF4"),
+    Country("DR Congo", "CD", "+243", "\uD83C\uDDE8\uD83C\uDDE9"),
+    Country("Ecuador", "EC", "+593", "\uD83C\uDDEA\uD83C\uDDE8"),
+    Country("Egypt", "EG", "+20", "\uD83C\uDDEA\uD83C\uDDEC"),
+    Country("El Salvador", "SV", "+503", "\uD83C\uDDF8\uD83C\uDDFB"),
+    Country("Equatorial Guinea", "GQ", "+240", "\uD83C\uDDEC\uD83C\uDDF6"),
+    Country("Eritrea", "ER", "+291", "\uD83C\uDDEA\uD83C\uDDF7"),
+    Country("Estonia", "EE", "+372", "\uD83C\uDDEA\uD83C\uDDEA"),
+    Country("Eswatini", "SZ", "+268", "\uD83C\uDDF8\uD83C\uDDFF"),
+    Country("Ethiopia", "ET", "+251", "\uD83C\uDDEA\uD83C\uDDF9"),
+    Country("Fiji", "FJ", "+679", "\uD83C\uDDEB\uD83C\uDDEF"),
+    Country("Finland", "FI", "+358", "\uD83C\uDDEB\uD83C\uDDEE"),
+    Country("France", "FR", "+33", "\uD83C\uDDEB\uD83C\uDDF7"),
+    Country("Gabon", "GA", "+241", "\uD83C\uDDEC\uD83C\uDDE6"),
+    Country("Gambia", "GM", "+220", "\uD83C\uDDEC\uD83C\uDDF2"),
+    Country("Georgia", "GE", "+995", "\uD83C\uDDEC\uD83C\uDDEA"),
+    Country("Germany", "DE", "+49", "\uD83C\uDDE9\uD83C\uDDEA"),
+    Country("Ghana", "GH", "+233", "\uD83C\uDDEC\uD83C\uDDED"),
+    Country("Greece", "GR", "+30", "\uD83C\uDDEC\uD83C\uDDF7"),
+    Country("Guatemala", "GT", "+502", "\uD83C\uDDEC\uD83C\uDDF9"),
+    Country("Guinea", "GN", "+224", "\uD83C\uDDEC\uD83C\uDDF3"),
+    Country("Guyana", "GY", "+592", "\uD83C\uDDEC\uD83C\uDDFE"),
+    Country("Haiti", "HT", "+509", "\uD83C\uDDED\uD83C\uDDF9"),
+    Country("Honduras", "HN", "+504", "\uD83C\uDDED\uD83C\uDDF3"),
+    Country("Hong Kong", "HK", "+852", "\uD83C\uDDED\uD83C\uDDF0"),
+    Country("Hungary", "HU", "+36", "\uD83C\uDDED\uD83C\uDDFA"),
+    Country("Iceland", "IS", "+354", "\uD83C\uDDEE\uD83C\uDDF8"),
+    Country("India", "IN", "+91", "\uD83C\uDDEE\uD83C\uDDF3"),
+    Country("Indonesia", "ID", "+62", "\uD83C\uDDEE\uD83C\uDDE9"),
+    Country("Iran", "IR", "+98", "\uD83C\uDDEE\uD83C\uDDF7"),
+    Country("Iraq", "IQ", "+964", "\uD83C\uDDEE\uD83C\uDDF6"),
+    Country("Ireland", "IE", "+353", "\uD83C\uDDEE\uD83C\uDDEA"),
+    Country("Israel", "IL", "+972", "\uD83C\uDDEE\uD83C\uDDF1"),
+    Country("Italy", "IT", "+39", "\uD83C\uDDEE\uD83C\uDDF9"),
+    Country("Ivory Coast", "CI", "+225", "\uD83C\uDDE8\uD83C\uDDEE"),
+    Country("Jamaica", "JM", "+1876", "\uD83C\uDDEF\uD83C\uDDF2"),
+    Country("Japan", "JP", "+81", "\uD83C\uDDEF\uD83C\uDDF5"),
+    Country("Jordan", "JO", "+962", "\uD83C\uDDEF\uD83C\uDDF4"),
+    Country("Kazakhstan", "KZ", "+7", "\uD83C\uDDF0\uD83C\uDDFF"),
+    Country("Kenya", "KE", "+254", "\uD83C\uDDF0\uD83C\uDDEA"),
+    Country("Kuwait", "KW", "+965", "\uD83C\uDDF0\uD83C\uDDFC"),
+    Country("Kyrgyzstan", "KG", "+996", "\uD83C\uDDF0\uD83C\uDDEC"),
+    Country("Laos", "LA", "+856", "\uD83C\uDDF1\uD83C\uDDE6"),
+    Country("Latvia", "LV", "+371", "\uD83C\uDDF1\uD83C\uDDFB"),
+    Country("Lebanon", "LB", "+961", "\uD83C\uDDF1\uD83C\uDDE7"),
+    Country("Lesotho", "LS", "+266", "\uD83C\uDDF1\uD83C\uDDF8"),
+    Country("Liberia", "LR", "+231", "\uD83C\uDDF1\uD83C\uDDF7"),
+    Country("Libya", "LY", "+218", "\uD83C\uDDF1\uD83C\uDDFE"),
+    Country("Liechtenstein", "LI", "+423", "\uD83C\uDDF1\uD83C\uDDEE"),
+    Country("Lithuania", "LT", "+370", "\uD83C\uDDF1\uD83C\uDDF9"),
+    Country("Luxembourg", "LU", "+352", "\uD83C\uDDF1\uD83C\uDDFA"),
+    Country("Macau", "MO", "+853", "\uD83C\uDDF2\uD83C\uDDF4"),
+    Country("Madagascar", "MG", "+261", "\uD83C\uDDF2\uD83C\uDDEC"),
+    Country("Malawi", "MW", "+265", "\uD83C\uDDF2\uD83C\uDDFC"),
+    Country("Malaysia", "MY", "+60", "\uD83C\uDDF2\uD83C\uDDFE"),
+    Country("Maldives", "MV", "+960", "\uD83C\uDDF2\uD83C\uDDFB"),
+    Country("Mali", "ML", "+223", "\uD83C\uDDF2\uD83C\uDDF1"),
+    Country("Malta", "MT", "+356", "\uD83C\uDDF2\uD83C\uDDF9"),
+    Country("Mauritania", "MR", "+222", "\uD83C\uDDF2\uD83C\uDDF7"),
+    Country("Mauritius", "MU", "+230", "\uD83C\uDDF2\uD83C\uDDFA"),
+    Country("Mexico", "MX", "+52", "\uD83C\uDDF2\uD83C\uDDFD"),
+    Country("Moldova", "MD", "+373", "\uD83C\uDDF2\uD83C\uDDE9"),
+    Country("Monaco", "MC", "+377", "\uD83C\uDDF2\uD83C\uDDE8"),
+    Country("Mongolia", "MN", "+976", "\uD83C\uDDF2\uD83C\uDDF3"),
+    Country("Montenegro", "ME", "+382", "\uD83C\uDDF2\uD83C\uDDEA"),
+    Country("Morocco", "MA", "+212", "\uD83C\uDDF2\uD83C\uDDE6"),
+    Country("Mozambique", "MZ", "+258", "\uD83C\uDDF2\uD83C\uDDFF"),
+    Country("Myanmar", "MM", "+95", "\uD83C\uDDF2\uD83C\uDDF2"),
+    Country("Namibia", "NA", "+264", "\uD83C\uDDF3\uD83C\uDDE6"),
+    Country("Nepal", "NP", "+977", "\uD83C\uDDF3\uD83C\uDDF5"),
+    Country("Netherlands", "NL", "+31", "\uD83C\uDDF3\uD83C\uDDF1"),
+    Country("New Zealand", "NZ", "+64", "\uD83C\uDDF3\uD83C\uDDFF"),
+    Country("Nicaragua", "NI", "+505", "\uD83C\uDDF3\uD83C\uDDEE"),
+    Country("Niger", "NE", "+227", "\uD83C\uDDF3\uD83C\uDDEA"),
+    Country("Nigeria", "NG", "+234", "\uD83C\uDDF3\uD83C\uDDEC"),
+    Country("North Korea", "KP", "+850", "\uD83C\uDDF0\uD83C\uDDF5"),
+    Country("North Macedonia", "MK", "+389", "\uD83C\uDDF2\uD83C\uDDF0"),
+    Country("Norway", "NO", "+47", "\uD83C\uDDF3\uD83C\uDDF4"),
+    Country("Oman", "OM", "+968", "\uD83C\uDDF4\uD83C\uDDF2"),
+    Country("Pakistan", "PK", "+92", "\uD83C\uDDF5\uD83C\uDDF0"),
+    Country("Palestine", "PS", "+970", "\uD83C\uDDF5\uD83C\uDDF8"),
+    Country("Panama", "PA", "+507", "\uD83C\uDDF5\uD83C\uDDE6"),
+    Country("Papua New Guinea", "PG", "+675", "\uD83C\uDDF5\uD83C\uDDEC"),
+    Country("Paraguay", "PY", "+595", "\uD83C\uDDF5\uD83C\uDDFE"),
+    Country("Peru", "PE", "+51", "\uD83C\uDDF5\uD83C\uDDEA"),
+    Country("Philippines", "PH", "+63", "\uD83C\uDDF5\uD83C\uDDED"),
+    Country("Poland", "PL", "+48", "\uD83C\uDDF5\uD83C\uDDF1"),
+    Country("Portugal", "PT", "+351", "\uD83C\uDDF5\uD83C\uDDF9"),
+    Country("Qatar", "QA", "+974", "\uD83C\uDDF6\uD83C\uDDE6"),
+    Country("Romania", "RO", "+40", "\uD83C\uDDF7\uD83C\uDDF4"),
+    Country("Russia", "RU", "+7", "\uD83C\uDDF7\uD83C\uDDFA"),
+    Country("Rwanda", "RW", "+250", "\uD83C\uDDF7\uD83C\uDDFC"),
+    Country("Saudi Arabia", "SA", "+966", "\uD83C\uDDF8\uD83C\uDDE6"),
+    Country("Senegal", "SN", "+221", "\uD83C\uDDF8\uD83C\uDDF3"),
+    Country("Serbia", "RS", "+381", "\uD83C\uDDF7\uD83C\uDDF8"),
+    Country("Sierra Leone", "SL", "+232", "\uD83C\uDDF8\uD83C\uDDF1"),
+    Country("Singapore", "SG", "+65", "\uD83C\uDDF8\uD83C\uDDEC"),
+    Country("Slovakia", "SK", "+421", "\uD83C\uDDF8\uD83C\uDDF0"),
+    Country("Slovenia", "SI", "+386", "\uD83C\uDDF8\uD83C\uDDEE"),
+    Country("Solomon Islands", "SB", "+677", "\uD83C\uDDF8\uD83C\uDDE7"),
+    Country("Somalia", "SO", "+252", "\uD83C\uDDF8\uD83C\uDDF4"),
+    Country("South Africa", "ZA", "+27", "\uD83C\uDDFF\uD83C\uDDE6"),
+    Country("South Korea", "KR", "+82", "\uD83C\uDDF0\uD83C\uDDF7"),
+    Country("South Sudan", "SS", "+211", "\uD83C\uDDF8\uD83C\uDDF8"),
+    Country("Spain", "ES", "+34", "\uD83C\uDDEA\uD83C\uDDF8"),
     Country("Sri Lanka", "LK", "+94", "\uD83C\uDDF1\uD83C\uDDF0"),
-    Country("Nepal", "NP", "+977", "\uD83C\uDDF3\uD83C\uDDF5")
+    Country("Sudan", "SD", "+249", "\uD83C\uDDF8\uD83C\uDDE9"),
+    Country("Suriname", "SR", "+597", "\uD83C\uDDF8\uD83C\uDDF7"),
+    Country("Sweden", "SE", "+46", "\uD83C\uDDF8\uD83C\uDDEA"),
+    Country("Switzerland", "CH", "+41", "\uD83C\uDDE8\uD83C\uDDED"),
+    Country("Syria", "SY", "+963", "\uD83C\uDDF8\uD83C\uDDFE"),
+    Country("Taiwan", "TW", "+886", "\uD83C\uDDF9\uD83C\uDDFC"),
+    Country("Tajikistan", "TJ", "+992", "\uD83C\uDDF9\uD83C\uDDEF"),
+    Country("Tanzania", "TZ", "+255", "\uD83C\uDDF9\uD83C\uDDFF"),
+    Country("Thailand", "TH", "+66", "\uD83C\uDDF9\uD83C\uDDED"),
+    Country("Togo", "TG", "+228", "\uD83C\uDDF9\uD83C\uDDEC"),
+    Country("Tonga", "TO", "+676", "\uD83C\uDDF9\uD83C\uDDF4"),
+    Country("Trinidad and Tobago", "TT", "+1868", "\uD83C\uDDF9\uD83C\uDDF9"),
+    Country("Tunisia", "TN", "+216", "\uD83C\uDDF9\uD83C\uDDF3"),
+    Country("Turkey", "TR", "+90", "\uD83C\uDDF9\uD83C\uDDF7"),
+    Country("Turkmenistan", "TM", "+993", "\uD83C\uDDF9\uD83C\uDDF2"),
+    Country("Tuvalu", "TV", "+688", "\uD83C\uDDF9\uD83C\uDDFB"),
+    Country("Uganda", "UG", "+256", "\uD83C\uDDFA\uD83C\uDDEC"),
+    Country("Ukraine", "UA", "+380", "\uD83C\uDDFA\uD83C\uDDE6"),
+    Country("United Arab Emirates", "AE", "+971", "\uD83C\uDDE6\uD83C\uDDEA"),
+    Country("United Kingdom", "GB", "+44", "\uD83C\uDDEC\uD83C\uDDE7"),
+    Country("United States", "US", "+1", "\uD83C\uDDFA\uD83C\uDDF8"),
+    Country("Uruguay", "UY", "+598", "\uD83C\uDDFA\uD83C\uDDFE"),
+    Country("Uzbekistan", "UZ", "+998", "\uD83C\uDDFA\uD83C\uDDFF"),
+    Country("Vanuatu", "VU", "+678", "\uD83C\uDDFB\uD83C\uDDFA"),
+    Country("Vatican City", "VA", "+379", "\uD83C\uDDFB\uD83C\uDDE6"),
+    Country("Venezuela", "VE", "+58", "\uD83C\uDDFB\uD83C\uDDEA"),
+    Country("Vietnam", "VN", "+84", "\uD83C\uDDFB\uD83C\uDDF3"),
+    Country("Yemen", "YE", "+967", "\uD83C\uDDFE\uD83C\uDDEA"),
+    Country("Zambia", "ZM", "+260", "\uD83C\uDDFF\uD83C\uDDF2"),
+    Country("Zimbabwe", "ZW", "+263", "\uD83C\uDDFF\uD83C\uDDFC"),
+
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -350,14 +505,39 @@ private fun OtpInputStep(
     onResend: () -> Unit,
     onChangeNumber: () -> Unit
 ) {
+    var resendTimer by remember { mutableIntStateOf(RESEND_COOLDOWN) }
+    var otpSentCount by remember { mutableIntStateOf(1) }
+
+    // Resend cooldown timer
+    LaunchedEffect(resendTimer) {
+        if (resendTimer > 0) {
+            kotlinx.coroutines.delay(1000L)
+            resendTimer--
+        }
+    }
+
+    // Auto-verify when 6 digits entered
+    LaunchedEffect(otp) {
+        if (otp.length == 6 && !isLoading) {
+            onVerify()
+        }
+    }
+
     Spacer(modifier = Modifier.height(24.dp))
 
     Text(
-        text = "Waiting to automatically detect an SMS\nsent to $phoneNumber.",
+        text = "Enter the 6-digit code sent to",
         fontSize = 14.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
         lineHeight = 20.sp
+    )
+    Text(
+        text = phoneNumber,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center
     )
 
     TextButton(onClick = onChangeNumber) {
@@ -370,20 +550,70 @@ private fun OtpInputStep(
 
     error?.let {
         Spacer(modifier = Modifier.height(12.dp))
-        Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.errorContainer,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Warning,
+                    null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-        Text("Didn't receive code? ", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            text = "Resend",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.clickable { onResend() }
-        )
+    // Resend timer
+    Row(
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        if (resendTimer > 0) {
+            Icon(
+                Icons.Default.Schedule,
+                null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Resend code in ${resendTimer}s",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text("Didn't receive code? ", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = "Resend",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable {
+                    onResend()
+                    resendTimer = RESEND_COOLDOWN
+                    otpSentCount++
+                }
+            )
+            if (otpSentCount > 1) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "(sent ${otpSentCount}x)",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -619,7 +849,8 @@ private fun CountryPickerDialog(
     onSelect: (Country) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    val filteredCountries = if (searchQuery.isBlank()) countries
+    val popularCountries = remember { countries.filter { it.code in POPULAR_COUNTRY_CODES }.sortedBy { POPULAR_COUNTRY_CODES.indexOf(it.code) } }
+    val filteredCountries = if (searchQuery.isBlank()) countries.sortedBy { it.name }
     else countries.filter {
         it.name.contains(searchQuery, ignoreCase = true) ||
                 it.dialCode.contains(searchQuery) ||
@@ -636,19 +867,31 @@ private fun CountryPickerDialog(
                 .fillMaxHeight(0.7f)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Choose a country",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Choose a country",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${countries.size} countries",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search") },
+                    placeholder = { Text("Search by name, code, or dial code") },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     leadingIcon = {
@@ -663,36 +906,83 @@ private fun CountryPickerDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 LazyColumn {
-                    items(filteredCountries.size) { index ->
-                        val country = filteredCountries[index]
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelect(country) }
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = country.flag, fontSize = 24.sp)
-                            Spacer(modifier = Modifier.width(12.dp))
+                    // Popular countries section (only when not searching)
+                    if (searchQuery.isBlank()) {
+                        item {
                             Text(
-                                text = country.name,
-                                modifier = Modifier.weight(1f),
-                                fontSize = 15.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = country.dialCode,
-                                fontSize = 14.sp,
+                                text = "POPULAR",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
+                        items(popularCountries.size) { index ->
+                            CountryRow(popularCountries[index], onSelect)
+                            if (index < popularCountries.size - 1) {
+                                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            }
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "ALL COUNTRIES",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                    }
+                    items(filteredCountries.size) { index ->
+                        CountryRow(filteredCountries[index], onSelect)
                         if (index < filteredCountries.size - 1) {
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        }
+                    }
+                    if (filteredCountries.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No countries found",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 24.dp)
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CountryRow(country: Country, onSelect: (Country) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect(country) }
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = country.flag, fontSize = 24.sp)
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = country.name,
+            modifier = Modifier.weight(1f),
+            fontSize = 15.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = country.dialCode,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
