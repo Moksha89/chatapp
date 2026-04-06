@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import {
@@ -172,41 +172,118 @@ export function ChatDialogs(props: ChatDialogsProps) {
         onCancel={() => setEditingMessage(null)}
       />
 
-      {/* Forward Dialog */}
-      {showForwardDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
-          <div className="bg-white rounded-lg p-4 w-full max-w-md max-h-[60vh] flex flex-col dialog-content">
-            <h3 className="font-semibold mb-3">Forward to...</h3>
-            <div className="flex-1 overflow-y-auto space-y-1">
-              {chats.filter(c => c.id !== activeChat?.id).map(chat => {
-                const chatName = chat.name || chat.participants.find((p: any) => p.userId !== userId)?.user?.displayName || 'Unknown';
-                return (
-                  <button
-                    key={chat.id}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-100 rounded-lg flex items-center gap-3"
-                    onClick={async () => {
-                      if (showForwardDialog) {
-                        await forwardMessage(showForwardDialog, chat.id);
-                        setShowForwardDialog(null);
-                      }
-                    }}
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-[#246BFD] text-white text-xs">
-                        {chatName.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">{chatName}</span>
-                  </button>
-                );
-              })}
+      {/* Forward Dialog - Multi-select with batch forward */}
+      {showForwardDialog && (() => {
+        const ForwardDialogInner = () => {
+          const [selectedChats, setSelectedChats] = useState<Set<string>>(new Set());
+          const [forwardSearch, setForwardSearch] = useState('');
+          const [isSending, setIsSending] = useState(false);
+          const availableChats = chats.filter(c => c.id !== activeChat?.id);
+          const filteredForwardChats = forwardSearch
+            ? availableChats.filter(c => {
+                const name = c.name || c.participants.find((p: any) => p.userId !== userId)?.user?.displayName || '';
+                return name.toLowerCase().includes(forwardSearch.toLowerCase());
+              })
+            : availableChats;
+          const toggleChat = (chatId: string) => {
+            setSelectedChats(prev => {
+              const next = new Set(prev);
+              if (next.has(chatId)) next.delete(chatId); else next.add(chatId);
+              return next;
+            });
+          };
+          const handleForwardAll = async () => {
+            if (!showForwardDialog || selectedChats.size === 0) return;
+            setIsSending(true);
+            try {
+              for (const chatId of selectedChats) {
+                await forwardMessage(showForwardDialog, chatId);
+              }
+            } catch { /* ignore */ }
+            setIsSending(false);
+            setShowForwardDialog(null);
+          };
+          return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
+              <div className="bg-white rounded-2xl p-4 w-full max-w-md max-h-[70vh] flex flex-col dialog-content shadow-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-lg">Forward to...</h3>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowForwardDialog(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Search */}
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search chats..."
+                    className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-xl text-sm border-none outline-none focus:ring-2 focus:ring-[#246BFD]/20"
+                    value={forwardSearch}
+                    onChange={(e) => setForwardSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                {/* Selected chips */}
+                {selectedChats.size > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3 px-1">
+                    {Array.from(selectedChats).map(id => {
+                      const chat = chats.find(c => c.id === id);
+                      const name = chat?.name || chat?.participants.find((p: any) => p.userId !== userId)?.user?.displayName || 'Chat';
+                      return (
+                        <span key={id} className="bg-[#246BFD]/10 text-[#246BFD] text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium">
+                          {name.slice(0, 15)}{name.length > 15 ? '...' : ''}
+                          <button onClick={() => toggleChat(id)} className="hover:bg-[#246BFD]/20 rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Chat list */}
+                <div className="flex-1 overflow-y-auto space-y-0.5 min-h-0">
+                  {filteredForwardChats.map(chat => {
+                    const chatName = chat.name || chat.participants.find((p: any) => p.userId !== userId)?.user?.displayName || 'Unknown';
+                    const isSelected = selectedChats.has(chat.id);
+                    return (
+                      <button
+                        key={chat.id}
+                        className={`w-full px-3 py-2.5 text-left rounded-xl flex items-center gap-3 transition-colors ${isSelected ? 'bg-[#246BFD]/5 border border-[#246BFD]/20' : 'hover:bg-gray-50 border border-transparent'}`}
+                        onClick={() => toggleChat(chat.id)}
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'border-[#246BFD] bg-[#246BFD]' : 'border-gray-300'}`}>
+                          {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-[#246BFD] text-white text-xs font-medium">
+                            {chatName.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium truncate">{chatName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Actions */}
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <span className="text-xs text-gray-400">{selectedChats.size} selected</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowForwardDialog(null)}>Cancel</Button>
+                    <Button
+                      size="sm"
+                      className="bg-[#246BFD] hover:bg-[#1A56DB]"
+                      disabled={selectedChats.size === 0 || isSending}
+                      onClick={handleForwardAll}
+                    >
+                      {isSending ? 'Sending...' : `Forward${selectedChats.size > 0 ? ` (${selectedChats.size})` : ''}`}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end mt-3">
-              <Button variant="outline" onClick={() => setShowForwardDialog(null)}>Cancel</Button>
-            </div>
-          </div>
-        </div>
-      )}
+          );
+        };
+        return <ForwardDialogInner />;
+      })()}
 
       {/* Disappearing Messages Dialog */}
       {showDisappearingDialog && (

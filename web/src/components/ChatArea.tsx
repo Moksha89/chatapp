@@ -50,12 +50,17 @@ import {
   Smile,
   Users,
   ChevronDown,
+  ChevronUp,
   BellOff,
   Hash,
   Globe,
   BarChart3,
   MapPin,
-  User as UserIcon
+  User as UserIcon,
+  AlertCircle,
+  WifiOff,
+  CalendarClock,
+  Link2
 } from 'lucide-react';
 
 interface MediaMessage {
@@ -128,6 +133,17 @@ export function ChatArea() {
   const [availableUsersForAdd, setAvailableUsersForAdd] = useState<Array<{ id: string; displayName: string; phoneNumber: string }>>([]);
   const [quickReplySuggestions, setQuickReplySuggestions] = useState<Array<{ id: string; shortcode: string; message: string }>>([]);
   const [showQuickReplySuggestions, setShowQuickReplySuggestions] = useState(false);
+  // Message scheduling
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
+  // Search navigation
+  const [searchMatchIndex, setSearchMatchIndex] = useState(0);
+  const [searchMatchCount, setSearchMatchCount] = useState(0);
+  // Link preview detection
+  const [linkPreviews, setLinkPreviews] = useState<Map<string, { title: string; description: string; image?: string; url: string }>>(new Map());
+  // Offline queue indicator
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   // Fix #2: Persist mute notifications to localStorage
   useEffect(() => {
@@ -135,7 +151,79 @@ export function ChatArea() {
       localStorage.setItem('mutedChats', JSON.stringify(Array.from(mutedChats)));
     } catch { /* ignore storage errors */ }
   }, [mutedChats]);
-  
+
+  // Draft persistence: load draft when switching chats
+  useEffect(() => {
+    if (!activeChat) return;
+    try {
+      const drafts = JSON.parse(localStorage.getItem('messageDrafts') || '{}');
+      const draft = drafts[activeChat.id];
+      if (draft) setInputValue(draft);
+      else setInputValue('');
+    } catch { setInputValue(''); }
+  }, [activeChat?.id]);
+
+  // Draft persistence: save draft on input change
+  useEffect(() => {
+    if (!activeChat) return;
+    try {
+      const drafts = JSON.parse(localStorage.getItem('messageDrafts') || '{}');
+      if (inputValue.trim()) drafts[activeChat.id] = inputValue;
+      else delete drafts[activeChat.id];
+      localStorage.setItem('messageDrafts', JSON.stringify(drafts));
+    } catch { /* ignore */ }
+  }, [inputValue, activeChat?.id]);
+
+  // Offline detection
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true);
+    const goOnline = () => setIsOffline(false);
+    window.addEventListener('offline', goOffline);
+    window.addEventListener('online', goOnline);
+    return () => { window.removeEventListener('offline', goOffline); window.removeEventListener('online', goOnline); };
+  }, []);
+
+  // Search match count tracking
+  useEffect(() => {
+    if (chatSearchQuery) {
+      const count = messages.filter(m => m.content?.toLowerCase().includes(chatSearchQuery.toLowerCase())).length;
+      setSearchMatchCount(count);
+      setSearchMatchIndex(count > 0 ? 1 : 0);
+    } else {
+      setSearchMatchCount(0);
+      setSearchMatchIndex(0);
+    }
+  }, [chatSearchQuery, messages]);
+
+  // Link preview detection for URLs in messages
+  useEffect(() => {
+    const urlRegex = /https?:\/\/[^\s]+/g;
+    messages.forEach(msg => {
+      if (msg.content && !msg.isDeleted && !linkPreviews.has(msg.id)) {
+        const urls = msg.content.match(urlRegex);
+        if (urls && urls.length > 0) {
+          setLinkPreviews(prev => {
+            const next = new Map(prev);
+            next.set(msg.id, { title: new URL(urls[0]).hostname, description: urls[0], url: urls[0] });
+            return next;
+          });
+        }
+      }
+    });
+  }, [messages, linkPreviews]);
+
+  // Keyboard shortcuts: Ctrl+F for search
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && activeChat) {
+        e.preventDefault();
+        setShowSearchBar(true);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [activeChat]);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -249,8 +337,15 @@ export function ChatArea() {
     setInputValue('');
     setReplyingTo(null);
 
+    // Clear draft after sending
+    try {
+      const drafts = JSON.parse(localStorage.getItem('messageDrafts') || '{}');
+      delete drafts[activeChat.id];
+      localStorage.setItem('messageDrafts', JSON.stringify(drafts));
+    } catch { /* ignore */ }
+
     // Bug #7 fix: Reset textarea height after sending multiline message
-    const textarea = document.querySelector('textarea[placeholder="Type a message"]') as HTMLTextAreaElement;
+    const textarea = document.querySelector('textarea') as HTMLTextAreaElement;
     if (textarea) textarea.style.height = 'auto';
 
     if (typingTimeoutRef.current) {
@@ -266,6 +361,17 @@ export function ChatArea() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+    // ArrowUp to edit last own message when input is empty
+    if (e.key === 'ArrowUp' && !inputValue.trim()) {
+      const lastOwnMsg = [...messages].reverse().find(m => m.senderId === user?.id && !m.isDeleted);
+      if (lastOwnMsg) {
+        const age = Date.now() - new Date(lastOwnMsg.createdAt).getTime();
+        if (age < 15 * 60 * 1000) {
+          e.preventDefault();
+          setEditingMessage({ id: lastOwnMsg.id, content: lastOwnMsg.content || '' });
+        }
+      }
     }
   };
 
@@ -474,16 +580,47 @@ export function ChatArea() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sending':
-        return <Clock className="h-3 w-3 text-gray-400" />;
+        return <Clock className="h-3 w-3 text-gray-400 animate-pulse" />;
       case 'sent':
         return <Check className="h-3 w-3 text-gray-400" />;
       case 'delivered':
         return <CheckCheck className="h-3 w-3 text-gray-400" />;
       case 'read':
-        return <CheckCheck className="h-3 w-3 text-blue-500" />;
+        return <CheckCheck className="h-3 w-3 text-blue-500 transition-colors duration-300" />;
+      case 'failed':
+        return <AlertCircle className="h-3 w-3 text-red-500" />;
+      case 'queued':
+        return <WifiOff className="h-3 w-3 text-orange-400" />;
       default:
         return null;
     }
+  };
+
+  // Scroll to a specific message by ID
+  const scrollToMessage = (messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('bg-yellow-100/50');
+      setTimeout(() => el.classList.remove('bg-yellow-100/50'), 2000);
+    }
+  };
+
+  // Handle scheduling a message
+  const handleScheduleMessage = () => {
+    if (!inputValue.trim() || !activeChat || !scheduleDate || !scheduleTime) return;
+    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+    socketService.emit('message:send', {
+      chatId: activeChat.id,
+      content: inputValue.trim(),
+      type: 'text',
+      tempId: `temp-${Date.now()}`,
+      scheduledAt,
+    });
+    setInputValue('');
+    setShowScheduleDialog(false);
+    setScheduleDate('');
+    setScheduleTime('');
   };
 
   const formatDateSeparator = fmtDateSep;
@@ -591,16 +728,25 @@ export function ChatArea() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <Avatar className="h-10 w-10 mr-3">
-          {(() => {
-            const otherP = activeChat?.participants.find(p => p.userId !== user?.id);
-            const photo = activeChat?.type === 'direct' ? (otherP?.user as { profilePhoto?: string } | undefined)?.profilePhoto : undefined;
-            return photo ? <AvatarImage src={photo} alt={getChatName()} /> : null;
+        <div className="relative mr-3">
+          <Avatar className="h-10 w-10">
+            {(() => {
+              const otherP = activeChat?.participants.find(p => p.userId !== user?.id);
+              const photo = activeChat?.type === 'direct' ? (otherP?.user as { profilePhoto?: string } | undefined)?.profilePhoto : undefined;
+              return photo ? <AvatarImage src={photo} alt={getChatName()} /> : null;
+            })()}
+            <AvatarFallback className="abhi-avatar text-white font-medium">
+              {getChatInitials()}
+            </AvatarFallback>
+          </Avatar>
+          {/* Green online indicator dot */}
+          {activeChat?.type === 'direct' && (() => {
+            const otherUserId = activeChat?.participants.find(p => p.userId !== user?.id)?.userId;
+            return otherUserId && onlineUsers.has(otherUserId) ? (
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#22C55E] border-2 border-white rounded-full" />
+            ) : null;
           })()}
-          <AvatarFallback className="abhi-avatar text-white font-medium">
-            {getChatInitials()}
-          </AvatarFallback>
-        </Avatar>
+        </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-gray-900 truncate">
             {getChatName()}
@@ -768,9 +914,16 @@ export function ChatArea() {
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Offline indicator */}
+      {isOffline && (
+        <div className="px-4 py-1.5 bg-red-500 text-white text-xs font-medium flex items-center justify-center gap-2">
+          <WifiOff className="h-3 w-3" /> No internet connection — messages will be queued
+        </div>
+      )}
+
+      {/* Enhanced Search Bar with navigation */}
       {showSearchBar && (
-        <div className="px-4 py-2 bg-white border-b flex items-center gap-2">
+        <div className="px-4 py-2 bg-white border-b flex items-center gap-2 shadow-sm">
           <Search className="h-4 w-4 text-gray-400" />
           <input
             type="text"
@@ -778,13 +931,53 @@ export function ChatArea() {
             className="flex-1 text-sm border-none outline-none bg-transparent"
             value={chatSearchQuery}
             onChange={(e) => setChatSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setSearchMatchIndex(prev => prev < searchMatchCount ? prev + 1 : 1);
+              }
+            }}
             autoFocus
           />
+          {chatSearchQuery && (
+            <span className="text-xs text-gray-400 whitespace-nowrap">{searchMatchIndex}/{searchMatchCount}</span>
+          )}
+          {chatSearchQuery && searchMatchCount > 0 && (
+            <div className="flex items-center gap-0.5">
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSearchMatchIndex(prev => prev > 1 ? prev - 1 : searchMatchCount)}>
+                <ChevronUp className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSearchMatchIndex(prev => prev < searchMatchCount ? prev + 1 : 1)}>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setShowSearchBar(false); setChatSearchQuery(''); }}>
             <X className="h-4 w-4" />
           </Button>
         </div>
       )}
+
+      {/* Pinned message banner */}
+      {activeChat?.pinnedMessageId && (() => {
+        const pinnedMsg = messages.find(m => m.id === activeChat.pinnedMessageId);
+        if (!pinnedMsg) return null;
+        return (
+          <div
+            className="px-4 py-2 bg-[#246BFD]/5 border-b border-[#246BFD]/10 flex items-center gap-3 cursor-pointer hover:bg-[#246BFD]/10 transition-colors"
+            onClick={() => scrollToMessage(pinnedMsg.id)}
+          >
+            <Pin className="h-4 w-4 text-[#246BFD] flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-[#246BFD] font-medium">Pinned Message</p>
+              <p className="text-xs text-gray-600 truncate">{pinnedMsg.content}</p>
+            </div>
+            <X className="h-3 w-3 text-gray-400 flex-shrink-0" onClick={async (e) => {
+              e.stopPropagation();
+              if (activeChat) { try { await api.pinMessage(activeChat.id, null); await refreshChats(); } catch { /* ignore */ } }
+            }} />
+          </div>
+        );
+      })()}
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef} onScroll={handleMessagesScroll}>
@@ -843,7 +1036,8 @@ export function ChatArea() {
                     </div>
                   )}
                 <div
-                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group msg-enter relative`}
+                  id={`msg-${message.id}`}
+                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group msg-enter relative transition-colors duration-500`}
                 >
                   <div className={`flex items-start gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
                     {/* Sender avatar in group messages */}
@@ -865,9 +1059,12 @@ export function ChatArea() {
                       {!isOwn && !message.isDeleted && (activeChat?.type === 'group' || activeChat?.type === 'community' || activeChat?.type === 'channel') && (
                         <p className={`text-xs font-medium mb-0.5 ${isOwn ? 'text-blue-100' : 'text-[#246BFD]'}`}>{getSenderName(message.senderId)}</p>
                       )}
-                      {/* Reply preview */}
+                      {/* Reply preview - click to scroll to original */}
                       {replyToMsg && !message.isDeleted && (
-                        <div className={`border-l-4 border-[#246BFD] rounded px-2 py-1 mb-1 text-xs ${isOwn ? 'bg-white/15' : 'bg-[#246BFD]/5'}`}>
+                        <div
+                          className={`border-l-4 border-[#246BFD] rounded px-2 py-1 mb-1 text-xs cursor-pointer hover:opacity-80 transition-opacity ${isOwn ? 'bg-white/15' : 'bg-[#246BFD]/5'}`}
+                          onClick={() => scrollToMessage(replyToMsg.id)}
+                        >
                           <p className={`font-medium truncate ${isOwn ? 'text-blue-100' : 'text-[#246BFD]'}`}>
                             {getSenderName(replyToMsg.senderId)}
                           </p>
@@ -889,15 +1086,44 @@ export function ChatArea() {
                       ) : isMedia ? (
                         renderMediaContent(message)
                       ) : (
-                        <p className={`text-sm break-words ${isOwn ? 'text-white' : 'text-gray-800'}`}>{message.content}</p>
+                        <>
+                          <p className={`text-sm break-words ${isOwn ? 'text-white' : 'text-gray-800'}`}>
+                            {chatSearchQuery && message.content ? (() => {
+                              const parts = message.content.split(new RegExp(`(${chatSearchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+                              return parts.map((part, i) =>
+                                part.toLowerCase() === chatSearchQuery.toLowerCase()
+                                  ? <mark key={i} className="bg-yellow-300/60 text-inherit rounded px-0.5">{part}</mark>
+                                  : part
+                              );
+                            })() : message.content}
+                          </p>
+                          {/* Link preview */}
+                          {linkPreviews.has(message.id) && (() => {
+                            const preview = linkPreviews.get(message.id);
+                            if (!preview) return null;
+                            return (
+                              <a href={preview.url} target="_blank" rel="noopener noreferrer" className={`block mt-1.5 rounded-lg overflow-hidden border ${isOwn ? 'border-white/20 bg-white/10' : 'border-gray-200 bg-gray-50'} hover:opacity-80 transition-opacity`}>
+                                <div className="px-2.5 py-2">
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    <Link2 className={`h-3 w-3 flex-shrink-0 ${isOwn ? 'text-blue-200' : 'text-gray-400'}`} />
+                                    <p className={`text-[11px] font-medium truncate ${isOwn ? 'text-blue-100' : 'text-gray-700'}`}>{preview.title}</p>
+                                  </div>
+                                  <p className={`text-[10px] truncate ${isOwn ? 'text-blue-200' : 'text-gray-500'}`}>{preview.description}</p>
+                                </div>
+                              </a>
+                            );
+                          })()}
+                        </>
                       )}
                       <div className="flex items-center justify-end gap-1 mt-0.5">
                         {message.isStarred && !message.isDeleted && (
                           <Star className="h-2.5 w-2.5 text-yellow-500 fill-yellow-500" />
                         )}
                         {message.isEdited && !message.isDeleted && (
-                          <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>edited</span>
+                          <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'} cursor-help`} title={`Edited ${new Date(message.updatedAt || message.createdAt).toLocaleString()}`}>edited</span>
                         )}
+                        {activeChat?.disappearingMessagesDuration && !message.isDeleted && (
+                          <Timer className={`h-2.5 w-2.5 ${isOwn ? 'text-blue-200' : 'text-gray-400'}`} />                        )}
                         <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>
                           {formatMessageTime(message.createdAt)}
                         </span>
@@ -1261,6 +1487,19 @@ export function ChatArea() {
               />
             </div>
 
+            {/* Schedule button */}
+            {inputValue.trim() && (
+              <Button
+                onClick={() => setShowScheduleDialog(true)}
+                variant="ghost"
+                size="icon"
+                className="text-gray-400 hover:text-[#246BFD] hover:bg-[#246BFD]/10 rounded-full h-9 w-9"
+                title="Schedule message"
+              >
+                <CalendarClock className="h-4 w-4" />
+              </Button>
+            )}
+
             {/* Send or Mic Button */}
             {inputValue.trim() ? (
               <Button
@@ -1290,6 +1529,52 @@ export function ChatArea() {
           className="fixed inset-0 z-[5]" 
           onClick={() => setShowAttachMenu(false)}
         />
+      )}
+
+      {/* Schedule Message Dialog */}
+      {showScheduleDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center gap-2 mb-4">
+              <CalendarClock className="h-5 w-5 text-[#246BFD]" />
+              <h3 className="font-semibold text-lg">Schedule Message</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Choose when to send this message</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600">Date</label>
+                <input
+                  type="date"
+                  className="w-full mt-1 px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] outline-none"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Time</label>
+                <input
+                  type="time"
+                  className="w-full mt-1 px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] outline-none"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3 mt-4">
+              <p className="text-xs text-gray-400 mb-1">Message preview</p>
+              <p className="text-sm text-gray-700 truncate">{inputValue}</p>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" className="flex-1" onClick={() => setShowScheduleDialog(false)}>Cancel</Button>
+              <Button
+                className="flex-1 bg-[#246BFD] hover:bg-[#1A56DB]"
+                disabled={!scheduleDate || !scheduleTime}
+                onClick={handleScheduleMessage}
+              >Schedule</Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* All dialogs extracted to ChatDialogs component */}

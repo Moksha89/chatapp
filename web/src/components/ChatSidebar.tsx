@@ -134,6 +134,14 @@ export function ChatSidebar() {
   };
 
   const getLastMessagePreview = (chat: typeof chats[0]) => {
+    // Draft indicator - show draft text for chats with unsent drafts
+    try {
+      const drafts = JSON.parse(localStorage.getItem('messageDrafts') || '{}');
+      const draft = drafts[chat.id];
+      if (draft && chat.id !== activeChat?.id) {
+        return <span className="text-[#246BFD] italic">Draft: {draft.slice(0, 30)}{draft.length > 30 ? '...' : ''}</span>;
+      }
+    } catch { /* ignore */ }
     // Show typing indicator in sidebar
     const chatTyping = typingUsers.get(chat.id);
     if (chatTyping && chatTyping.size > 0) {
