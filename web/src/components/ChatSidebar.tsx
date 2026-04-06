@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2 } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2, Plus, UserPlus, UsersRound } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -308,31 +308,28 @@ export function ChatSidebar() {
         </DropdownMenu>
 
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowNewChat(true)}
-            title="New Chat"
-          >
-            <MessageSquarePlus className="h-5 w-5 text-[#246BFD]" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowCreateGroup(true)}
-            title="Create Group"
-          >
-            <Users className="h-5 w-5 text-[#246BFD]" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={logout}
-            title="Logout"
-            className="text-gray-400 hover:text-red-500"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Add"
+                className="bg-[#246BFD] hover:bg-[#1a5be0] text-white rounded-full h-9 w-9"
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowFriends(true)}>
+                <UserPlus className="mr-2 h-4 w-4 text-[#246BFD]" />
+                Add Friend
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowCreateGroup(true)}>
+                <UsersRound className="mr-2 h-4 w-4 text-[#246BFD]" />
+                Create Group
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

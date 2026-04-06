@@ -36,13 +36,20 @@ fun ChatListScreen(
     onNewChat: () -> Unit = {},
     onCreateGroup: (String) -> Unit = {},
     onSearch: () -> Unit = {},
+    onAddFriend: () -> Unit = {},
     viewModel: ChatListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("All", "Groups", "Channels", "Labels")
-    
+
+    // + menu state
+    var showPlusMenu by remember { mutableStateOf(false) }
+
+    // Bottom nav state
+    var selectedBottomTab by remember { mutableIntStateOf(0) }
+
     // Long-press menu state
     var longPressedChat by remember { mutableStateOf<ChatSummary?>(null) }
     var showLabelDialog by remember { mutableStateOf(false) }
@@ -152,47 +159,39 @@ fun ChatListScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Abhi Chat") },
+                    title = {
+                        Text(
+                            "Abhi",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF1A56DB),
+                        containerColor = Color(0xFF246BFD),
                         titleContentColor = Color.White
                     ),
                     actions = {
                         IconButton(onClick = onSearch) {
                             Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
                         }
-                        IconButton(onClick = onScanQr) {
-                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Link Device", tint = Color.White)
-                        }
-                        var showMenu by remember { mutableStateOf(false) }
+                        // + button with Add Friend / Create Group popup
                         Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.White)
+                            IconButton(onClick = { showPlusMenu = true }) {
+                                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
                             }
                             DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
+                                expanded = showPlusMenu,
+                                onDismissRequest = { showPlusMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("New Group") },
-                                    onClick = { showMenu = false; onCreateGroup("group") },
-                                    leadingIcon = { Icon(Icons.Default.Group, contentDescription = null) }
+                                    text = { Text("Add Friend") },
+                                    onClick = { showPlusMenu = false; onAddFriend() },
+                                    leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Color(0xFF246BFD)) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("New Channel") },
-                                    onClick = { showMenu = false; onCreateGroup("channel") },
-                                    leadingIcon = { Icon(Icons.Default.Campaign, contentDescription = null) }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("New Community") },
-                                    onClick = { showMenu = false; onCreateGroup("community") },
-                                    leadingIcon = { Icon(Icons.Default.People, contentDescription = null) }
-                                )
-                                Divider()
-                                DropdownMenuItem(
-                                    text = { Text("Settings") },
-                                    onClick = { showMenu = false; onSettings() },
-                                    leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                                    text = { Text("Create Group") },
+                                    onClick = { showPlusMenu = false; onCreateGroup("group") },
+                                    leadingIcon = { Icon(Icons.Default.GroupAdd, contentDescription = null, tint = Color(0xFF246BFD)) }
                                 )
                             }
                         }
@@ -201,7 +200,7 @@ fun ChatListScreen(
                 // Tab Row
                 TabRow(
                     selectedTabIndex = selectedTab,
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = Color(0xFF246BFD),
                     contentColor = Color.White,
                     indicator = @Composable { tabPositions ->
                         TabRowDefaults.Indicator(
@@ -226,21 +225,54 @@ fun ChatListScreen(
                 }
             }
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = if (selectedTab == 1) { { onCreateGroup("group") } } 
-                          else if (selectedTab == 2) { { onCreateGroup("channel") } }
-                          else onNewChat,
-                containerColor = Color(0xFF246BFD)
+        bottomBar = {
+            NavigationBar(
+                containerColor = Color.White,
+                tonalElevation = 8.dp
             ) {
-                Icon(
-                    when (selectedTab) {
-                        1 -> Icons.Default.GroupAdd
-                        2 -> Icons.Default.Campaign
-                        else -> Icons.Default.Message
-                    },
-                    contentDescription = "New",
-                    tint = Color.White
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Chat, contentDescription = "Chats") },
+                    label = { Text("Chats", fontSize = 11.sp) },
+                    selected = selectedBottomTab == 0,
+                    onClick = { selectedBottomTab = 0 },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF246BFD),
+                        selectedTextColor = Color(0xFF246BFD),
+                        indicatorColor = Color(0xFFE8F0FE)
+                    )
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Call, contentDescription = "Calls") },
+                    label = { Text("Calls", fontSize = 11.sp) },
+                    selected = selectedBottomTab == 1,
+                    onClick = { selectedBottomTab = 1 },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF246BFD),
+                        selectedTextColor = Color(0xFF246BFD),
+                        indicatorColor = Color(0xFFE8F0FE)
+                    )
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Contacts, contentDescription = "Contacts") },
+                    label = { Text("Contacts", fontSize = 11.sp) },
+                    selected = selectedBottomTab == 2,
+                    onClick = { selectedBottomTab = 2; onAddFriend() },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF246BFD),
+                        selectedTextColor = Color(0xFF246BFD),
+                        indicatorColor = Color(0xFFE8F0FE)
+                    )
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                    label = { Text("Settings", fontSize = 11.sp) },
+                    selected = selectedBottomTab == 3,
+                    onClick = { selectedBottomTab = 3; onSettings() },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF246BFD),
+                        selectedTextColor = Color(0xFF246BFD),
+                        indicatorColor = Color(0xFFE8F0FE)
+                    )
                 )
             }
         }
@@ -265,7 +297,7 @@ fun ChatListScreen(
             if (uiState.isLoading && uiState.chats.isEmpty()) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = Color(0xFF1A56DB)
+                    color = Color(0xFF246BFD)
                 )
             } else if (selectedTab == 3) {
                 // Labels tab

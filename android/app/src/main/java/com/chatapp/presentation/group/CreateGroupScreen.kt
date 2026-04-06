@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -63,7 +64,7 @@ fun CreateGroupScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A56DB),
+                    containerColor = Color(0xFF246BFD),
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
@@ -119,11 +120,33 @@ fun CreateGroupScreen(
                         label = { Text(if (chatType == "channel") "Channel name" else "Group name") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF1A56DB),
-                            cursorColor = Color(0xFF1A56DB)
+                            focusedBorderColor = Color(0xFF246BFD),
+                            cursorColor = Color(0xFF246BFD)
                         )
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Add members button
+                    Button(
+                        onClick = { step = 2; viewModel.loadContacts() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = groupName.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF246BFD)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.GroupAdd, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Add members to group",
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -171,7 +194,7 @@ fun CreateGroupScreen(
 
                 if (uiState.isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFF1A56DB))
+                        CircularProgressIndicator(color = Color(0xFF246BFD))
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -188,7 +211,7 @@ fun CreateGroupScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape),
-                                    color = if (isSelected) Color(0xFF1A56DB) else Color(0xFF246BFD)
+                                    color = if (isSelected) Color(0xFF246BFD) else Color(0xFF90CAF9)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         if (isSelected) {

@@ -26,6 +26,7 @@ import com.chatapp.presentation.settings.LinkedDevicesScreen
 import com.chatapp.presentation.contacts.NewChatScreen
 import com.chatapp.presentation.contacts.NewChatViewModel
 import com.chatapp.presentation.contacts.ContactUser
+import com.chatapp.presentation.contacts.AddFriendScreen
 import com.chatapp.presentation.group.CreateGroupScreen
 import com.chatapp.presentation.group.GroupInfoScreen
 import com.chatapp.presentation.business.BusinessProfileScreen
@@ -84,6 +85,7 @@ sealed class Screen(val route: String) {
     object GroupInfo : Screen("group_info/{chatId}?name={name}") {
         fun createRoute(chatId: String, name: String = "Group") = "group_info/$chatId?name=${Uri.encode(name)}"
     }
+    object AddFriend : Screen("add_friend")
 }
 
 @Composable
@@ -157,6 +159,9 @@ fun AppNavigation() {
                 },
                 onSearch = {
                     navController.navigate(Screen.ChatSearch.route)
+                },
+                onAddFriend = {
+                    navController.navigate(Screen.AddFriend.route)
                 }
             )
         }
@@ -265,6 +270,41 @@ fun AppNavigation() {
             }
             
             NewChatScreen(
+                onBack = { navController.popBackStack() },
+                onUserSelected = { userId ->
+                    newChatViewModel.createChat(userId)
+                },
+                users = contactUsers,
+                isLoading = newChatUiState.isLoading,
+                onSearch = { query ->
+                    newChatViewModel.searchUsers(query)
+                }
+            )
+        }
+
+        // Add Friend screen
+        composable(Screen.AddFriend.route) {
+            val newChatViewModel: NewChatViewModel = hiltViewModel()
+            val newChatUiState by newChatViewModel.uiState.collectAsState()
+
+            LaunchedEffect(newChatUiState.createdChatId) {
+                newChatUiState.createdChatId?.let { chatId ->
+                    navController.navigate(Screen.Chat.createRoute(chatId)) {
+                        popUpTo(Screen.AddFriend.route) { inclusive = true }
+                    }
+                    newChatViewModel.clearCreatedChatId()
+                }
+            }
+
+            val contactUsers = newChatUiState.contacts.map { contact ->
+                ContactUser(
+                    id = contact.id,
+                    displayName = contact.displayName,
+                    phoneNumber = contact.phoneNumber
+                )
+            }
+
+            AddFriendScreen(
                 onBack = { navController.popBackStack() },
                 onUserSelected = { userId ->
                     newChatViewModel.createChat(userId)
