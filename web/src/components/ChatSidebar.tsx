@@ -346,18 +346,18 @@ export function ChatSidebar() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex gap-1 mt-2 flex-wrap filter-pills-container">
+        <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-none filter-pills-container" style={{ scrollbarWidth: 'none' }}>
           {(['all', 'unread', 'groups', 'channels', 'communities', 'labels'] as const).map((filter) => (
             <button
               key={filter}
-              className={`filter-pill px-3 py-1.5 text-xs rounded-full capitalize font-medium ${
+              className={`filter-pill px-3 py-1.5 text-xs rounded-full capitalize font-medium whitespace-nowrap flex-shrink-0 transition-all duration-200 ${
                 chatFilter === filter
                   ? 'bg-[#246BFD] text-white shadow-sm shadow-blue-500/20'
                   : 'bg-[#F7F8FC] text-gray-500 hover:bg-[#E8F0FE] hover:text-[#246BFD]'
               }`}
               onClick={() => setChatFilter(filter)}
             >
-              {filter === 'labels' ? `Labels (${userLabels.length})` : filter}
+              {filter === 'labels' ? `Labels` : filter}
             </button>
           ))}
         </div>
@@ -389,59 +389,95 @@ export function ChatSidebar() {
             </p>
           </div>
         ) : (
-          filteredChats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`chat-item flex items-center p-3 cursor-pointer ${
-                activeChat?.id === chat.id ? 'bg-[#E8F0FE]' : 'hover:bg-[#F7F8FC]'
-              } mx-1 mb-0.5`}
-              onClick={() => selectChat(chat)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setContextMenu({ x: e.clientX, y: e.clientY, chatId: chat.id, chat });
-              }}
-            >
-              <div className="relative mr-3 flex-shrink-0">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="abhi-avatar text-white font-medium">
-                    {getChatInitials(chat)}
-                  </AvatarFallback>
-                </Avatar>
-                {chat.type === 'direct' && (() => {
-                  const otherUserId = chat.participants.find(p => p.userId !== user?.id)?.userId;
-                  return otherUserId && onlineUsers.has(otherUserId) ? (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-                  ) : null;
-                })()}
+          <>
+            {/* Pinned section header */}
+            {filteredChats.some(c => c.isPinned) && chatFilter === 'all' && (
+              <div className="px-4 pt-2 pb-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                  <Pin className="h-3 w-3" /> Pinned
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline">
-                  <span className="font-medium truncate flex items-center gap-1">
-                    {getChatTypeIcon(chat.type)}
-                    {getChatName(chat)}
-                  </span>
-                  <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
-                    {formatTime(chat.lastMessage?.createdAt)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm truncate flex items-center gap-1 ${isTypingInChat(chat) ? 'text-[#246BFD] italic' : 'text-gray-400'}`}>
-                    {!isTypingInChat(chat) && getMessageStatusIcon(chat)}
-                    {getLastMessagePreview(chat)}
-                  </span>
-                  <div className="flex items-center gap-1 ml-2">
-                    {chat.isPinned && <Pin className="h-3 w-3 text-gray-400" />}
-                    {chat.isMuted && <BellOff className="h-3 w-3 text-gray-400" />}
-                    {chat.unreadCount > 0 && (
-                      <span className="unread-badge bg-[#246BFD] text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-sm shadow-blue-500/20">
-                        {chat.unreadCount}
-                      </span>
-                    )}
+            )}
+            {filteredChats.map((chat, idx) => {
+              // Show "All Chats" divider after pinned section
+              const prevChat = idx > 0 ? filteredChats[idx - 1] : null;
+              const showAllChatsHeader = chatFilter === 'all' && prevChat?.isPinned && !chat.isPinned;
+              return (
+                <div key={chat.id}>
+                  {showAllChatsHeader && (
+                    <div className="px-4 pt-3 pb-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">All chats</span>
+                    </div>
+                  )}
+                  <div
+                    className={`chat-item flex items-center p-3 cursor-pointer ${
+                      activeChat?.id === chat.id
+                        ? 'bg-[#E8F0FE] border-l-2 border-l-[#246BFD]'
+                        : 'hover:bg-[#F7F8FC] border-l-2 border-l-transparent'
+                    } mx-1 mb-0.5`}
+                    onClick={() => selectChat(chat)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({ x: e.clientX, y: e.clientY, chatId: chat.id, chat });
+                    }}
+                  >
+                    <div className="relative mr-3 flex-shrink-0">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="abhi-avatar text-white font-medium text-sm">
+                          {getChatInitials(chat)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {chat.type === 'direct' && (() => {
+                        const otherUserId = chat.participants.find(p => p.userId !== user?.id)?.userId;
+                        return otherUserId && onlineUsers.has(otherUserId) ? (
+                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white shadow-sm" />
+                        ) : null;
+                      })()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-[15px] text-gray-900 truncate flex items-center gap-1.5">
+                          {getChatTypeIcon(chat.type)}
+                          {getChatName(chat)}
+                        </span>
+                        <span className="text-[11px] text-gray-400 ml-2 flex-shrink-0">
+                          {formatTime(chat.lastMessage?.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-0.5">
+                        <span className={`text-[13px] truncate flex items-center gap-1 ${
+                          isTypingInChat(chat) ? 'text-[#246BFD] italic font-medium' : 'text-gray-400'
+                        }`}>
+                          {!isTypingInChat(chat) && getMessageStatusIcon(chat)}
+                          {getLastMessagePreview(chat)}
+                        </span>
+                        <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                          {chat.isPinned && <Pin className="h-3.5 w-3.5 text-[#246BFD] opacity-60" />}
+                          {chat.isMuted && <BellOff className="h-3.5 w-3.5 text-gray-300" />}
+                          {/* Label color dots */}
+                          {(chatLabels[chat.id] || []).length > 0 && (
+                            <div className="flex items-center gap-0.5">
+                              {(chatLabels[chat.id] || []).slice(0, 3).map(labelId => {
+                                const label = userLabels.find(l => l.id === labelId);
+                                return label ? (
+                                  <span key={labelId} className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: label.color }} title={label.name} />
+                                ) : null;
+                              })}
+                            </div>
+                          )}
+                          {chat.unreadCount > 0 && (
+                            <span className="unread-badge bg-[#246BFD] text-white text-[11px] font-semibold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-sm shadow-blue-500/20">
+                              {chat.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))
+              );
+            })}
+          </>
         )}
       </ScrollArea>
 
@@ -463,32 +499,32 @@ export function ChatSidebar() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <div
-            className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[200px]"
-            style={{ left: Math.min(contextMenu.x, window.innerWidth - 220), top: Math.min(contextMenu.y, window.innerHeight - 400) }}
+            className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 min-w-[220px] context-menu-enter"
+            style={{ left: Math.min(contextMenu.x, window.innerWidth - 240), top: Math.min(contextMenu.y, window.innerHeight - 400) }}
           >
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu(contextMenu.chat?.isPinned ? 'unpin' : 'pin', contextMenu.chatId)}>
-              <Pin className="h-4 w-4 text-gray-500" /> {contextMenu.chat?.isPinned ? 'Unpin' : 'Pin'} conversation
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu(contextMenu.chat?.isPinned ? 'unpin' : 'pin', contextMenu.chatId)}>
+              <Pin className="h-4 w-4 text-[#246BFD]" /> {contextMenu.chat?.isPinned ? 'Unpin' : 'Pin'} conversation
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu(contextMenu.chat?.isMuted ? 'unmute' : 'mute', contextMenu.chatId)}>
-              <BellOff className="h-4 w-4 text-gray-500" /> {contextMenu.chat?.isMuted ? 'Unmute' : 'Mute'} notifications
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu(contextMenu.chat?.isMuted ? 'unmute' : 'mute', contextMenu.chatId)}>
+              <BellOff className="h-4 w-4 text-[#246BFD]" /> {contextMenu.chat?.isMuted ? 'Unmute' : 'Mute'} notifications
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('archive', contextMenu.chatId)}>
-              <Archive className="h-4 w-4 text-gray-500" /> Archive chat
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu('archive', contextMenu.chatId)}>
+              <Archive className="h-4 w-4 text-[#246BFD]" /> Archive chat
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('label', contextMenu.chatId)}>
-              <Tag className="h-4 w-4 text-gray-500" /> Add label
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu('label', contextMenu.chatId)}>
+              <Tag className="h-4 w-4 text-[#246BFD]" /> Add label
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('favorite', contextMenu.chatId)}>
-              <Star className="h-4 w-4 text-gray-500" /> Mark as favorite
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu('favorite', contextMenu.chatId)}>
+              <Star className="h-4 w-4 text-[#246BFD]" /> Mark as favorite
             </button>
-            <div className="border-t border-gray-100 my-1" />
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2 text-orange-500" onClick={() => handleChatContextMenu('block', contextMenu.chatId)}>
+            <div className="border-t border-gray-100 my-1.5" />
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-red-50 flex items-center gap-3 text-orange-600 transition-colors" onClick={() => handleChatContextMenu('block', contextMenu.chatId)}>
               <Shield className="h-4 w-4" /> Block contact
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2 text-orange-500" onClick={() => handleChatContextMenu('report', contextMenu.chatId)}>
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-red-50 flex items-center gap-3 text-orange-600 transition-colors" onClick={() => handleChatContextMenu('report', contextMenu.chatId)}>
               <Tag className="h-4 w-4" /> Report
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2 text-red-500" onClick={() => handleChatContextMenu('delete', contextMenu.chatId)}>
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-red-50 flex items-center gap-3 text-red-600 transition-colors" onClick={() => handleChatContextMenu('delete', contextMenu.chatId)}>
               <Trash2 className="h-4 w-4" /> Delete chat
             </button>
           </div>

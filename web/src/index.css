@@ -124,8 +124,11 @@
 
   /* Chat list item smooth hover */
   .chat-item {
-    transition: background-color 0.2s ease, transform 0.15s ease;
+    transition: background-color 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
     border-radius: 12px;
+  }
+  .chat-item:active {
+    transform: scale(0.99);
   }
 
   /* Filter pill transitions */
@@ -272,17 +275,15 @@
     font-style: italic;
   }
 
-  /* Filter pills horizontal scroll on mobile */
-  @media (max-width: 640px) {
-    .filter-pills-container {
-      overflow-x: auto;
-      flex-wrap: nowrap !important;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .filter-pills-container::-webkit-scrollbar {
-      display: none;
-    }
+  /* Filter pills horizontal scroll */
+  .filter-pills-container {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .filter-pills-container::-webkit-scrollbar {
+    display: none;
   }
 
   /* Improved scrollbar for chat area */
