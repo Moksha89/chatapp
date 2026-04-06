@@ -126,6 +126,8 @@ export function ChatArea() {
   });
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [availableUsersForAdd, setAvailableUsersForAdd] = useState<Array<{ id: string; displayName: string; phoneNumber: string }>>([]);
+  const [quickReplySuggestions, setQuickReplySuggestions] = useState<Array<{ id: string; shortcode: string; message: string }>>([]);
+  const [showQuickReplySuggestions, setShowQuickReplySuggestions] = useState(false);
 
   // Fix #2: Persist mute notifications to localStorage
   useEffect(() => {
@@ -203,12 +205,25 @@ export function ChatArea() {
   }, [videoPreviewStream]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value);
+    const val = e.target.value;
+    setInputValue(val);
 
     // Auto-resize textarea
     const textarea = e.target;
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+
+    // Quick reply suggestions: trigger when typing /
+    if (val.startsWith('/') && val.length >= 1) {
+      api.getQuickReplies().then((replies: Array<{ id: string; shortcode: string; message: string }>) => {
+        const prefix = val.toLowerCase();
+        const filtered = replies.filter((r: { shortcode: string }) => r.shortcode.toLowerCase().startsWith(prefix));
+        setQuickReplySuggestions(filtered);
+        setShowQuickReplySuggestions(filtered.length > 0);
+      }).catch(() => { setShowQuickReplySuggestions(false); });
+    } else {
+      setShowQuickReplySuggestions(false);
+    }
 
     if (activeChat && !isTyping) {
       setIsTyping(true);
@@ -1216,8 +1231,27 @@ export function ChatArea() {
 
             {/* Text Input */}
             <div className="flex-1 relative">
+                {/* Quick Reply Suggestions */}
+                {showQuickReplySuggestions && quickReplySuggestions.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 max-h-48 overflow-y-auto z-20">
+                    <div className="px-3 py-1.5 text-xs text-gray-400 font-medium">Quick Replies</div>
+                    {quickReplySuggestions.map((qr) => (
+                      <button
+                        key={qr.id}
+                        className="w-full px-3 py-2 text-left hover:bg-[#F7F8FC] flex flex-col"
+                        onClick={() => {
+                          setInputValue(qr.message);
+                          setShowQuickReplySuggestions(false);
+                        }}
+                      >
+                        <span className="text-xs font-mono text-[#246BFD]">{qr.shortcode}</span>
+                        <span className="text-sm text-gray-600 truncate">{qr.message}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <textarea
-                  placeholder={viewOnceMode ? 'View once mode - media will disappear after viewing' : activeChat?.type === 'channel' ? 'Broadcast a message...' : activeChat?.type === 'group' ? 'Message group...' : activeChat?.type === 'community' ? 'Message community...' : 'Type a message'}
+                  placeholder={viewOnceMode ? 'View once mode - media will disappear after viewing' : activeChat?.type === 'channel' ? 'Broadcast a message...' : activeChat?.type === 'group' ? 'Message group...' : activeChat?.type === 'community' ? 'Message community...' : 'Type a message (type / for quick replies)'}
                   className="w-full px-4 py-2.5 bg-white rounded-2xl border border-gray-200 focus:ring-2 focus:ring-[#246BFD]/20 focus:border-[#246BFD] resize-none text-sm outline-none transition-all"
                 value={inputValue}
                 onChange={handleInputChange}

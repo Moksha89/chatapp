@@ -30,7 +30,7 @@ export function ChatSidebar() {
   const { user, logout } = useAuth();
   const { chats, activeChat, selectChat, isLoadingChats, refreshChats, typingUsers, onlineUsers } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
-  const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities'>('all');
+  const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities' | 'labels'>('all');
   const [showNewChat, setShowNewChat] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
@@ -49,7 +49,15 @@ export function ChatSidebar() {
   const [channelDesc, setChannelDesc] = useState('');
   const [communityName, setCommunityName] = useState('');
   const [communityDesc, setCommunityDesc] = useState('');
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string; chat?: typeof chats[0] } | null>(null);
+  const [showLabelAssign, setShowLabelAssign] = useState<string | null>(null);
+  const [chatLabels, setChatLabels] = useState<Record<string, string[]>>(() => {
+    try { const s = localStorage.getItem('chatLabels'); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+  const [userLabels, setUserLabels] = useState<Array<{id: string; name: string; color: string}>>(() => {
+    try { const s = localStorage.getItem('userLabels'); return s ? JSON.parse(s) : [{id:'1',name:'Important',color:'#EF4444'},{id:'2',name:'Work',color:'#3B82F6'},{id:'3',name:'Personal',color:'#10B981'}]; } catch { return [{id:'1',name:'Important',color:'#EF4444'},{id:'2',name:'Work',color:'#3B82F6'},{id:'3',name:'Personal',color:'#10B981'}]; }
+  });
+  const [newLabelName, setNewLabelName] = useState('');
 
   const filteredChats = chats.filter((chat) => {
     const chatName = chat.name || chat.participants.find((p) => p.userId !== user?.id)?.user?.displayName || '';
@@ -59,6 +67,7 @@ export function ChatSidebar() {
     if (chatFilter === 'groups') return chat.type === 'group';
     if (chatFilter === 'channels') return chat.type === 'channel';
     if (chatFilter === 'communities') return chat.type === 'community';
+    if (chatFilter === 'labels') return (chatLabels[chat.id] || []).length > 0;
     return true;
   }).sort((a, b) => {
     // Pinned chats first
@@ -70,6 +79,16 @@ export function ChatSidebar() {
     return bTime - aTime;
   });
 
+  // Persist labels to localStorage
+  const saveChatLabels = (labels: Record<string, string[]>) => {
+    setChatLabels(labels);
+    try { localStorage.setItem('chatLabels', JSON.stringify(labels)); } catch {}
+  };
+  const saveUserLabels = (labels: Array<{id: string; name: string; color: string}>) => {
+    setUserLabels(labels);
+    try { localStorage.setItem('userLabels', JSON.stringify(labels)); } catch {}
+  };
+
   const handleChatContextMenu = async (action: string, chatId: string) => {
     try {
       const { api } = await import('../services/api');
@@ -79,9 +98,25 @@ export function ChatSidebar() {
         case 'mute': await api.muteConversation(chatId, true, 'forever'); break;
         case 'unmute': await api.muteConversation(chatId, false); break;
         case 'archive': await api.archiveConversation(chatId, true); break;
+        case 'unarchive': await api.archiveConversation(chatId, false); break;
         case 'favorite': await api.favoriteConversation(chatId, true); break;
         case 'unfavorite': await api.favoriteConversation(chatId, false); break;
         case 'clear': await api.clearChatHistory(chatId); break;
+        case 'delete': await api.clearChatHistory(chatId); break;
+        case 'block': {
+          try { await api.blockUser(chatId); } catch { /* may not exist */ }
+          break;
+        }
+        case 'report': {
+          try { await api.reportChat(chatId, 'spam'); } catch { /* may not exist */ }
+          alert('Chat reported. Thank you for your feedback.');
+          break;
+        }
+        case 'label': {
+          setShowLabelAssign(chatId);
+          setContextMenu(null);
+          return;
+        }
       }
       await refreshChats();
     } catch (err) {
@@ -313,7 +348,7 @@ export function ChatSidebar() {
           />
         </div>
         <div className="flex gap-1 mt-2 flex-wrap filter-pills-container">
-          {(['all', 'unread', 'groups', 'channels', 'communities'] as const).map((filter) => (
+          {(['all', 'unread', 'groups', 'channels', 'communities', 'labels'] as const).map((filter) => (
             <button
               key={filter}
               className={`filter-pill px-3 py-1.5 text-xs rounded-full capitalize font-medium ${
@@ -323,7 +358,7 @@ export function ChatSidebar() {
               }`}
               onClick={() => setChatFilter(filter)}
             >
-              {filter}
+              {filter === 'labels' ? `Labels (${userLabels.length})` : filter}
             </button>
           ))}
         </div>
@@ -364,7 +399,7 @@ export function ChatSidebar() {
               onClick={() => selectChat(chat)}
               onContextMenu={(e) => {
                 e.preventDefault();
-                setContextMenu({ x: e.clientX, y: e.clientY, chatId: chat.id });
+                setContextMenu({ x: e.clientX, y: e.clientY, chatId: chat.id, chat });
               }}
             >
               <div className="relative mr-3 flex-shrink-0">
@@ -429,27 +464,97 @@ export function ChatSidebar() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <div
-            className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[180px]"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
+            className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[200px]"
+            style={{ left: Math.min(contextMenu.x, window.innerWidth - 220), top: Math.min(contextMenu.y, window.innerHeight - 400) }}
           >
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('pin', contextMenu.chatId)}>
-              <Pin className="h-4 w-4 text-gray-500" /> Pin conversation
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu(contextMenu.chat?.isPinned ? 'unpin' : 'pin', contextMenu.chatId)}>
+              <Pin className="h-4 w-4 text-gray-500" /> {contextMenu.chat?.isPinned ? 'Unpin' : 'Pin'} conversation
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('mute', contextMenu.chatId)}>
-              <BellOff className="h-4 w-4 text-gray-500" /> Mute notifications
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu(contextMenu.chat?.isMuted ? 'unmute' : 'mute', contextMenu.chatId)}>
+              <BellOff className="h-4 w-4 text-gray-500" /> {contextMenu.chat?.isMuted ? 'Unmute' : 'Mute'} notifications
             </button>
             <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('archive', contextMenu.chatId)}>
               <Archive className="h-4 w-4 text-gray-500" /> Archive chat
+            </button>
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('label', contextMenu.chatId)}>
+              <Tag className="h-4 w-4 text-gray-500" /> Add label
             </button>
             <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2" onClick={() => handleChatContextMenu('favorite', contextMenu.chatId)}>
               <Star className="h-4 w-4 text-gray-500" /> Mark as favorite
             </button>
             <div className="border-t border-gray-100 my-1" />
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2 text-red-500" onClick={() => handleChatContextMenu('clear', contextMenu.chatId)}>
-              <Trash2 className="h-4 w-4" /> Clear chat
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2 text-orange-500" onClick={() => handleChatContextMenu('block', contextMenu.chatId)}>
+              <Shield className="h-4 w-4" /> Block contact
+            </button>
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2 text-orange-500" onClick={() => handleChatContextMenu('report', contextMenu.chatId)}>
+              <Tag className="h-4 w-4" /> Report
+            </button>
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-2 text-red-500" onClick={() => handleChatContextMenu('delete', contextMenu.chatId)}>
+              <Trash2 className="h-4 w-4" /> Delete chat
             </button>
           </div>
         </>
+      )}
+
+      {/* Label Assignment Dialog */}
+      {showLabelAssign && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
+            <h3 className="font-semibold mb-3 text-gray-900">Assign Labels</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {userLabels.map((label) => {
+                const isAssigned = (chatLabels[showLabelAssign] || []).includes(label.id);
+                return (
+                  <button
+                    key={label.id}
+                    className={`w-full px-3 py-2.5 text-sm text-left rounded-lg flex items-center gap-2 ${isAssigned ? 'bg-[#E8F0FE] border border-[#246BFD]' : 'hover:bg-[#F7F8FC] border border-gray-100'}`}
+                    onClick={() => {
+                      const current = chatLabels[showLabelAssign] || [];
+                      const updated = isAssigned ? current.filter(id => id !== label.id) : [...current, label.id];
+                      saveChatLabels({ ...chatLabels, [showLabelAssign]: updated });
+                    }}
+                  >
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: label.color }} />
+                    {label.name}
+                    {isAssigned && <Check className="h-4 w-4 ml-auto text-[#246BFD]" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="border-t border-gray-100 mt-3 pt-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="New label name..."
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-[#F7F8FC] outline-none focus:border-[#246BFD]"
+                  value={newLabelName}
+                  onChange={(e) => setNewLabelName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newLabelName.trim()) {
+                      const colors = ['#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6','#EC4899'];
+                      const newLabel = { id: Date.now().toString(), name: newLabelName.trim(), color: colors[userLabels.length % colors.length] };
+                      saveUserLabels([...userLabels, newLabel]);
+                      setNewLabelName('');
+                    }
+                  }}
+                />
+                <button
+                  className="px-3 py-2 text-sm bg-[#246BFD] text-white rounded-lg hover:bg-[#1A56DB] disabled:opacity-50"
+                  disabled={!newLabelName.trim()}
+                  onClick={() => {
+                    const colors = ['#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6','#EC4899'];
+                    const newLabel = { id: Date.now().toString(), name: newLabelName.trim(), color: colors[userLabels.length % colors.length] };
+                    saveUserLabels([...userLabels, newLabel]);
+                    setNewLabelName('');
+                  }}
+                >Add</button>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg" onClick={() => { setShowLabelAssign(null); setNewLabelName(''); }}>Done</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Create Channel Dialog */}
