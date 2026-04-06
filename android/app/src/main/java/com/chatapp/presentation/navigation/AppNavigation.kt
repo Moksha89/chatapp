@@ -25,6 +25,7 @@ import com.chatapp.presentation.contacts.NewChatScreen
 import com.chatapp.presentation.contacts.NewChatViewModel
 import com.chatapp.presentation.contacts.ContactUser
 import com.chatapp.presentation.group.CreateGroupScreen
+import com.chatapp.presentation.group.GroupInfoScreen
 import com.chatapp.presentation.business.BusinessProfileScreen
 import com.chatapp.presentation.business.ProductsScreen
 import com.chatapp.presentation.business.OrdersScreen
@@ -76,6 +77,9 @@ sealed class Screen(val route: String) {
     object Notifications : Screen("notifications")
     object StorageData : Screen("storage_data")
     object Help : Screen("help")
+    object GroupInfo : Screen("group_info/{chatId}?name={name}") {
+        fun createRoute(chatId: String, name: String = "Group") = "group_info/$chatId?name=${Uri.encode(name)}"
+    }
 }
 
 @Composable
@@ -312,6 +316,26 @@ fun AppNavigation() {
 
         composable(Screen.Help.route) {
             HelpScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.GroupInfo.route,
+            arguments = listOf(
+                navArgument("chatId") { type = NavType.StringType },
+                navArgument("name") { type = NavType.StringType; defaultValue = "Group" }
+            )
+        ) { backStackEntry ->
+            val groupChatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            val gName = backStackEntry.arguments?.getString("name") ?: "Group"
+            GroupInfoScreen(
+                chatId = groupChatId,
+                groupName = gName,
+                onBack = { navController.popBackStack() },
+                onAddMembers = { },
+                onChatClick = { id ->
+                    navController.navigate(Screen.Chat.createRoute(id))
+                }
+            )
         }
 
         composable(Screen.ContactSync.route) {
