@@ -135,7 +135,7 @@ fun GroupInfoScreen(
                 Column {
                     Text("Share this link to invite people to this group:")
                     Spacer(modifier = Modifier.height(8.dp))
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFF5F5F5), modifier = Modifier.fillMaxWidth()) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
                         Text(text = inviteLink, modifier = Modifier.padding(12.dp), fontSize = 13.sp, color = Color(0xFF246BFD))
                     }
                 }
@@ -230,7 +230,7 @@ fun GroupInfoScreen(
                     } else {
                         Text(
                             text = groupDescription.ifBlank { "Add group description" },
-                            color = if (groupDescription.isBlank()) Color.Gray else Color.Unspecified,
+                            color = if (groupDescription.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
                             modifier = Modifier.clickable { isEditingDescription = true }
                         )
                     }

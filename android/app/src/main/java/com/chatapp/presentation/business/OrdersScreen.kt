@@ -101,7 +101,7 @@ fun StatusChip(status: String) {
         "shipped" -> Color(0xFFE3F2FD) to Color(0xFF1565C0)
         "delivered" -> Color(0xFFE8F5E9) to Color(0xFF1B5E20)
         "cancelled" -> Color(0xFFFFEBEE) to Color(0xFFC62828)
-        else -> Color(0xFFF5F5F5) to Color.Gray
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
     Surface(
         shape = RoundedCornerShape(12.dp),

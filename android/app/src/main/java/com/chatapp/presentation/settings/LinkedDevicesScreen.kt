@@ -236,7 +236,7 @@ fun DeviceItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape),
-            color = if (device.isCurrentDevice) Color(0xFF246BFD) else Color(0xFFE0E0E0)
+            color = if (device.isCurrentDevice) Color(0xFF246BFD) else MaterialTheme.colorScheme.surfaceVariant
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -247,7 +247,7 @@ fun DeviceItem(
                         else -> Icons.Default.Devices
                     },
                     contentDescription = null,
-                    tint = if (device.isCurrentDevice) Color.White else Color.Gray
+                    tint = if (device.isCurrentDevice) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

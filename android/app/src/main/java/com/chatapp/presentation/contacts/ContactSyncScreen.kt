@@ -139,7 +139,7 @@ fun ContactRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape),
-            color = if (contact.isRegistered) Color(0xFF246BFD) else Color.Gray
+            color = if (contact.isRegistered) Color(0xFF246BFD) else MaterialTheme.colorScheme.onSurfaceVariant
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(

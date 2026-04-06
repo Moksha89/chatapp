@@ -496,7 +496,7 @@ fun ChatListItemView(
                 Text(
                     text = chat.lastMessageTime,
                     fontSize = 12.sp,
-                    color = if (chat.unreadCount > 0) Color(0xFF246BFD) else Color.Gray
+                    color = if (chat.unreadCount > 0) Color(0xFF246BFD) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 

@@ -661,7 +661,7 @@ fun MessageBubble(
                         Text(
                             text = "This message was deleted",
                             fontStyle = FontStyle.Italic,
-                            color = if (isOwn) Color.White.copy(alpha = 0.7f) else Color.Gray
+                            color = if (isOwn) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
                         Text(
@@ -679,7 +679,7 @@ fun MessageBubble(
                             Text(
                                 text = "edited",
                                 fontSize = 10.sp,
-                                color = if (isOwn) Color.White.copy(alpha = 0.6f) else Color.Gray,
+                                color = if (isOwn) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontStyle = FontStyle.Italic
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -687,7 +687,7 @@ fun MessageBubble(
                         Text(
                             text = timeString,
                             fontSize = 10.sp,
-                            color = if (isOwn) Color.White.copy(alpha = 0.6f) else Color.Gray
+                            color = if (isOwn) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (isOwn) {
                             Spacer(modifier = Modifier.width(3.dp))
@@ -720,7 +720,7 @@ fun MessageBubble(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = if (users.contains(currentUserId)) 
-                                Color(0xFFE3F2FD) else Color.White,
+                                MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                             modifier = Modifier
                                 .padding(end = 4.dp)
                                 .clickable { onReactionClick(emoji) }
@@ -764,15 +764,15 @@ fun MessageMenuDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            contentColor = Color(0xFF1A1A2E)
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 // Quick reactions row
                 Text(
                     text = "React",
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1A1A2E),
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 LazyRow(
@@ -782,7 +782,7 @@ fun MessageMenuDialog(
                         val hasReacted = message.reactions[emoji]?.contains(currentUserId) == true
                         Surface(
                             shape = CircleShape,
-                            color = if (hasReacted) Color(0xFFE3F2FD) else Color(0xFFF5F5F5),
+                            color = if (hasReacted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier.clickable { onReaction(emoji) }
                         ) {
                             Text(
@@ -806,7 +806,7 @@ fun MessageMenuDialog(
                 ) {
                     Icon(Icons.Default.Reply, contentDescription = null, tint = Color(0xFF246BFD))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Reply", color = Color(0xFF1A1A2E))
+                    Text("Reply", color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 // Forward
@@ -827,7 +827,7 @@ fun MessageMenuDialog(
                 ) {
                     Icon(Icons.Default.Forward, contentDescription = null, tint = Color(0xFF246BFD))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Forward", color = Color(0xFF1A1A2E))
+                    Text("Forward", color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 // Star
@@ -853,7 +853,7 @@ fun MessageMenuDialog(
                         tint = Color(0xFFFFC107)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(if (isStarred) "Unstar" else "Star", color = Color(0xFF1A1A2E))
+                    Text(if (isStarred) "Unstar" else "Star", color = MaterialTheme.colorScheme.onSurface)
                 }
 
                 // Copy
@@ -872,7 +872,7 @@ fun MessageMenuDialog(
                 ) {
                     Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color(0xFF607D8B))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Copy", color = Color(0xFF1A1A2E))
+                    Text("Copy", color = MaterialTheme.colorScheme.onSurface)
                 }
                 
                 // Edit (own messages only, within 15 min)
@@ -888,7 +888,7 @@ fun MessageMenuDialog(
                         ) {
                             Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF1A56DB))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Edit", color = Color(0xFF1A1A2E))
+                            Text("Edit", color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }

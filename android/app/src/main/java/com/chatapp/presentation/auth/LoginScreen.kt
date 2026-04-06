@@ -229,7 +229,7 @@ private fun PhoneInputStep(
         text = "Enter your\nmobile phone",
         fontSize = 22.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFF1A1A2E),
+        color = MaterialTheme.colorScheme.onSurface,
         textAlign = TextAlign.Center,
         lineHeight = 28.sp
     )
@@ -258,7 +258,7 @@ private fun PhoneInputStep(
                     text = selectedCountry.dialCode,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF1A1A2E)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Icon(
                     Icons.Default.ArrowDropDown,
@@ -364,7 +364,7 @@ private fun OtpInputStep(
         text = "Enter OTP Code",
         fontSize = 22.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFF1A1A2E)
+        color = MaterialTheme.colorScheme.onSurface
     )
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -459,17 +459,17 @@ private fun OtpInputRow(
                                 width = if (isFocused) 2.dp else 1.dp,
                                 color = if (isFocused) Color(0xFF246BFD)
                                 else if (char != null) Color(0xFF246BFD).copy(alpha = 0.5f)
-                                else Color(0xFFE0E0E0),
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                                 shape = RoundedCornerShape(12.dp)
                             )
-                            .background(Color(0xFFF7F8FC), RoundedCornerShape(12.dp)),
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = char?.toString() ?: "",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A1A2E),
+                            color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -545,7 +545,7 @@ private fun RegisterStep(
         text = "Enter your name",
         fontSize = 22.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFF1A1A2E)
+        color = MaterialTheme.colorScheme.onSurface
     )
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -626,8 +626,8 @@ private fun CountryPickerDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            contentColor = Color(0xFF1A1A2E),
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.7f)
@@ -637,7 +637,7 @@ private fun CountryPickerDialog(
                     text = "Select Country",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A2E),
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -675,7 +675,7 @@ private fun CountryPickerDialog(
                                 text = country.name,
                                 modifier = Modifier.weight(1f),
                                 fontSize = 15.sp,
-                                color = Color(0xFF1A1A2E)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = country.dialCode,
