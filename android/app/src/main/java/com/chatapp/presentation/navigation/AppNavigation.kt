@@ -12,6 +12,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.chatapp.presentation.auth.LoginScreen
+import com.chatapp.presentation.onboarding.SplashScreen
+import com.chatapp.presentation.onboarding.OnboardingScreen
 import com.chatapp.presentation.chat.ChatListScreen
 import com.chatapp.presentation.chat.ChatListViewModel
 import com.chatapp.presentation.chat.ChatScreen
@@ -42,6 +44,8 @@ import com.chatapp.presentation.settings.HelpScreen
 import com.chatapp.presentation.profile.UserProfileScreen
 
 sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
+    object Onboarding : Screen("onboarding")
     object Login : Screen("login")
     object ChatList : Screen("chat_list")
     object Chat : Screen("chat/{chatId}?name={name}") {
@@ -88,8 +92,33 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route
+        startDestination = Screen.Splash.route
     ) {
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onSplashFinished = {
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onGetStarted = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                },
+                onSkip = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = {

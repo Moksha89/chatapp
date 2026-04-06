@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { MaintenancePage } from './components/MaintenancePage';
 import { OnboardingPage } from './components/OnboardingPage';
+import { SplashScreen } from './components/SplashScreen';
 
 // Lazy load heavy components for faster initial load
 const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -117,6 +118,8 @@ function App() {
     checked: boolean;
   }>({ maintenanceMode: false, maintenanceMessage: '', checked: false });
 
+  const [showSplash, setShowSplash] = useState(true);
+
   // Show onboarding for first-time visitors (must be before any early returns)
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('onboarding_completed');
@@ -160,6 +163,15 @@ function App() {
   // Show maintenance page if maintenance mode is enabled
   if (appStatus.maintenanceMode) {
     return <MaintenancePage message={appStatus.maintenanceMessage} />;
+  }
+
+  // Show splash screen on first load
+  if (showSplash) {
+    return (
+      <ErrorBoundary>
+        <SplashScreen onComplete={() => setShowSplash(false)} />
+      </ErrorBoundary>
+    );
   }
 
   if (showOnboarding) {

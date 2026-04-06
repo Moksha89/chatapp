@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircle, Shield, Users, Zap, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Users, Video, Lock, Monitor, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface OnboardingPageProps {
   onComplete: () => void;
@@ -7,32 +7,32 @@ interface OnboardingPageProps {
 
 const SLIDES = [
   {
-    icon: MessageCircle,
-    title: 'Welcome to WhatsApp Business Chat',
-    description: 'Connect with your customers, team, and friends with a powerful, modern messaging platform.',
+    icon: Users,
+    title: 'Group Chatting',
+    description: 'Connect with multiple members in group chats. Share messages, media, and files with your team.',
     color: '#246BFD',
     bgGradient: 'from-blue-500/20 to-indigo-500/20',
   },
   {
-    icon: Shield,
-    title: 'Secure & Private',
-    description: 'End-to-end encryption keeps your conversations private. Your messages stay between you and the people you choose.',
+    icon: Video,
+    title: 'Video And Voice Calls',
+    description: 'Instantly connect via high-quality video and voice calls with anyone, anywhere.',
+    color: '#1A56DB',
+    bgGradient: 'from-blue-600/20 to-blue-400/20',
+  },
+  {
+    icon: Lock,
+    title: 'Message Encryption',
+    description: 'Ensure privacy with end-to-end encrypted messages. Your conversations stay between you.',
     color: '#10B981',
     bgGradient: 'from-emerald-500/20 to-teal-500/20',
   },
   {
-    icon: Users,
-    title: 'Groups & Channels',
-    description: 'Create groups for your team, channels for announcements, and communities to bring everyone together.',
-    color: '#F59E0B',
-    bgGradient: 'from-amber-500/20 to-orange-500/20',
-  },
-  {
-    icon: Zap,
-    title: 'Business Tools',
-    description: 'Quick replies, labels, chatbot auto-replies, product catalog, and broadcast lists — everything you need to grow.',
+    icon: Monitor,
+    title: 'Cross-Platform Compatibility',
+    description: 'Access your chats on any device seamlessly. Web, Android, and more.',
     color: '#8B5CF6',
-    bgGradient: 'from-purple-500/20 to-pink-500/20',
+    bgGradient: 'from-purple-500/20 to-violet-500/20',
   },
 ];
 
