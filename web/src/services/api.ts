@@ -1021,20 +1021,6 @@ class ApiService {
     });
   }
 
-  // Two-step verification
-  async enableTwoStepVerification(pin: string) {
-    return this.request<{ success: boolean }>('/users/me/two-step-verification', {
-      method: 'POST',
-      body: JSON.stringify({ pin }),
-    });
-  }
-
-  async disableTwoStepVerification() {
-    return this.request<{ success: boolean }>('/users/me/two-step-verification', {
-      method: 'DELETE',
-    });
-  }
-
   // Mark view-once message as viewed
   async markViewOnceViewed(chatId: string, messageId: string) {
     return this.request<{ id: string; isViewed: boolean }>(`/chats/${chatId}/messages/${messageId}/view-once`, {
@@ -1148,6 +1134,63 @@ class ApiService {
       body: JSON.stringify({ reason, details }),
     });
   }
+  // Enhanced Privacy - Two-step verification
+  async enableTwoStepVerification(pin: string, email?: string) {
+    return this.request<{ enabled: boolean }>('/users/me/two-step', {
+      method: 'POST',
+      body: JSON.stringify({ pin, email }),
+    });
+  }
+
+  async disableTwoStepVerification() {
+    return this.request<{ enabled: boolean }>('/users/me/two-step', {
+      method: 'DELETE',
+    });
+  }
+
+  async verifyTwoStepPin(pin: string) {
+    return this.request<{ verified: boolean }>('/users/me/two-step/verify', {
+      method: 'POST',
+      body: JSON.stringify({ pin }),
+    });
+  }
+
+  // Enhanced Privacy - Last seen & online controls
+  async updateLastSeenPrivacy(level: 'everyone' | 'contacts' | 'nobody') {
+    return this.request<{ lastSeenPrivacy: string }>('/users/me/privacy/last-seen', {
+      method: 'PUT',
+      body: JSON.stringify({ level }),
+    });
+  }
+
+  // Enhanced Privacy - Safety number verification
+  async getSafetyNumber(chatId: string) {
+    return this.request<{ safetyNumber: string; qrCode: string }>(`/chats/${chatId}/safety-number`);
+  }
+
+  async verifySafetyNumber(chatId: string, safetyNumber: string) {
+    return this.request<{ verified: boolean }>(`/chats/${chatId}/safety-number/verify`, {
+      method: 'POST',
+      body: JSON.stringify({ safetyNumber }),
+    });
+  }
+
+  // Enhanced Privacy - View-once messages
+  async sendViewOnceMessage(chatId: string, mediaUrl: string, type: 'image' | 'video') {
+    return this.request<{ id: string }>(`/chats/${chatId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ mediaUrl, type, viewOnce: true }),
+    });
+  }
+
+  // Enhanced Privacy - IP protection for calls
+  async updateCallPrivacy(settings: { ipProtection?: boolean; callPrivacy?: string }) {
+    return this.request<{ ipProtection: boolean; callPrivacy: string }>('/users/me/privacy/calls', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
 
   // ========== FRIENDS (ChitChat features) ==========
   async getFriends() {

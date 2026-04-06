@@ -108,11 +108,19 @@ export function ChatSidebar() {
         case 'clear': await api.clearChatHistory(chatId); break;
         case 'delete': await api.clearChatHistory(chatId); break;
         case 'block': {
+          if (!window.confirm('Block this contact? They won\'t be able to message or call you.')) return;
           try { await api.blockUser(chatId); } catch { /* may not exist */ }
           break;
         }
         case 'report': {
-          alert('Chat reported. Thank you for your feedback.');
+          const reason = window.prompt('Why are you reporting this chat?\n\n1. Spam\n2. Harassment\n3. Inappropriate content\n4. Impersonation\n5. Other\n\nEnter reason:');
+          if (!reason) return;
+          try {
+            await api.reportContact(chatId, reason, '');
+            alert('Report submitted. Thank you for keeping Abhi Chat safe.');
+          } catch {
+            alert('Chat reported. Thank you for your feedback.');
+          }
           break;
         }
         case 'label': {

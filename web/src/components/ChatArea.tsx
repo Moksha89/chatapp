@@ -1189,7 +1189,7 @@ export function ChatArea() {
             {/* E2EE banner at top of messages for direct chats */}
             {activeChat?.type === 'direct' && (
               <div className="flex items-center justify-center my-3">
-                <div className="encryption-banner inline-flex items-center gap-2">
+                <div className="encryption-banner inline-flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" title="Messages are end-to-end encrypted. Click to learn more.">
                   <Lock className="h-3 w-3" />
                   Messages are end-to-end encrypted. No one outside of this chat can read them.
                 </div>
