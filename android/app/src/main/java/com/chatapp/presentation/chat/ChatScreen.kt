@@ -172,6 +172,11 @@ fun ChatScreen(
             onDelete = {
                 showDeleteDialog = true
                 showReactionPicker = false
+            },
+            onReply = {
+                replyToMessage = selectedMessage
+                showReactionPicker = false
+                selectedMessage = null
             }
         )
     }
@@ -744,10 +749,14 @@ fun MessageMenuDialog(
     onDismiss: () -> Unit,
     onReaction: (String) -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onReply: () -> Unit = {},
+    onForward: () -> Unit = {},
+    onStar: () -> Unit = {}
 ) {
     val isOwn = message.senderId == currentUserId
     val context = LocalContext.current
+    var isStarred by remember { mutableStateOf(false) }
     
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -755,6 +764,7 @@ fun MessageMenuDialog(
             color = Color.White
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                // Quick reactions row
                 Text(
                     text = "React",
                     fontWeight = FontWeight.SemiBold,
@@ -780,36 +790,68 @@ fun MessageMenuDialog(
                 }
                 
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
-                
-                if (isOwn) {
-                    val canEdit = System.currentTimeMillis() - message.createdAt < 15 * 60 * 1000
-                    if (canEdit) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onEdit() }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF1A56DB))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Edit")
-                        }
-                    }
-                }
-                
+
+                // Reply
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onDelete() }
-                        .padding(vertical = 12.dp),
+                        .clickable { onReply(); onDismiss() }
+                        .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                    Icon(Icons.Default.Reply, contentDescription = null, tint = Color(0xFF246BFD))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Delete", color = Color.Red)
+                    Text("Reply")
                 }
-                
+
+                // Forward
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, message.content ?: "")
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Forward to..."))
+                            onDismiss()
+                        }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Forward, contentDescription = null, tint = Color(0xFF246BFD))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Forward")
+                }
+
+                // Star
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            isStarred = !isStarred
+                            Toast.makeText(
+                                context,
+                                if (isStarred) "Message starred" else "Message unstarred",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            onStar()
+                            onDismiss()
+                        }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        if (isStarred) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = null,
+                        tint = Color(0xFFFFC107)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(if (isStarred) "Unstar" else "Star")
+                }
+
+                // Copy
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -820,12 +862,43 @@ fun MessageMenuDialog(
                             Toast.makeText(context, "Message copied", Toast.LENGTH_SHORT).show()
                             onDismiss()
                         }
-                        .padding(vertical = 12.dp),
+                        .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color.Gray)
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color(0xFF607D8B))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("Copy")
+                }
+                
+                // Edit (own messages only, within 15 min)
+                if (isOwn) {
+                    val canEdit = System.currentTimeMillis() - message.createdAt < 15 * 60 * 1000
+                    if (canEdit) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onEdit() }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF1A56DB))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Edit")
+                        }
+                    }
+                }
+                
+                // Delete
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDelete() }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Delete", color = Color.Red)
                 }
             }
         }
