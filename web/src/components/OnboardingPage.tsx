@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Users, Video, Lock, Monitor, ChevronRight, ChevronLeft } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Users, Video, Lock, Monitor, ChevronRight, ChevronLeft, MessageSquare } from 'lucide-react';
 
 interface OnboardingPageProps {
   onComplete: () => void;
@@ -36,27 +36,72 @@ const SLIDES = [
   },
 ];
 
+const AUTO_ADVANCE_INTERVAL = 5000;
+
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left');
+  const [autoAdvance, setAutoAdvance] = useState(true);
+  const [autoProgress, setAutoProgress] = useState(0);
+  const touchStartX = useRef(0);
+  const autoAdvanceRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const handleNext = () => {
+  // Auto-advance slides
+  useEffect(() => {
+    if (!autoAdvance) return;
+    setAutoProgress(0);
+    const progressInterval = setInterval(() => {
+      setAutoProgress(prev => Math.min(prev + 2, 100));
+    }, AUTO_ADVANCE_INTERVAL / 50);
+    autoAdvanceRef.current = setTimeout(() => {
+      if (currentSlide < SLIDES.length - 1) {
+        setSlideDirection('left');
+        setCurrentSlide(prev => prev + 1);
+      } else {
+        setAutoAdvance(false);
+      }
+    }, AUTO_ADVANCE_INTERVAL) as unknown as ReturnType<typeof setInterval>;
+    return () => {
+      clearTimeout(autoAdvanceRef.current as unknown as ReturnType<typeof setTimeout>);
+      clearInterval(progressInterval);
+    };
+  }, [currentSlide, autoAdvance]);
+
+  const handleNext = useCallback(() => {
+    setAutoAdvance(false);
     if (currentSlide < SLIDES.length - 1) {
+      setSlideDirection('left');
       setCurrentSlide(prev => prev + 1);
     } else {
       localStorage.setItem('onboarding_completed', 'true');
       onComplete();
     }
-  };
+  }, [currentSlide, onComplete]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
+    setAutoAdvance(false);
     if (currentSlide > 0) {
+      setSlideDirection('right');
       setCurrentSlide(prev => prev - 1);
     }
-  };
+  }, [currentSlide]);
 
   const handleSkip = () => {
     localStorage.setItem('onboarding_completed', 'true');
     onComplete();
+  };
+
+  // Swipe gesture support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) handleNext();
+      else handlePrev();
+    }
   };
 
   const slide = SLIDES[currentSlide];
@@ -64,41 +109,64 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const isLastSlide = currentSlide === SLIDES.length - 1;
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F7F8FC] flex flex-col items-center justify-center p-4" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className="w-full max-w-md">
-        {/* Skip button */}
-        <div className="flex justify-end mb-8">
+        {/* Header with logo and skip */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg abhi-gradient flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm font-bold text-[#1A1A2E]">Abhi Chat</span>
+          </div>
           <button
             onClick={handleSkip}
-            className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-sm text-gray-400 hover:text-[#246BFD] transition-colors font-medium"
           >
             Skip
           </button>
         </div>
 
-        {/* Slide content */}
-        <div className="text-center mb-12">
-          <div className={`w-32 h-32 rounded-full bg-gradient-to-br ${slide.bgGradient} flex items-center justify-center mx-auto mb-8 transition-all duration-500`}>
-            <Icon className="w-16 h-16" style={{ color: slide.color }} />
+        {/* Slide content with animation */}
+        <div className="text-center mb-12 overflow-hidden">
+          <div
+            key={currentSlide}
+            className="animate-fade-in"
+            style={{
+              animation: `slideIn${slideDirection === 'left' ? 'Left' : 'Right'} 0.3s ease-out`,
+            }}
+          >
+            <div className={`w-36 h-36 rounded-3xl bg-gradient-to-br ${slide.bgGradient} flex items-center justify-center mx-auto mb-8 transition-all duration-500 shadow-lg`}>
+              <Icon className="w-16 h-16" style={{ color: slide.color }} />
+            </div>
+            <h1 className="text-2xl font-bold text-[#1A1A2E] mb-4">
+              {slide.title}
+            </h1>
+            <p className="text-gray-400 text-base leading-relaxed max-w-sm mx-auto">
+              {slide.description}
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4 transition-all duration-300">
-            {slide.title}
-          </h1>
-          <p className="text-gray-500 text-base leading-relaxed max-w-sm mx-auto transition-all duration-300">
-            {slide.description}
-          </p>
         </div>
 
-        {/* Dots indicator */}
+        {/* Dots indicator with auto-advance progress */}
         <div className="flex justify-center gap-2 mb-8">
           {SLIDES.map((_, i) => (
             <button
               key={i}
-              onClick={() => setCurrentSlide(i)}
-              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                i === currentSlide ? 'w-8 bg-[#246BFD]' : 'bg-gray-300 hover:bg-gray-400'
-              }`}
-            />
+              onClick={() => { setAutoAdvance(false); setSlideDirection(i > currentSlide ? 'left' : 'right'); setCurrentSlide(i); }}
+              className="relative h-2.5 rounded-full transition-all duration-300 overflow-hidden"
+              style={{ width: i === currentSlide ? 32 : 10, backgroundColor: i === currentSlide ? 'transparent' : i < currentSlide ? '#246BFD' : '#D1D5DB' }}
+            >
+              {i === currentSlide && (
+                <>
+                  <div className="absolute inset-0 bg-[#246BFD]/30 rounded-full" />
+                  <div
+                    className="absolute inset-y-0 left-0 bg-[#246BFD] rounded-full transition-all duration-100"
+                    style={{ width: autoAdvance ? `${autoProgress}%` : '100%' }}
+                  />
+                </>
+              )}
+            </button>
           ))}
         </div>
 
@@ -125,6 +193,17 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
           </button>
         </div>
       </div>
+
+      <style>{`
+        @keyframes slideInLeft {
+          from { opacity: 0; transform: translateX(30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(-30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 }

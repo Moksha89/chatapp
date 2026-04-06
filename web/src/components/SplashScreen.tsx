@@ -6,21 +6,33 @@ interface SplashScreenProps {
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [phase, setPhase] = useState(0);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 800),
-      setTimeout(() => setPhase(2), 1600),
-      setTimeout(() => setPhase(3), 2400),
-      setTimeout(() => onComplete(), 4000),
+      setTimeout(() => setPhase(1), 600),
+      setTimeout(() => setPhase(2), 1200),
+      setTimeout(() => setPhase(3), 1800),
+      setTimeout(() => onComplete(), 3200),
     ];
     return () => timers.forEach(clearTimeout);
   }, [onComplete]);
 
+  // Smooth progress bar
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) { clearInterval(interval); return 100; }
+        return prev + 2;
+      });
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
+
   const bubbleColor =
     phase >= 2 ? '#246BFD' : phase >= 1 ? '#5B9BFD' : '#BBCCDD';
   const bubbleOpacity = phase >= 1 ? 1 : 0.35;
-  const bubbleScale = phase === 0 ? 0.8 : phase === 1 ? 0.9 : phase === 2 ? 1 : 0.6;
+  const bubbleScale = phase === 0 ? 0.8 : phase === 1 ? 0.95 : phase === 2 ? 1 : 0.6;
   const showLogo = phase >= 3;
 
   return (
@@ -92,6 +104,17 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         <h1 className="text-3xl font-bold text-[#1A1A2E] mb-2">Abhi</h1>
         <p className="text-gray-400 text-sm tracking-wide">Stay Connected Stay Chatting</p>
         <p className="text-gray-300 text-xs mt-4">v2.1.0</p>
+      </div>
+
+      {/* Progress bar */}
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-48">
+        <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-[#246BFD] to-[#6C5CE7] rounded-full transition-all duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="text-center text-xs text-gray-300 mt-2">{progress < 100 ? 'Loading...' : 'Ready!'}</p>
       </div>
 
       {/* Bottom wave */}
