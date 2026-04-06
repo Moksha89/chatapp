@@ -934,15 +934,17 @@ export function ChatArea() {
           ) : (() => {
             if (activeChat?.type === 'channel') {
               const count = activeChat.participants.length;
-              return <p className="text-xs text-gray-400">{count} subscriber{count !== 1 ? 's' : ''}</p>;
+              const adminCount = activeChat.participants.filter((p: { role?: string }) => p.role === 'admin').length;
+              return <p className="text-xs text-gray-400">{count} subscriber{count !== 1 ? 's' : ''} &middot; {adminCount} admin{adminCount !== 1 ? 's' : ''}</p>;
             }
             if (activeChat?.type === 'community') {
               const count = activeChat.participants.length;
-              return <p className="text-xs text-gray-400">{count} member{count !== 1 ? 's' : ''}</p>;
+              return <p className="text-xs text-gray-400">{count} member{count !== 1 ? 's' : ''} &middot; Community</p>;
             }
             if (activeChat?.type === 'group') {
               const count = activeChat.participants.length;
-              return <p className="text-xs text-gray-400">{count} participant{count !== 1 ? 's' : ''}</p>;
+              const onlineCount = activeChat.participants.filter((p: { userId: string }) => onlineUsers.has(p.userId)).length;
+              return <p className="text-xs text-gray-400">{count} participant{count !== 1 ? 's' : ''}{onlineCount > 0 ? ` \u00b7 ${onlineCount} online` : ''}</p>;
             }
             const otherUserId = activeChat?.participants.find(p => p.userId !== user?.id)?.userId;
             const isOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
@@ -1011,6 +1013,9 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) { setMutedChats(prev => { const next = new Set(prev); if (next.has(activeChat.id)) next.delete(activeChat.id); else next.add(activeChat.id); return next; }); } }}>
                         <BellOff className="h-4 w-4" /> {activeChat && mutedChats.has(activeChat.id) ? 'Unmute notifications' : 'Mute notifications'}
                       </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
+                        <Timer className="h-4 w-4" /> Disappearing messages
+                      </button>
                     </>
                   ) : activeChat?.type === 'community' ? (
                     <>
@@ -1025,6 +1030,9 @@ export function ChatArea() {
                       </button>
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) { setMutedChats(prev => { const next = new Set(prev); if (next.has(activeChat.id)) next.delete(activeChat.id); else next.add(activeChat.id); return next; }); } }}>
                         <BellOff className="h-4 w-4" /> {activeChat && mutedChats.has(activeChat.id) ? 'Unmute notifications' : 'Mute notifications'}
+                      </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
+                        <Timer className="h-4 w-4" /> Disappearing messages
                       </button>
                     </>
                   ) : (

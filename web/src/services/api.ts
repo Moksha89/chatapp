@@ -685,6 +685,46 @@ class ApiService {
       method: 'POST',
     });
   }
+  async removeAdmin(chatId: string, participantId: string) {
+    return this.request<{ id: string }>(`/chats/${chatId}/participants/${participantId}/admin`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getGroupInviteLink(chatId: string) {
+    return this.request<{ inviteLink: string; expiresAt?: string }>(`/chats/${chatId}/invite-link`);
+  }
+
+  async revokeGroupInviteLink(chatId: string) {
+    return this.request<{ inviteLink: string }>(`/chats/${chatId}/invite-link/revoke`, {
+      method: 'POST',
+    });
+  }
+
+  async updateGroupPermissions(chatId: string, permissions: {
+    sendMessages?: boolean;
+    sendMedia?: boolean;
+    addMembers?: boolean;
+    pinMessages?: boolean;
+    editGroupInfo?: boolean;
+  }) {
+    return this.request<{ id: string }>(`/chats/${chatId}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify(permissions),
+    });
+  }
+
+  async getGroupPermissions(chatId: string) {
+    return this.request<{
+      sendMessages: boolean;
+      sendMedia: boolean;
+      addMembers: boolean;
+      pinMessages: boolean;
+      editGroupInfo: boolean;
+    }>(`/chats/${chatId}/permissions`);
+  }
+
+
 
   // Bug #13 fix: Add 401 retry logic to uploadMedia
   async uploadMedia(file: File): Promise<{
