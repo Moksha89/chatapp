@@ -213,11 +213,14 @@ fun ChatListScreen(
                         Tab(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
+                            selectedContentColor = Color.White,
+                            unselectedContentColor = Color.White.copy(alpha = 0.7f),
                             text = {
                                 Text(
                                     text = title,
                                     fontSize = 13.sp,
-                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedTab == index) Color.White else Color.White.copy(alpha = 0.7f)
                                 )
                             }
                         )

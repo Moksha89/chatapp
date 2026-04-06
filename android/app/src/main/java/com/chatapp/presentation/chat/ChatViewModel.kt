@@ -28,7 +28,8 @@ data class ChatUiState(
     val error: String? = null,
     val currentUserId: String = "",
     val isOnline: Boolean = false,
-    val isTyping: Boolean = false
+    val isTyping: Boolean = false,
+    val resolvedChatName: String? = null
 )
 
 @HiltViewModel
@@ -134,6 +135,32 @@ class ChatViewModel @Inject constructor(
         otherUserId = otherUserIdParam
         _uiState.update { it.copy(isLoading = true, currentUserId = userId) }
         connectSocket()
+
+        // Resolve chat name from API (handles direct chats where name might be "Chat")
+        viewModelScope.launch {
+            try {
+                val chats = apiService.getChats()
+                val chat = chats.find { it.id == chatId }
+                if (chat != null) {
+                    val resolvedName = chat.name ?: chat.participants
+                        .filter { it.userId != userId && it.user != null }
+                        .firstOrNull()?.user?.displayName
+                        ?: chat.participants.firstOrNull { it.user != null }?.user?.displayName
+                    if (resolvedName != null) {
+                        _uiState.update { it.copy(resolvedChatName = resolvedName) }
+                    }
+                    // Set otherUserId for presence tracking
+                    if (otherUserId.isEmpty()) {
+                        val otherId = chat.participants
+                            .filter { it.userId != userId }
+                            .firstOrNull()?.userId
+                        if (otherId != null) {
+                            otherUserId = otherId
+                        }
+                    }
+                }
+            } catch (_: Exception) { }
+        }
 
         viewModelScope.launch {
             chatRepository.getMessages(chatId)

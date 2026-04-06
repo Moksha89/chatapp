@@ -64,7 +64,9 @@ class SocketManager @Inject constructor(
                 reconnectionDelay = 1000
                 reconnectionAttempts = 10
             }
-            socket = IO.socket(BuildConfig.SOCKET_URL, options)
+            // Backend WebSocket gateway uses namespace "/chat"
+            val socketUrl = BuildConfig.SOCKET_URL.trimEnd('/') + "/chat"
+            socket = IO.socket(socketUrl, options)
             setupListeners()
             socket?.connect()
         } catch (e: Exception) {
@@ -98,7 +100,10 @@ class SocketManager @Inject constructor(
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
                     val chatId = data.optString("chatId", "")
-                    _events.tryEmit(SocketEvent.NewMessage(chatId, data))
+                    // Backend sends { message: {...}, chatId: "..." }
+                    // Extract the nested message object if present
+                    val messageJson = if (data.has("message")) data.optJSONObject("message") ?: data else data
+                    _events.tryEmit(SocketEvent.NewMessage(chatId, messageJson))
                 }
             }
 
@@ -147,6 +152,26 @@ class SocketManager @Inject constructor(
                 }
             }
 
+            // Backend sends typing:indicator (not typing:start/typing:stop)
+            on("typing:indicator") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as JSONObject
+                    val chatId = data.optString("chatId", "")
+                    val userId = data.optString("userId", "")
+                    val isTyping = data.optBoolean("isTyping", false)
+                    _typingUsers.value = _typingUsers.value.toMutableMap().apply {
+                        val current = get(chatId)?.toMutableSet() ?: mutableSetOf()
+                        if (isTyping) current.add(userId) else current.remove(userId)
+                        if (current.isEmpty()) remove(chatId) else put(chatId, current)
+                    }
+                    if (isTyping) {
+                        _events.tryEmit(SocketEvent.TypingStart(chatId, userId, ""))
+                    } else {
+                        _events.tryEmit(SocketEvent.TypingStop(chatId, userId))
+                    }
+                }
+            }
+
             on("presence:online") { args ->
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
@@ -162,6 +187,22 @@ class SocketManager @Inject constructor(
                     val userId = data.optString("userId", "")
                     _onlineUsers.value = _onlineUsers.value - userId
                     _events.tryEmit(SocketEvent.UserOffline(userId))
+                }
+            }
+
+            // Backend broadcasts presence:update with { userId, status: 'online'|'offline' }
+            on("presence:update") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as JSONObject
+                    val userId = data.optString("userId", "")
+                    val status = data.optString("status", "offline")
+                    if (status == "online") {
+                        _onlineUsers.value = _onlineUsers.value + userId
+                        _events.tryEmit(SocketEvent.UserOnline(userId))
+                    } else {
+                        _onlineUsers.value = _onlineUsers.value - userId
+                        _events.tryEmit(SocketEvent.UserOffline(userId))
+                    }
                 }
             }
 

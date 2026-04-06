@@ -67,6 +67,9 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // Use resolved name from API if available, otherwise fall back to navigation param
+    val effectiveChatName = uiState.resolvedChatName ?: chatName
+
     // Use ViewModel's real-time online/typing status
     val effectiveOnline = uiState.isOnline || isOnline
     val effectiveTyping = uiState.isTyping || isTyping
@@ -236,15 +239,15 @@ fun ChatScreen(
                                     .clip(CircleShape),
                                 color = Color(0xFF246BFD)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = chatName.firstOrNull()?.toString() ?: "?",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = effectiveChatName.firstOrNull()?.toString() ?: "?",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                    }
                                 }
-                            }
                             if (effectiveOnline) {
                                 Box(
                                     modifier = Modifier
@@ -257,7 +260,7 @@ fun ChatScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                chatName,
+                                effectiveChatName,
                                 fontSize = 15.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
