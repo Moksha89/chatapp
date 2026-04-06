@@ -203,9 +203,9 @@ fun ChatListScreen(
                     selectedTabIndex = selectedTab,
                     containerColor = Color(0xFF1A56DB),
                     contentColor = Color.White,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                    indicator = @Composable { tabPositions ->
+                        TabRowDefaults.Indicator(
+                            modifier = Modifier.fillMaxWidth(),
                             color = Color.White
                         )
                     }
