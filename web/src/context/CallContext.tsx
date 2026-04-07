@@ -645,6 +645,45 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         isGroupCall: data.isGroupCall,
       });
       setCallState('incoming');
+
+      // Play ringtone sound for incoming call
+      try {
+        const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        const playTone = (freq: number, startTime: number, duration: number) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.value = freq;
+          osc.type = 'sine';
+          gain.gain.setValueAtTime(0.2, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        };
+        // Ring pattern: two tones repeated
+        for (let i = 0; i < 3; i++) {
+          playTone(440, audioCtx.currentTime + i * 0.6, 0.25);
+          playTone(520, audioCtx.currentTime + i * 0.6 + 0.25, 0.25);
+        }
+        setTimeout(() => audioCtx.close(), 3000);
+      } catch { /* audio not available */ }
+
+      // Browser notification for incoming call
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const callNotification = new Notification(`Incoming ${data.callType} call`, {
+          body: `${data.callerName} is calling you`,
+          icon: '/logo192.png',
+          tag: `call-${data.callId}`,
+          requireInteraction: true,
+        });
+        callNotification.onclick = () => {
+          window.focus();
+          callNotification.close();
+        };
+        // Auto-close after 30 seconds
+        setTimeout(() => callNotification.close(), 30000);
+      }
     };
 
     const handleCallAnswered = async (data: { callId: string; answer: RTCSessionDescriptionInit }) => {

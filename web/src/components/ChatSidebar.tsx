@@ -113,10 +113,18 @@ export function ChatSidebar() {
     try {
       const { api } = await import('../services/api');
       switch (action) {
-        case 'pin': await api.pinConversation(chatId, true); break;
-        case 'unpin': await api.pinConversation(chatId, false); break;
-        case 'mute': await api.muteConversation(chatId, true, 'forever'); break;
-        case 'unmute': await api.muteConversation(chatId, false); break;
+        case 'pin':
+          await api.pinConversation(chatId, true);
+          break;
+        case 'unpin':
+          await api.pinConversation(chatId, false);
+          break;
+        case 'mute':
+          await api.muteConversation(chatId, true, 'forever');
+          break;
+        case 'unmute':
+          await api.muteConversation(chatId, false);
+          break;
         case 'archive': await api.archiveConversation(chatId, true); break;
         case 'unarchive': await api.archiveConversation(chatId, false); break;
         case 'favorite': await api.favoriteConversation(chatId, true); break;

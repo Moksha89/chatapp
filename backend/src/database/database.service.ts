@@ -786,8 +786,14 @@ export class DatabaseService implements OnModuleInit {
       const chatLabelIds = labelIdsByChatId.get(chatId) || [];
       const labels = chatLabelIds.map(lid => labelMap.get(lid)).filter((l): l is Label => !!l);
 
+      // Include per-user isPinned/isMuted/isArchived/isFavorite from the current user's participant record
+      const userParticipant = userParticipantsMap.get(chatId);
       results.push({
         ...chat,
+        isPinned: userParticipant?.isPinned ?? false,
+        isMuted: userParticipant?.isMuted ?? false,
+        isArchived: userParticipant?.isArchived ?? false,
+        isFavorite: userParticipant?.isFavorite ?? false,
         participants: enrichedParticipants,
         lastMessage: lastMessageMap.get(chatId),
         unreadCount: unreadMap.get(chatId) || 0,
