@@ -80,6 +80,179 @@ fun EmojiPickerView(
     }
 }
 
+// Enhanced Emoji/GIF/Sticker picker with tabs
+@Composable
+fun EnhancedEmojiPickerView(
+    onEmojiSelected: (String) -> Unit,
+    onGifSelected: (String) -> Unit,
+    onStickerSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedEmojiCategory by remember { mutableIntStateOf(0) }
+
+    val emojiCategories = listOf(
+        "Smileys" to SMILEYS,
+        "People" to PEOPLE,
+        "Animals" to ANIMALS,
+        "Food" to FOOD,
+        "Activities" to ACTIVITIES,
+        "Objects" to OBJECTS,
+        "Symbols" to SYMBOLS
+    )
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Column {
+            // Top tabs: Emoji / GIF / Stickers
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.EmojiEmotions, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Emoji", fontSize = 13.sp)
+                    }
+                }
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Gif, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("GIF", fontSize = 13.sp)
+                    }
+                }
+                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.SentimentVerySatisfied, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Stickers", fontSize = 13.sp)
+                    }
+                }
+            }
+
+            when (selectedTab) {
+                0 -> {
+                    // Emoji category tabs
+                    ScrollableTabRow(
+                        selectedTabIndex = selectedEmojiCategory,
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        edgePadding = 0.dp
+                    ) {
+                        emojiCategories.forEachIndexed { index, (name, _) ->
+                            Tab(
+                                selected = selectedEmojiCategory == index,
+                                onClick = { selectedEmojiCategory = index },
+                                text = { Text(name, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(8),
+                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                        contentPadding = PaddingValues(4.dp)
+                    ) {
+                        items(emojiCategories[selectedEmojiCategory].second) { emoji ->
+                            Text(
+                                text = emoji,
+                                fontSize = 24.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(4.dp).clickable { onEmojiSelected(emoji) }
+                            )
+                        }
+                    }
+                }
+                1 -> {
+                    // GIF picker (popular GIF reactions)
+                    val gifEmojis = listOf(
+                        "\uD83D\uDE02" to "Laughing",
+                        "\uD83D\uDC4D" to "Thumbs Up",
+                        "\uD83D\uDE0D" to "Heart Eyes",
+                        "\uD83D\uDE22" to "Crying",
+                        "\uD83D\uDE31" to "Shocked",
+                        "\uD83D\uDE4C" to "Celebration",
+                        "\uD83D\uDE44" to "Eye Roll",
+                        "\uD83D\uDD25" to "Fire",
+                        "\uD83D\uDC4F" to "Clapping",
+                        "\uD83E\uDD14" to "Thinking",
+                        "\uD83D\uDE4F" to "Thank You",
+                        "\uD83D\uDE18" to "Kiss",
+                        "\u2764\uFE0F" to "Love",
+                        "\uD83D\uDE2D" to "Sobbing",
+                        "\uD83D\uDE33" to "Flushed",
+                        "\uD83D\uDE0E" to "Cool"
+                    )
+                    Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                        Text("Popular GIF Reactions", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(4.dp)
+                        ) {
+                            items(gifEmojis) { (emoji, label) ->
+                                Surface(
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.padding(4.dp).clickable { onGifSelected(emoji) }
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(emoji, fontSize = 32.sp)
+                                        Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                2 -> {
+                    // Sticker packs
+                    val stickerPacks = listOf(
+                        "Greetings" to listOf("\uD83D\uDC4B", "\uD83D\uDE4B", "\uD83E\uDD1D", "\u270C\uFE0F", "\uD83D\uDC4D", "\uD83D\uDC4C"),
+                        "Love" to listOf("\u2764\uFE0F", "\uD83D\uDC95", "\uD83D\uDC9E", "\uD83D\uDC98", "\uD83D\uDE0D", "\uD83E\uDD70"),
+                        "Happy" to listOf("\uD83D\uDE00", "\uD83D\uDE04", "\uD83D\uDE06", "\uD83D\uDE02", "\uD83E\uDD29", "\uD83E\uDD73"),
+                        "Animals" to listOf("\uD83D\uDC36", "\uD83D\uDC31", "\uD83D\uDC3B", "\uD83D\uDC3C", "\uD83E\uDD81", "\uD83E\uDD8A"),
+                        "Food" to listOf("\uD83C\uDF55", "\uD83C\uDF54", "\uD83C\uDF5F", "\uD83C\uDF69", "\uD83C\uDF70", "\uD83C\uDF66")
+                    )
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(6),
+                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                        contentPadding = PaddingValues(4.dp)
+                    ) {
+                        stickerPacks.forEach { (packName, stickers) ->
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(6) }) {
+                                Text(packName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 4.dp))
+                            }
+                            items(stickers) { sticker ->
+                                Surface(
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(4.dp).clickable { onStickerSelected(sticker) }
+                                ) {
+                                    Text(
+                                        sticker, fontSize = 32.sp, textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 val SMILEYS = listOf(
     "\uD83D\uDE00", "\uD83D\uDE03", "\uD83D\uDE04", "\uD83D\uDE01", "\uD83D\uDE06",
     "\uD83D\uDE05", "\uD83D\uDE02", "\uD83E\uDD23", "\uD83D\uDE0A", "\uD83D\uDE07",

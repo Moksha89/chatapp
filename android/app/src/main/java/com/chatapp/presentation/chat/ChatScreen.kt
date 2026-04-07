@@ -1,9 +1,13 @@
 package com.chatapp.presentation.chat
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -37,13 +41,13 @@ import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import com.chatapp.domain.model.Message
 import com.chatapp.domain.model.MessageStatus
+import com.chatapp.presentation.media.MediaPickerHelper
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
@@ -84,13 +88,25 @@ fun ChatScreen(
     var showEmojiPicker by remember { mutableStateOf(false) }
     var showAttachMenu by remember { mutableStateOf(false) }
 
-    // Activity result launchers for attachments with real file upload
+    // Multi-message selection
+    var isSelectMode by remember { mutableStateOf(false) }
+    var selectedMessages by remember { mutableStateOf(setOf<String>()) }
+
+    // Seen-by dialog
+    var showSeenByMessageId by remember { mutableStateOf<String?>(null) }
+
+    // Activity result launchers for attachments with file validation
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            Toast.makeText(context, "Uploading image...", Toast.LENGTH_SHORT).show()
-            viewModel.sendMediaMessage(context, it, "image")
+            val validation = MediaPickerHelper.validateFile(context, it, "image")
+            if (validation.isValid) {
+                Toast.makeText(context, "Uploading image...", Toast.LENGTH_SHORT).show()
+                viewModel.sendMediaMessage(context, it, "image")
+            } else {
+                Toast.makeText(context, validation.errorMessage ?: "Invalid file", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -118,8 +134,28 @@ fun ChatScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            Toast.makeText(context, "Uploading document...", Toast.LENGTH_SHORT).show()
-            viewModel.sendMediaMessage(context, it, "file")
+            val validation = MediaPickerHelper.validateFile(context, it, "file")
+            if (validation.isValid) {
+                Toast.makeText(context, "Uploading document...", Toast.LENGTH_SHORT).show()
+                viewModel.sendMediaMessage(context, it, "file")
+            } else {
+                Toast.makeText(context, validation.errorMessage ?: "Invalid file", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // Video launcher with validation
+    val videoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val validation = MediaPickerHelper.validateFile(context, it, "video")
+            if (validation.isValid) {
+                Toast.makeText(context, "Uploading video...", Toast.LENGTH_SHORT).show()
+                viewModel.sendMediaMessage(context, it, "video")
+            } else {
+                Toast.makeText(context, validation.errorMessage ?: "Invalid file", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -178,6 +214,12 @@ fun ChatScreen(
             },
             onReply = {
                 replyToMessage = selectedMessage
+                showReactionPicker = false
+                selectedMessage = null
+            },
+            onSelectMessages = {
+                isSelectMode = true
+                selectedMessages = setOf(selectedMessage!!.id)
                 showReactionPicker = false
                 selectedMessage = null
             }
@@ -312,6 +354,84 @@ fun ChatScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            // Connection status banner (offline/reconnecting)
+            AnimatedVisibility(
+                visible = !uiState.isSocketConnected,
+                enter = slideInVertically(),
+                exit = slideOutVertically()
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.error
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("No internet connection — messages will be queued", color = Color.White, fontSize = 12.sp)
+                    }
+                }
+            }
+
+            // Upload progress indicator
+            if (uiState.isUploading) {
+                LinearProgressIndicator(
+                    progress = { uiState.uploadProgress },
+                    modifier = Modifier.fillMaxWidth().height(3.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+
+            // Multi-select action bar
+            if (isSelectMode) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { isSelectMode = false; selectedMessages = emptySet() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel", tint = Color.White)
+                        }
+                        Text("${selectedMessages.size} selected", color = Color.White, modifier = Modifier.weight(1f))
+                        IconButton(
+                            onClick = {
+                                selectedMessages.forEach { id -> viewModel.deleteMessage(id, false) }
+                                isSelectMode = false; selectedMessages = emptySet()
+                            },
+                            enabled = selectedMessages.isNotEmpty()
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White.copy(alpha = if (selectedMessages.isNotEmpty()) 1f else 0.5f))
+                        }
+                        IconButton(
+                            onClick = {
+                                val content = uiState.messages.filter { it.id in selectedMessages }.mapNotNull { it.content }.joinToString("\n")
+                                val sendIntent = Intent().apply { action = Intent.ACTION_SEND; putExtra(Intent.EXTRA_TEXT, content); type = "text/plain" }
+                                context.startActivity(Intent.createChooser(sendIntent, "Forward to..."))
+                                isSelectMode = false; selectedMessages = emptySet()
+                            },
+                            enabled = selectedMessages.isNotEmpty()
+                        ) {
+                            Icon(Icons.Default.Forward, contentDescription = "Forward", tint = Color.White.copy(alpha = if (selectedMessages.isNotEmpty()) 1f else 0.5f))
+                        }
+                        IconButton(
+                            onClick = {
+                                Toast.makeText(context, "${selectedMessages.size} message(s) starred", Toast.LENGTH_SHORT).show()
+                                isSelectMode = false; selectedMessages = emptySet()
+                            },
+                            enabled = selectedMessages.isNotEmpty()
+                        ) {
+                            Icon(Icons.Default.Star, contentDescription = "Star", tint = Color(0xFFFFC107).copy(alpha = if (selectedMessages.isNotEmpty()) 1f else 0.5f))
+                        }
+                    }
+                }
+            }
+
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier
@@ -330,6 +450,14 @@ fun ChatScreen(
                         listState.animateScrollToItem(uiState.messages.size - 1)
                     }
                 }
+
+                // Infinite scroll — load more when near the top
+                val firstVisibleIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+                LaunchedEffect(firstVisibleIndex) {
+                    if (firstVisibleIndex <= 3 && !uiState.isLoadingMore && uiState.hasMoreMessages && uiState.messages.isNotEmpty()) {
+                        viewModel.loadMoreMessages()
+                    }
+                }
                 
                 LazyColumn(
                     state = listState,
@@ -338,25 +466,81 @@ fun ChatScreen(
                         .padding(horizontal = 8.dp),
                     reverseLayout = false
                 ) {
+                    // Loading more indicator at top
+                    if (uiState.isLoadingMore) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+
                     items(uiState.messages, key = { it.id }) { message ->
-                        SwipeableMessageBubble(
-                            message = message,
-                            currentUserId = uiState.currentUserId,
-                            onLongPress = {
-                                if (!message.isDeleted) {
-                                    selectedMessage = message
-                                    showReactionPicker = true
+                        val isOwn = message.senderId == uiState.currentUserId
+
+                        if (isSelectMode) {
+                            // Multi-select mode: show checkbox
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedMessages = if (message.id in selectedMessages) selectedMessages - message.id else selectedMessages + message.id
+                                    }
+                                    .background(if (message.id in selectedMessages) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent)
+                                    .padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .border(2.dp, if (message.id in selectedMessages) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
+                                        .background(if (message.id in selectedMessages) MaterialTheme.colorScheme.primary else Color.Transparent),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (message.id in selectedMessages) {
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                    }
                                 }
-                            },
-                            onReactionClick = { emoji ->
-                                viewModel.toggleReaction(message.id, emoji)
-                            },
-                            onSwipeToReply = {
-                                if (!message.isDeleted) {
-                                    replyToMessage = message
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(modifier = Modifier.weight(1f)) {
+                                    MessageBubble(
+                                        message = message,
+                                        currentUserId = uiState.currentUserId,
+                                        onLongPress = {},
+                                        onReactionClick = {},
+                                        onRetry = {},
+                                        showSeenBy = false,
+                                        onSeenByClick = {}
+                                    )
                                 }
                             }
-                        )
+                        } else {
+                            SwipeableMessageBubble(
+                                message = message,
+                                currentUserId = uiState.currentUserId,
+                                onLongPress = {
+                                    if (!message.isDeleted) {
+                                        selectedMessage = message
+                                        showReactionPicker = true
+                                    }
+                                },
+                                onReactionClick = { emoji ->
+                                    viewModel.toggleReaction(message.id, emoji)
+                                },
+                                onSwipeToReply = {
+                                    if (!message.isDeleted) {
+                                        replyToMessage = message
+                                    }
+                                },
+                                onRetry = { viewModel.retryMessage(message) },
+                                showSeenBy = isOwn && message.status == MessageStatus.READ,
+                                onSeenByClick = {
+                                    showSeenByMessageId = if (showSeenByMessageId == message.id) null else message.id
+                                },
+                                isSeenByExpanded = showSeenByMessageId == message.id
+                            )
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
@@ -513,10 +697,18 @@ fun ChatScreen(
                 }
             }
 
-            // Emoji picker
+            // Enhanced Emoji/GIF/Sticker picker
             if (showEmojiPicker) {
-                EmojiPickerView(
+                EnhancedEmojiPickerView(
                     onEmojiSelected = { emoji -> messageText += emoji },
+                    onGifSelected = { gifUrl ->
+                        viewModel.sendMessage(gifUrl, null)
+                        showEmojiPicker = false
+                    },
+                    onStickerSelected = { stickerEmoji ->
+                        viewModel.sendMessage(stickerEmoji, null)
+                        showEmojiPicker = false
+                    },
                     onDismiss = { showEmojiPicker = false }
                 )
             }
@@ -552,7 +744,11 @@ fun SwipeableMessageBubble(
     currentUserId: String,
     onLongPress: () -> Unit,
     onReactionClick: (String) -> Unit,
-    onSwipeToReply: () -> Unit
+    onSwipeToReply: () -> Unit,
+    onRetry: () -> Unit = {},
+    showSeenBy: Boolean = false,
+    onSeenByClick: () -> Unit = {},
+    isSeenByExpanded: Boolean = false
 ) {
     val isOwn = message.senderId == currentUserId
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -583,7 +779,6 @@ fun SwipeableMessageBubble(
                         hasTriggeredReply = false
                     },
                     onHorizontalDrag = { _, dragAmount ->
-                        // Only allow right swipe (positive direction)
                         val newOffset = offsetX + dragAmount
                         offsetX = newOffset.coerceIn(0f, swipeThreshold * 1.5f)
                     }
@@ -617,8 +812,35 @@ fun SwipeableMessageBubble(
                 message = message,
                 currentUserId = currentUserId,
                 onLongPress = onLongPress,
-                onReactionClick = onReactionClick
+                onReactionClick = onReactionClick,
+                onRetry = onRetry,
+                showSeenBy = showSeenBy,
+                onSeenByClick = onSeenByClick
             )
+        }
+    }
+
+    // Seen-by expanded row
+    if (isSeenByExpanded && showSeenBy) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = if (isOwn) 48.dp else 8.dp, end = if (isOwn) 8.dp else 48.dp, top = 2.dp),
+            horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Read", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
@@ -629,17 +851,42 @@ fun MessageBubble(
     message: Message,
     currentUserId: String,
     onLongPress: () -> Unit,
-    onReactionClick: (String) -> Unit
+    onReactionClick: (String) -> Unit,
+    onRetry: () -> Unit = {},
+    showSeenBy: Boolean = false,
+    onSeenByClick: () -> Unit = {}
 ) {
     val isOwn = message.senderId == currentUserId
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val timeString = timeFormat.format(Date(message.createdAt))
+    val isFailed = message.status == MessageStatus.FAILED
+
+    // Extract URLs from message content for link preview
+    val urlRegex = remember { Regex("https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+") }
+    val detectedUrl = remember(message.content) { message.content?.let { urlRegex.find(it)?.value } }
     
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start
+            horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Bottom
         ) {
+            // Retry button for failed messages (left side for own messages)
+            if (isFailed && isOwn) {
+                IconButton(
+                    onClick = onRetry,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Retry",
+                        tint = Color.Red,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+
             Surface(
                 shape = RoundedCornerShape(
                     topStart = 12.dp,
@@ -648,6 +895,7 @@ fun MessageBubble(
                     bottomEnd = if (isOwn) 0.dp else 12.dp
                 ),
                 color = if (message.isDeleted) Color.LightGray.copy(alpha = 0.5f)
+                        else if (isFailed) Color.Red.copy(alpha = 0.15f)
                         else if (isOwn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .widthIn(max = 280.dp)
@@ -664,17 +912,44 @@ fun MessageBubble(
                             color = if (isOwn) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
-                        Text(
-                            text = message.content ?: "",
-                            color = if (isOwn) Color.White else MaterialTheme.colorScheme.onSurface,
-                            fontSize = 15.sp
-                        )
+                        // Voice waveform for audio messages
+                        if (message.type == com.chatapp.domain.model.MessageType.AUDIO) {
+                            AudioWaveformPlayer(
+                                messageId = message.id,
+                                isOwn = isOwn
+                            )
+                        }
+
+                        // Text content
+                        if (!message.content.isNullOrBlank()) {
+                            Text(
+                                text = message.content,
+                                color = if (isFailed) Color.Red
+                                        else if (isOwn) Color.White else MaterialTheme.colorScheme.onSurface,
+                                fontSize = 15.sp
+                            )
+                        }
+
+                        // Link preview
+                        if (detectedUrl != null && message.type == com.chatapp.domain.model.MessageType.TEXT) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            LinkPreviewCard(url = detectedUrl, isOwn = isOwn)
+                        }
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Row(
                         modifier = Modifier.align(Alignment.End),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (isFailed) {
+                            Text(
+                                text = "Failed",
+                                fontSize = 10.sp,
+                                color = Color.Red,
+                                fontStyle = FontStyle.Italic
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
                         if (message.isEdited && !message.isDeleted) {
                             Text(
                                 text = "edited",
@@ -684,12 +959,23 @@ fun MessageBubble(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                         }
+                        // Seen-by eye icon
+                        if (showSeenBy) {
+                            Icon(
+                                Icons.Default.Visibility,
+                                contentDescription = "Seen by",
+                                modifier = Modifier.size(12.dp).clickable { onSeenByClick() },
+                                tint = MaterialTheme.colorScheme.primaryContainer
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                        }
                         Text(
                             text = timeString,
                             fontSize = 10.sp,
-                            color = if (isOwn) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isFailed) Color.Red.copy(alpha = 0.7f)
+                                    else if (isOwn) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (isOwn) {
+                        if (isOwn && !isFailed) {
                             Spacer(modifier = Modifier.width(3.dp))
                             Icon(
                                 imageVector = when (message.status) {
@@ -745,6 +1031,128 @@ fun MessageBubble(
     }
 }
 
+// Voice message waveform visualization
+@Composable
+fun AudioWaveformPlayer(
+    messageId: String,
+    isOwn: Boolean
+) {
+    // Generate deterministic waveform bars from message ID
+    val waveformBars = remember(messageId) {
+        val seed = messageId.hashCode().toLong()
+        val random = Random(seed)
+        List(24) { 0.15f + random.nextFloat() * 0.85f }
+    }
+    var isPlaying by remember { mutableStateOf(false) }
+    var playbackProgress by remember { mutableFloatStateOf(0f) }
+    var playbackSpeed by remember { mutableFloatStateOf(1f) }
+
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
+            // Play/Pause button
+            IconButton(
+                onClick = { isPlaying = !isPlaying },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = if (isOwn) Color.White else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            // Waveform bars
+            Row(
+                modifier = Modifier.weight(1f).height(32.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                waveformBars.forEachIndexed { index, amplitude ->
+                    val barProgress = index.toFloat() / waveformBars.size
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(amplitude)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(
+                                if (barProgress <= playbackProgress)
+                                    if (isOwn) Color.White else MaterialTheme.colorScheme.primary
+                                else
+                                    if (isOwn) Color.White.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Speed toggle
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isOwn) Color.White.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.clickable {
+                    playbackSpeed = when (playbackSpeed) {
+                        1f -> 1.5f
+                        1.5f -> 2f
+                        else -> 1f
+                    }
+                }
+            ) {
+                Text(
+                    text = "${playbackSpeed}x",
+                    fontSize = 10.sp,
+                    color = if (isOwn) Color.White else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+// Link preview card
+@Composable
+fun LinkPreviewCard(url: String, isOwn: Boolean) {
+    val domain = remember(url) {
+        try { Uri.parse(url).host ?: url } catch (_: Exception) { url }
+    }
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (isOwn) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Link,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = if (isOwn) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = domain,
+                    fontSize = 11.sp,
+                    color = if (isOwn) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = url,
+                fontSize = 12.sp,
+                color = if (isOwn) Color.White.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
 @Composable
 fun MessageMenuDialog(
     message: Message,
@@ -755,7 +1163,8 @@ fun MessageMenuDialog(
     onDelete: () -> Unit,
     onReply: () -> Unit = {},
     onForward: () -> Unit = {},
-    onStar: () -> Unit = {}
+    onStar: () -> Unit = {},
+    onSelectMessages: () -> Unit = {}
 ) {
     val isOwn = message.senderId == currentUserId
     val context = LocalContext.current
@@ -893,6 +1302,19 @@ fun MessageMenuDialog(
                     }
                 }
                 
+                // Select messages (multi-select mode)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectMessages(); onDismiss() }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckBox, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Select messages", color = MaterialTheme.colorScheme.onSurface)
+                }
+
                 // Delete
                 Row(
                     modifier = Modifier

@@ -25,11 +25,16 @@ import javax.inject.Inject
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val hasMoreMessages: Boolean = true,
     val error: String? = null,
     val currentUserId: String = "",
     val isOnline: Boolean = false,
     val isTyping: Boolean = false,
-    val resolvedChatName: String? = null
+    val resolvedChatName: String? = null,
+    val isSocketConnected: Boolean = true,
+    val uploadProgress: Float = 0f,
+    val isUploading: Boolean = false
 )
 
 @HiltViewModel
@@ -63,6 +68,12 @@ class ChatViewModel @Inject constructor(
                     val isTyping = typingInChat.isNotEmpty() && !typingInChat.contains(_uiState.value.currentUserId)
                     _uiState.update { it.copy(isTyping = isTyping) }
                 }
+            }
+        }
+        // Track socket connection status for offline banner
+        viewModelScope.launch {
+            socketManager.isConnected.collect { connected ->
+                _uiState.update { it.copy(isSocketConnected = connected) }
             }
         }
     }
@@ -232,10 +243,21 @@ class ChatViewModel @Inject constructor(
 
     fun sendMediaMessage(context: Context, uri: Uri, mediaType: String = "image") {
         if (currentChatId.isEmpty()) return
+
+        // Validate file before uploading
+        val validation = MediaPickerHelper.validateFile(context, uri, mediaType)
+        if (!validation.isValid) {
+            _uiState.update { it.copy(error = validation.errorMessage) }
+            return
+        }
+
         viewModelScope.launch {
+            _uiState.update { it.copy(isUploading = true, uploadProgress = 0f) }
             val file = MediaPickerHelper.getFileFromUri(context, uri)
             if (file != null) {
+                _uiState.update { it.copy(uploadProgress = 0.3f) }
                 val url = MediaPickerHelper.uploadFile(apiService, file)
+                _uiState.update { it.copy(uploadProgress = 0.8f) }
                 if (url != null) {
                     val messageType = when {
                         mediaType.startsWith("image") -> "image"
@@ -245,6 +267,7 @@ class ChatViewModel @Inject constructor(
                     }
                     sendMessage(url, null)
                     socketManager.sendMessage(currentChatId, url, messageType, UUID.randomUUID().toString(), null)
+                    _uiState.update { it.copy(uploadProgress = 1f) }
                 } else {
                     _uiState.update { it.copy(error = "Failed to upload file") }
                 }
@@ -252,6 +275,41 @@ class ChatViewModel @Inject constructor(
             } else {
                 _uiState.update { it.copy(error = "Failed to read file") }
             }
+            _uiState.update { it.copy(isUploading = false, uploadProgress = 0f) }
+        }
+    }
+
+    fun retryMessage(message: Message) {
+        val content = message.content ?: return
+        // Remove the failed message
+        _uiState.update { state ->
+            state.copy(messages = state.messages.filter { it.id != message.id })
+        }
+        // Resend
+        sendMessage(content, message.replyToMessageId)
+    }
+
+    fun loadMoreMessages() {
+        if (_uiState.value.isLoadingMore || !_uiState.value.hasMoreMessages || currentChatId.isEmpty()) return
+        val oldestMessage = _uiState.value.messages.minByOrNull { it.createdAt } ?: return
+
+        _uiState.update { it.copy(isLoadingMore = true) }
+        viewModelScope.launch {
+            chatRepository.getMessages(currentChatId, before = oldestMessage.id)
+                .onSuccess { olderMessages ->
+                    _uiState.update { state ->
+                        val existingIds = state.messages.map { it.id }.toSet()
+                        val newMessages = olderMessages.filter { it.id !in existingIds }
+                        state.copy(
+                            messages = (newMessages + state.messages).sortedBy { it.createdAt },
+                            isLoadingMore = false,
+                            hasMoreMessages = olderMessages.isNotEmpty()
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(isLoadingMore = false) }
+                }
         }
     }
 
