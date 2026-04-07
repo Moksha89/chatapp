@@ -302,7 +302,7 @@ export class WebsocketGateway
   }
 
   // Heartbeat handler — client sends this periodically to stay "alive"
-  @SubscribeMessage('presence:heartbeat')
+  @SubscribeMessage('heartbeat')
   handleHeartbeat(@ConnectedSocket() client: AuthenticatedSocket) {
     if (!client.userId) {
       return { error: 'Not authenticated' };
