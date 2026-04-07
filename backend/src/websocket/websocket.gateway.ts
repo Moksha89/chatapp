@@ -152,7 +152,8 @@ export class WebsocketGateway
       const senderName = sender?.displayName || sender?.phoneNumber || 'Unknown';
 
       for (const participantId of participants) {
-        this.websocketService.emitToUser(participantId, 'message:new', {
+        // Use emitToUserOrQueue so offline users get the message when they reconnect
+        this.websocketService.emitToUserOrQueue(participantId, 'message:new', {
           message,
           chatId: data.chatId,
         });

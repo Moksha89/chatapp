@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { api } from '../services/api';
 import { socketService } from '../services/socket';
 import { useAuth } from './AuthContext';
@@ -56,6 +56,8 @@ interface Chat {
   disappearingMessagesDuration?: number | null;
   isPinned?: boolean;
   isMuted?: boolean;
+  isArchived?: boolean;
+  isFavorite?: boolean;
 }
 
 interface ChatContextType {
@@ -109,6 +111,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [chatFilter, setChatFilter] = useState('all');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const chatsRef = useRef<Chat[]>(chats);
+  chatsRef.current = chats;
 
   const initializeE2EE = useCallback(async () => {
     if (!isAuthenticated || !deviceId) return;
@@ -543,7 +547,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
             // Browser push notification (requires permission)
             if ('Notification' in window && Notification.permission === 'granted') {
-              const senderName = chats.find(c => c.id === chatId)
+              const currentChats = chatsRef.current;
+              const senderName = currentChats.find(c => c.id === chatId)
                 ?.participants.find(p => p.userId === message.senderId)?.user?.displayName || 'New message';
               const notification = new Notification(senderName, {
                 body: decryptedMessage.content || 'Sent a media file',
@@ -553,7 +558,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               });
               notification.onclick = () => {
                 window.focus();
-                const chat = chats.find(c => c.id === chatId);
+                const chat = chatsRef.current.find(c => c.id === chatId);
                 if (chat) selectChat(chat);
                 notification.close();
               };
@@ -724,6 +729,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const unsubPresence = socketService.on('presence:update', handlePresenceUpdate);
     const unsubPollVote = socketService.on('poll:vote:updated', handlePollVoteUpdated);
 
+    // Refresh chats on socket reconnect to get messages missed while disconnected
+    const unsubReconnect = socketService.on('_connection', (data: unknown) => {
+      const { connected } = data as { connected: boolean };
+      if (connected) {
+        refreshChats();
+      }
+    });
+
     return () => {
       unsubNewMessage();
       unsubMessageSent();
@@ -735,6 +748,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unsubMessageDeleted();
       unsubPresence();
       unsubPollVote();
+      unsubReconnect();
     };
   }, [isAuthenticated, activeChat]);
 

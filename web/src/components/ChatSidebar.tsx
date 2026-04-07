@@ -78,8 +78,18 @@ export function ChatSidebar() {
     try { const s = localStorage.getItem('userLabels'); return s ? JSON.parse(s) : [{id:'1',name:'Important',color:'#EF4444'},{id:'2',name:'Work',color:'#3B82F6'},{id:'3',name:'Personal',color:'#10B981'}]; } catch { return [{id:'1',name:'Important',color:'#EF4444'},{id:'2',name:'Work',color:'#3B82F6'},{id:'3',name:'Personal',color:'#10B981'}]; }
   });
   const [newLabelName, setNewLabelName] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Separate archived chats from active chats (WhatsApp-style)
+  const archivedChats = chats.filter((chat) => chat.isArchived).sort((a, b) => {
+    const aTime = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : 0;
+    const bTime = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
+    return bTime - aTime;
+  });
 
   const filteredChats = chats.filter((chat) => {
+    // Exclude archived chats from main list (shown in separate section)
+    if (chat.isArchived) return false;
     const chatName = chat.name || chat.participants.find((p) => p.userId !== user?.id)?.user?.displayName || '';
     const matchesSearch = chatName.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
@@ -468,6 +478,79 @@ export function ChatSidebar() {
           </div>
         ) : (
           <>
+            {/* Archived chats bar — WhatsApp style */}
+            {archivedChats.length > 0 && chatFilter === 'all' && (
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#F7F8FC] transition-colors border-b border-gray-100"
+                onClick={() => setShowArchived(!showArchived)}
+              >
+                <div className="w-10 h-10 rounded-full bg-[#E8F0FE] flex items-center justify-center flex-shrink-0">
+                  <Archive className="h-5 w-5 text-[#246BFD]" />
+                </div>
+                <span className="font-medium text-[15px] text-gray-700 flex-1 text-left">Archived</span>
+                <span className="text-xs text-[#246BFD] font-semibold bg-[#E8F0FE] px-2 py-0.5 rounded-full">{archivedChats.length}</span>
+              </button>
+            )}
+
+            {/* Archived chats list (expanded) */}
+            {showArchived && archivedChats.length > 0 && chatFilter === 'all' && (
+              <div className="bg-[#FAFBFD]">
+                <div className="px-4 pt-2 pb-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                    <Archive className="h-3 w-3" /> Archived chats
+                  </span>
+                </div>
+                {archivedChats.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`chat-item flex items-center p-3 cursor-pointer ${
+                      activeChat?.id === chat.id
+                        ? 'bg-[#E8F0FE] border-l-2 border-l-[#246BFD]'
+                        : 'hover:bg-[#F0F1F5] border-l-2 border-l-transparent'
+                    } mx-1 mb-0.5`}
+                    onClick={() => selectChat(chat)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({ x: e.clientX, y: e.clientY, chatId: chat.id, chat });
+                    }}
+                  >
+                    <div className="relative mr-3 flex-shrink-0">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="abhi-avatar text-white font-medium text-sm">
+                          {getChatInitials(chat)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-[15px] text-gray-900 truncate flex items-center gap-1.5">
+                          {getChatTypeIcon(chat.type)}
+                          {getChatName(chat)}
+                        </span>
+                        <span className="text-[11px] text-gray-400 ml-2 flex-shrink-0">
+                          {formatTime(chat.lastMessage?.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-0.5">
+                        <span className="text-[13px] truncate text-gray-400">
+                          {getLastMessagePreview(chat)}
+                        </span>
+                        <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                          <Archive className="h-3.5 w-3.5 text-gray-300" />
+                          {chat.unreadCount > 0 && (
+                            <span className="unread-badge bg-gray-400 text-white text-[11px] font-semibold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                              {chat.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="border-b border-gray-200 mx-4 my-1" />
+              </div>
+            )}
+
             {/* Pinned section header */}
             {filteredChats.some(c => c.isPinned) && chatFilter === 'all' && (
               <div className="px-4 pt-2 pb-1">
@@ -595,14 +678,14 @@ export function ChatSidebar() {
             <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu(contextMenu.chat?.isMuted ? 'unmute' : 'mute', contextMenu.chatId)}>
               <BellOff className="h-4 w-4 text-[#246BFD]" /> {contextMenu.chat?.isMuted ? 'Unmute' : 'Mute'} notifications
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu('archive', contextMenu.chatId)}>
-              <Archive className="h-4 w-4 text-[#246BFD]" /> Archive chat
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu(contextMenu.chat?.isArchived ? 'unarchive' : 'archive', contextMenu.chatId)}>
+              <Archive className="h-4 w-4 text-[#246BFD]" /> {contextMenu.chat?.isArchived ? 'Unarchive' : 'Archive'} chat
             </button>
             <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu('label', contextMenu.chatId)}>
               <Tag className="h-4 w-4 text-[#246BFD]" /> Add label
             </button>
-            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu('favorite', contextMenu.chatId)}>
-              <Star className="h-4 w-4 text-[#246BFD]" /> Mark as favorite
+            <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-[#F7F8FC] flex items-center gap-3 text-gray-700 transition-colors" onClick={() => handleChatContextMenu(contextMenu.chat?.isFavorite ? 'unfavorite' : 'favorite', contextMenu.chatId)}>
+              <Star className="h-4 w-4 text-[#246BFD]" /> {contextMenu.chat?.isFavorite ? 'Remove from favorites' : 'Mark as favorite'}
             </button>
             <div className="border-t border-gray-100 my-1.5" />
             <button className="w-full px-4 py-2.5 text-sm text-left hover:bg-red-50 flex items-center gap-3 text-orange-600 transition-colors" onClick={() => handleChatContextMenu('block', contextMenu.chatId)}>
