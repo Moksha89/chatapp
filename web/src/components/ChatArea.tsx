@@ -576,16 +576,38 @@ export function ChatArea() {
 
   const handleVoiceCall = () => {
     const targetUserId = getOtherParticipantId();
-    if (targetUserId && callState === 'idle' && activeChat) {
-      initiateCall(targetUserId, getChatName(), 'audio', activeChat.id);
+    console.log('[Call] handleVoiceCall:', { targetUserId, callState, activeChat: activeChat?.id, participants: activeChat?.participants?.length });
+    if (!targetUserId) {
+      console.warn('[Call] No target user found for voice call');
+      return;
     }
+    if (callState !== 'idle') {
+      console.warn('[Call] Call state is not idle:', callState);
+      return;
+    }
+    if (!activeChat) {
+      console.warn('[Call] No active chat');
+      return;
+    }
+    initiateCall(targetUserId, getChatName(), 'audio', activeChat.id);
   };
 
   const handleVideoCall = () => {
     const targetUserId = getOtherParticipantId();
-    if (targetUserId && callState === 'idle' && activeChat) {
-      initiateCall(targetUserId, getChatName(), 'video', activeChat.id);
+    console.log('[Call] handleVideoCall:', { targetUserId, callState, activeChat: activeChat?.id, participants: activeChat?.participants?.length });
+    if (!targetUserId) {
+      console.warn('[Call] No target user found for video call');
+      return;
     }
+    if (callState !== 'idle') {
+      console.warn('[Call] Call state is not idle:', callState);
+      return;
+    }
+    if (!activeChat) {
+      console.warn('[Call] No active chat');
+      return;
+    }
+    initiateCall(targetUserId, getChatName(), 'video', activeChat.id);
   };
 
   const formatMessageTime = fmtMsgTime;

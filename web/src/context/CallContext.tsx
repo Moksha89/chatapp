@@ -311,6 +311,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [isNoiseCancellation]);
 
   const initiateCall = useCallback(async (targetUserId: string, targetUserName: string, callType: CallType, chatId?: string) => {
+    console.log('[Call] initiateCall called:', { targetUserId, targetUserName, callType, chatId });
     try {
       setCallState('calling');
       callIdRef.current = ''; // Reset callId ref
@@ -322,7 +323,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         isOutgoing: true,
       });
 
-      const stream = await getMediaStream(callType);
+      let stream: MediaStream;
+      try {
+        stream = await getMediaStream(callType);
+      } catch (mediaError) {
+        console.error('[Call] Media permission denied:', mediaError);
+        // Keep the call dialog visible briefly to show the error
+        setTimeout(() => {
+          addToHistory({
+            peerId: targetUserId,
+            peerName: targetUserName,
+            callType,
+            direction: 'outgoing',
+            status: 'no-answer',
+            duration: 0,
+          });
+          cleanup();
+        }, 500);
+        // Show browser-native alert so user knows what went wrong
+        alert(`Cannot access ${callType === 'video' ? 'camera/microphone' : 'microphone'}. Please allow ${callType === 'video' ? 'camera and microphone' : 'microphone'} access in your browser settings and try again.`);
+        return;
+      }
+
       const pc = createPeerConnection(targetUserId, '');
 
       stream.getTracks().forEach(track => {
@@ -332,6 +354,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      console.log('[Call] Emitting call:initiate to server');
       socketService.emit('call:initiate', {
         targetUserId,
         callType,
@@ -339,12 +362,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         offer: pc.localDescription,
       }, (response: unknown) => {
         const res = response as { success: boolean; callId?: string; error?: string };
+        console.log('[Call] Server response:', res);
         if (res.success && res.callId) {
           // Update both state and ref so ICE candidates use the correct callId
           callIdRef.current = res.callId;
           setCallInfo(prev => prev ? { ...prev, callId: res.callId! } : null);
         } else {
-          console.error('Failed to initiate call:', res.error);
+          console.error('[Call] Server rejected call:', res.error);
           addToHistory({
             peerId: targetUserId,
             peerName: targetUserName,
@@ -357,7 +381,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         }
       });
     } catch (error) {
-      console.error('Failed to initiate call:', error);
+      console.error('[Call] Failed to initiate call:', error);
       cleanup();
     }
   }, [getMediaStream, createPeerConnection, cleanup, addToHistory]);
