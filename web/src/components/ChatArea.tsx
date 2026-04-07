@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useCall } from '../context/CallContext';
@@ -145,8 +145,6 @@ export function ChatArea() {
   const [linkPreviews, setLinkPreviews] = useState<Map<string, { title: string; description: string; image?: string; url: string }>>(new Map());
   // Connection status: 'online' | 'offline' | 'reconnecting'
   const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline' | 'reconnecting'>(navigator.onLine ? 'online' : 'offline');
-  // Offline queue indicator (keep for backwards compat)
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   // Image quality/compression
   const [imageQuality, setImageQuality] = useState(85);
   // Camera capture
@@ -155,6 +153,11 @@ export function ChatArea() {
   const [cameraMode, setCameraMode] = useState<'photo' | 'video'>('photo');
   // Sticker picker
   const [showStickerPicker, setShowStickerPicker] = useState(false);
+  // Multi-message selection
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  // Seen-by dialog for group messages
+  const [showSeenByDialog, setShowSeenByDialog] = useState<string | null>(null);
 
   // Fix #2: Persist mute notifications to localStorage
   useEffect(() => {
@@ -187,8 +190,8 @@ export function ChatArea() {
 
   // Connection status detection (offline + socket reconnecting)
   useEffect(() => {
-    const goOffline = () => { setIsOffline(true); setConnectionStatus('offline'); };
-    const goOnline = () => { setIsOffline(false); setConnectionStatus(socketService.isConnected() ? 'online' : 'reconnecting'); };
+    const goOffline = () => { setConnectionStatus('offline'); };
+    const goOnline = () => { setConnectionStatus(socketService.isConnected() ? 'online' : 'reconnecting'); };
     window.addEventListener('offline', goOffline);
     window.addEventListener('online', goOnline);
 
@@ -869,6 +872,9 @@ export function ChatArea() {
       case 'audio': {
         const AudioPlayer = () => {
           const [playbackRate, setPlaybackRate] = useState(1);
+          const [isPlaying, setIsPlaying] = useState(false);
+          const [progress, setProgress] = useState(0);
+          const [duration, setDuration] = useState(message.mediaDuration || 0);
           const audioRef = useRef<HTMLAudioElement>(null);
           const rates = [1, 1.5, 2];
           const cycleRate = () => {
@@ -877,12 +883,65 @@ export function ChatArea() {
             setPlaybackRate(newRate);
             if (audioRef.current) audioRef.current.playbackRate = newRate;
           };
+          const togglePlay = () => {
+            if (!audioRef.current) return;
+            if (isPlaying) { audioRef.current.pause(); } else { audioRef.current.play(); }
+          };
+          // Generate static waveform bars (deterministic from message id)
+          const waveformBars = useMemo(() => {
+            const bars: number[] = [];
+            let seed = 0;
+            for (let i = 0; i < message.id.length; i++) seed += message.id.charCodeAt(i);
+            for (let i = 0; i < 32; i++) {
+              seed = (seed * 16807 + 12345) % 2147483647;
+              bars.push(0.2 + (seed % 100) / 125);
+            }
+            return bars;
+          }, [message.id]);
+          const formatDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
           return (
-            <div className="flex items-center gap-2 min-w-[220px] bg-white/20 rounded-xl px-3 py-2">
-              <audio ref={audioRef} src={mediaUrl} controls className="w-full h-8" style={{ minWidth: '150px' }} />
-              <button onClick={cycleRate} className="text-[10px] font-bold bg-gray-200 hover:bg-gray-300 rounded-full px-2 py-1 whitespace-nowrap transition-colors" title="Playback speed">
-                {playbackRate}x
+            <div className="flex items-center gap-2 min-w-[220px] rounded-xl px-3 py-2">
+              <audio
+                ref={audioRef}
+                src={mediaUrl}
+                preload="metadata"
+                onLoadedMetadata={() => { if (audioRef.current && audioRef.current.duration !== Infinity) setDuration(audioRef.current.duration); }}
+                onTimeUpdate={() => { if (audioRef.current && duration > 0) setProgress(audioRef.current.currentTime / duration); }}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => { setIsPlaying(false); setProgress(0); }}
+                className="hidden"
+              />
+              <button onClick={togglePlay} className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isOwn ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-[#246BFD]/10 hover:bg-[#246BFD]/20 text-[#246BFD]'}`}>
+                {isPlaying ? (
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                ) : (
+                  <svg className="h-4 w-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                )}
               </button>
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="flex items-end gap-[2px] h-6 cursor-pointer" onClick={(e) => {
+                  if (!audioRef.current || !duration) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const pct = (e.clientX - rect.left) / rect.width;
+                  audioRef.current.currentTime = pct * duration;
+                  setProgress(pct);
+                }}>
+                  {waveformBars.map((h, i) => (
+                    <div
+                      key={i}
+                      className={`w-[3px] rounded-full transition-colors ${i / waveformBars.length <= progress ? (isOwn ? 'bg-white' : 'bg-[#246BFD]') : (isOwn ? 'bg-white/30' : 'bg-gray-300')}`}
+                      style={{ height: `${h * 100}%` }}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{formatDur(isPlaying ? progress * duration : duration)}</span>
+                  <button onClick={cycleRate} className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 transition-colors ${isOwn ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-600'}`}>
+                    {playbackRate}x
+                  </button>
+                </div>
+              </div>
             </div>
           );
         };
@@ -1160,6 +1219,9 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowOrderDialog(true); }}>
                         <ShoppingCart className="h-4 w-4" /> Create order
                       </button>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setIsSelectMode(true); setSelectedMessages(new Set()); }}>
+                        <CheckCheck className="h-4 w-4" /> Select messages
+                      </button>
                     </>
                   )}
                 </div>
@@ -1297,8 +1359,16 @@ export function ChatArea() {
                   )}
                 <div
                   id={`msg-${message.id}`}
-                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group msg-enter relative transition-colors duration-500`}
+                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group msg-enter relative transition-colors duration-500 ${isSelectMode ? 'cursor-pointer' : ''} ${selectedMessages.has(message.id) ? 'bg-[#246BFD]/5' : ''}`}
+                  onClick={isSelectMode ? () => setSelectedMessages(prev => { const next = new Set(prev); if (next.has(message.id)) next.delete(message.id); else next.add(message.id); return next; }) : undefined}
                 >
+                  {isSelectMode && (
+                    <div className="flex items-center mr-2 flex-shrink-0">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedMessages.has(message.id) ? 'bg-[#246BFD] border-[#246BFD]' : 'border-gray-300'}`}>
+                        {selectedMessages.has(message.id) && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                    </div>
+                  )}
                   <div className={`flex items-start gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
                     {/* Sender avatar in group messages */}
                     {!isOwn && (activeChat?.type === 'group' || activeChat?.type === 'community' || activeChat?.type === 'channel') && (
@@ -1401,7 +1471,32 @@ export function ChatArea() {
                             Retry
                           </button>
                         )}
+                        {/* Seen-by for group messages */}
+                        {isOwn && message.status === 'read' && (activeChat?.type === 'group' || activeChat?.type === 'community') && (
+                          <button
+                            className={`ml-1 text-[10px] ${isOwn ? 'text-blue-200 hover:text-white' : 'text-gray-400 hover:text-gray-600'} cursor-pointer`}
+                            onClick={(e) => { e.stopPropagation(); setShowSeenByDialog(showSeenByDialog === message.id ? null : message.id); }}
+                          >
+                            <Eye className="h-2.5 w-2.5 inline" />
+                          </button>
+                        )}
                       </div>
+                      {/* Seen-by popup */}
+                      {showSeenByDialog === message.id && (activeChat?.type === 'group' || activeChat?.type === 'community') && (
+                        <div className="mt-1 p-2 bg-white rounded-lg shadow-md border border-gray-100 text-xs">
+                          <p className="font-medium text-gray-700 mb-1 flex items-center gap-1"><Eye className="h-3 w-3" /> Seen by</p>
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {activeChat?.participants
+                              .filter((p: { userId: string }) => p.userId !== user?.id)
+                              .map((p: { userId: string }) => (
+                                <p key={p.userId} className="text-gray-500 flex items-center gap-1">
+                                  <CheckCheck className="h-3 w-3 text-[#246BFD]" />
+                                  {getSenderName(p.userId)}
+                                </p>
+                              ))}
+                          </div>
+                        </div>
+                      )}
                       {message.reactions && Object.keys(message.reactions).length > 0 && !message.isDeleted && (
                         <MessageReactions
                           reactions={message.reactions}
@@ -1458,6 +1553,25 @@ export function ChatArea() {
             size="icon"
           >
             <ChevronDown className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Multi-select action bar */}
+      {isSelectMode && (
+        <div className="px-4 py-2.5 bg-white border-t border-gray-100 flex items-center gap-3 shadow-sm">
+          <Button variant="ghost" size="sm" onClick={() => { setIsSelectMode(false); setSelectedMessages(new Set()); }} className="text-gray-500 hover:text-gray-700">
+            <X className="h-4 w-4 mr-1" /> Cancel
+          </Button>
+          <span className="text-sm text-gray-500 flex-1">{selectedMessages.size} selected</span>
+          <Button variant="ghost" size="sm" disabled={selectedMessages.size === 0} onClick={() => { selectedMessages.forEach(id => deleteMessage(id, false)); setIsSelectMode(false); setSelectedMessages(new Set()); }} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+            <X className="h-4 w-4 mr-1" /> Delete
+          </Button>
+          <Button variant="ghost" size="sm" disabled={selectedMessages.size === 0} onClick={() => { const firstId = Array.from(selectedMessages)[0]; if (firstId) setShowForwardDialog(firstId); setIsSelectMode(false); setSelectedMessages(new Set()); }} className="text-[#246BFD] hover:text-[#1A56DB] hover:bg-[#246BFD]/10">
+            <Send className="h-4 w-4 mr-1" /> Forward
+          </Button>
+          <Button variant="ghost" size="sm" disabled={selectedMessages.size === 0} onClick={() => { selectedMessages.forEach(id => toggleStar(id)); setIsSelectMode(false); setSelectedMessages(new Set()); }} className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50">
+            <Star className="h-4 w-4 mr-1" /> Star
           </Button>
         </div>
       )}
