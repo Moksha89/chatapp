@@ -125,6 +125,20 @@ function App() {
     return !localStorage.getItem('onboarding_completed');
   });
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K / Cmd+K for search focus
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector<HTMLInputElement>('[data-search-input]');
+        if (searchInput) searchInput.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     // Don't check status for admin routes — admin panel works regardless
     if (isAdminRoute) {
@@ -184,10 +198,13 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <ToastProvider>
         <I18nProvider>
           <AuthProvider>
-            <ChatApp />
+            <div id="main-content" role="main" aria-label="Abhi Chat Application">
+              <ChatApp />
+            </div>
           </AuthProvider>
         </I18nProvider>
       </ToastProvider>

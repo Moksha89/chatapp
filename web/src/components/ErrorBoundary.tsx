@@ -37,23 +37,23 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-500" />
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4" role="alert" aria-live="assertive">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center animate-scaleIn">
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse-ring">
+              <AlertTriangle className="w-10 h-10 text-red-500" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Something went wrong
             </h2>
-            <p className="text-gray-600 mb-6">
-              We encountered an unexpected error. Please try refreshing the page.
+            <p className="text-gray-500 mb-6 leading-relaxed">
+              We encountered an unexpected error. Please try refreshing the page or contact support if the issue persists.
             </p>
             {this.state.error && (
-              <details className="text-left mb-6 p-3 bg-gray-100 rounded text-sm">
-                <summary className="cursor-pointer text-gray-700 font-medium">
+              <details className="text-left mb-6 p-4 bg-gray-50 rounded-xl text-sm border border-gray-100">
+                <summary className="cursor-pointer text-gray-700 font-semibold select-none">
                   Error details
                 </summary>
-                <pre className="mt-2 text-red-600 whitespace-pre-wrap overflow-auto">
+                <pre className="mt-3 text-red-600 whitespace-pre-wrap overflow-auto text-xs font-mono bg-red-50 p-3 rounded-lg">
                   {this.state.error.message}
                 </pre>
               </details>
