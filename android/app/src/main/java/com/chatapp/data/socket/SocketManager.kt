@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Timer
+import java.util.TimerTask
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,6 +40,7 @@ class SocketManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private var socket: Socket? = null
+    private var heartbeatTimer: Timer? = null
     private val tag = "SocketManager"
 
     private val _events = MutableSharedFlow<SocketEvent>(extraBufferCapacity = 64)
@@ -75,6 +78,7 @@ class SocketManager @Inject constructor(
     }
 
     fun disconnect() {
+        stopHeartbeat()
         socket?.disconnect()
         socket?.off()
         socket = null
@@ -83,12 +87,32 @@ class SocketManager @Inject constructor(
         _typingUsers.value = emptyMap()
     }
 
+    private fun startHeartbeat() {
+        stopHeartbeat()
+        heartbeatTimer = Timer().apply {
+            scheduleAtFixedRate(object : TimerTask() {
+                override fun run() {
+                    if (_isConnected.value) {
+                        socket?.emit("heartbeat", JSONObject())
+                        Log.d(tag, "Heartbeat sent")
+                    }
+                }
+            }, 0L, 30_000L) // Send heartbeat every 30 seconds
+        }
+    }
+
+    private fun stopHeartbeat() {
+        heartbeatTimer?.cancel()
+        heartbeatTimer = null
+    }
+
     private fun setupListeners() {
         socket?.apply {
             on(Socket.EVENT_CONNECT) {
                 Log.d(tag, "Socket connected")
                 _isConnected.value = true
                 emit("presence:online", JSONObject())
+                startHeartbeat()
             }
 
             on(Socket.EVENT_DISCONNECT) {

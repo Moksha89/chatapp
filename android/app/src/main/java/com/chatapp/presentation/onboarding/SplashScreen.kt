@@ -27,9 +27,9 @@ fun SplashScreen(
     var showLogo by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        delay(400)
+        delay(200)
         showLogo = true
-        delay(2200)
+        delay(1000)
         onSplashFinished()
     }
 
