@@ -795,6 +795,7 @@ export function ChatArea() {
   }, [cameraStream, handleImageUpload]);
 
   const renderMediaContent = (message: {
+    id?: string;
     type: string;
     content?: string;
     mediaUrl?: string;
@@ -803,7 +804,7 @@ export function ChatArea() {
     mediaSize?: number;
     mediaDuration?: number;
     isViewOnce?: boolean;
-  }) => {
+  }, isOwn = false) => {
     const baseUrl = import.meta.env.VITE_API_URL || '';
     const mediaUrl = message.mediaUrl ? `${baseUrl}${message.mediaUrl}` : '';
 
@@ -888,16 +889,17 @@ export function ChatArea() {
             if (isPlaying) { audioRef.current.pause(); } else { audioRef.current.play(); }
           };
           // Generate static waveform bars (deterministic from message id)
+          const msgId = message.id || '';
           const waveformBars = useMemo(() => {
             const bars: number[] = [];
             let seed = 0;
-            for (let i = 0; i < message.id.length; i++) seed += message.id.charCodeAt(i);
+            for (let i = 0; i < msgId.length; i++) seed += msgId.charCodeAt(i);
             for (let i = 0; i < 32; i++) {
               seed = (seed * 16807 + 12345) % 2147483647;
               bars.push(0.2 + (seed % 100) / 125);
             }
             return bars;
-          }, [message.id]);
+          }, [msgId]);
           const formatDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
           return (
             <div className="flex items-center gap-2 min-w-[220px] rounded-xl px-3 py-2">
@@ -1414,7 +1416,7 @@ export function ChatArea() {
                       ) : message.type === 'contact' ? (
                         renderContactCardContent(message)
                       ) : isMedia ? (
-                        renderMediaContent(message)
+                        renderMediaContent(message, isOwn)
                       ) : (
                         <>
                           <p className={`text-sm break-words ${isOwn ? 'text-white' : 'text-gray-800'}`}>
