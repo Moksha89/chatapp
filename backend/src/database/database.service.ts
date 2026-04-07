@@ -768,7 +768,7 @@ export class DatabaseService implements OnModuleInit {
     const labelMap = new Map(allLabels.map(l => [l.id, l]));
 
     // Assemble results
-    const results: Array<Chat & { participants: (ChatParticipant & { user?: { id: string; displayName: string; phoneNumber: string; profilePhoto: string | null } })[]; lastMessage?: Message; unreadCount: number; labels: Label[] }> = [];
+    const results: Array<Chat & { isPinned: boolean; isMuted: boolean; isArchived: boolean; isFavorite: boolean; participants: (ChatParticipant & { user?: { id: string; displayName: string; phoneNumber: string; profilePhoto: string | null } })[]; lastMessage?: Message; unreadCount: number; labels: Label[] }> = [];
 
     for (const chatId of chatIds) {
       const chat = chatMap.get(chatId);
