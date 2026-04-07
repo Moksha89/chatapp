@@ -378,7 +378,7 @@ fun ChatScreen(
             // Upload progress indicator
             if (uiState.isUploading) {
                 LinearProgressIndicator(
-                    progress = { uiState.uploadProgress },
+                    progress = uiState.uploadProgress,
                     modifier = Modifier.fillMaxWidth().height(3.dp),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
