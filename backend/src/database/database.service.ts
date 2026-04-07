@@ -564,11 +564,13 @@ export class DatabaseService implements OnModuleInit {
       whereClause.createdAt = LessThan(before);
     }
     
-    return this.messageRepository.find({
+    // Fetch the most recent N messages (DESC), then reverse to ASC for display order
+    const messages = await this.messageRepository.find({
       where: whereClause,
       order: { createdAt: 'DESC' },
       take: limit,
-    }) as Promise<Message[]>;
+    }) as Message[];
+    return messages.reverse();
   }
 
   async updateMessage(id: string, data: Partial<Message>): Promise<Message | undefined> {
