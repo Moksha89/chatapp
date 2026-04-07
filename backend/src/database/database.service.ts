@@ -24,6 +24,7 @@ import {
   FriendEntity,
   StickerEntity,
   FaqEntity,
+  MessageStarEntity,
 } from './entities';
 
 export interface User {
@@ -310,6 +311,8 @@ export class DatabaseService implements OnModuleInit {
     private stickerRepository: Repository<StickerEntity>,
     @InjectRepository(FaqEntity)
     private faqRepository: Repository<FaqEntity>,
+    @InjectRepository(MessageStarEntity)
+    private messageStarRepository: Repository<MessageStarEntity>,
   ) {}
 
   async onModuleInit() {
@@ -825,29 +828,58 @@ export class DatabaseService implements OnModuleInit {
     }) as Promise<Message[]>;
   }
 
-  // Get starred messages for a user
+  // Get starred messages for a user (per-user starring via message_stars table)
   async getStarredMessages(userId: string): Promise<Message[]> {
-    const participations = await this.chatParticipantRepository.find({ where: { userId } });
-    const chatIds = participations.map(p => p.chatId);
-    
-    if (chatIds.length === 0) return [];
-    
-    return this.messageRepository.find({
-      where: {
-        chatId: In(chatIds),
-        isStarred: true,
-      },
+    const stars = await this.messageStarRepository.find({ where: { userId } });
+    if (stars.length === 0) return [];
+
+    const messageIds = stars.map(s => s.messageId);
+    const messages = await this.messageRepository.find({
+      where: { id: In(messageIds) },
       order: { createdAt: 'DESC' },
-    }) as Promise<Message[]>;
+    });
+    // Mark all as starred since they come from the user's star list
+    return messages.map(m => ({ ...m, isStarred: true })) as Message[];
   }
 
-  // Toggle message star
-  async toggleMessageStar(messageId: string): Promise<Message | undefined> {
+  // Toggle message star (per-user starring via message_stars table)
+  async toggleMessageStar(messageId: string, userId: string): Promise<Message | undefined> {
     const message = await this.findMessageById(messageId);
     if (!message) return undefined;
-    
-    await this.messageRepository.update(messageId, { isStarred: !message.isStarred });
-    return this.findMessageById(messageId);
+
+    const existingStar = await this.messageStarRepository.findOne({
+      where: { messageId, userId },
+    });
+
+    if (existingStar) {
+      await this.messageStarRepository.remove(existingStar);
+      return { ...message, isStarred: false } as Message;
+    } else {
+      const star = this.messageStarRepository.create({
+        id: this.generateId(),
+        messageId,
+        userId,
+      });
+      await this.messageStarRepository.save(star);
+      return { ...message, isStarred: true } as Message;
+    }
+  }
+
+  // Check if a message is starred by a specific user
+  async isMessageStarredByUser(messageId: string, userId: string): Promise<boolean> {
+    const star = await this.messageStarRepository.findOne({
+      where: { messageId, userId },
+    });
+    return !!star;
+  }
+
+  // Get starred message IDs for a user in a specific chat (for enriching message lists)
+  async getStarredMessageIdsForUser(userId: string, messageIds: string[]): Promise<Set<string>> {
+    if (messageIds.length === 0) return new Set();
+    const stars = await this.messageStarRepository.find({
+      where: { userId, messageId: In(messageIds) },
+    });
+    return new Set(stars.map(s => s.messageId));
   }
 
   // Delete expired messages (for disappearing messages feature)

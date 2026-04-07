@@ -28,3 +28,4 @@ export { PageContentEntity } from './page-content.entity';
 export { ContactSubmissionEntity } from './contact-submission.entity';
 export { ReportCategoryEntity } from './report-category.entity';
 export { AppSettingEntity } from './app-setting.entity';
+export { MessageStarEntity } from './message-star.entity';

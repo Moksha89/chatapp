@@ -32,6 +32,7 @@ import {
   ContactSubmissionEntity,
   ReportCategoryEntity,
   AppSettingEntity,
+  MessageStarEntity,
 } from './entities';
 import { DatabaseService } from './database.service';
 import { AuditLogEntity } from '../admin/audit-log.entity';
@@ -67,6 +68,7 @@ const entities = [
   ContactSubmissionEntity,
   ReportCategoryEntity,
   AppSettingEntity,
+  MessageStarEntity,
   AuditLogEntity,
 ];
 

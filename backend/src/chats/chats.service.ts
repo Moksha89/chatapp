@@ -272,7 +272,12 @@ export class ChatsService {
       beforeDate = new Date(before);
     }
 
-    return this.databaseService.findMessagesByChatId(chatId, limit, beforeDate);
+    const messages = await this.databaseService.findMessagesByChatId(chatId, limit, beforeDate);
+    
+    // Enrich messages with per-user isStarred status
+    const messageIds = messages.map(m => m.id);
+    const starredIds = await this.databaseService.getStarredMessageIdsForUser(userId, messageIds);
+    return messages.map(m => ({ ...m, isStarred: starredIds.has(m.id) }));
   }
 
   async sendMessage(
@@ -401,7 +406,7 @@ export class ChatsService {
       throw new NotFoundException('Message not found');
     }
 
-    const updated = await this.databaseService.toggleMessageStar(messageId);
+    const updated = await this.databaseService.toggleMessageStar(messageId, userId);
     if (!updated) {
       throw new NotFoundException('Message not found');
     }
