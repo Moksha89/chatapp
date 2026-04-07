@@ -970,12 +970,24 @@ export class DatabaseService implements OnModuleInit {
     return this.findCallById(id);
   }
 
-  async getCallHistory(userId: string, limit = 50): Promise<Call[]> {
+  // L7: Added offset parameter for pagination
+  async getCallHistory(userId: string, limit = 50, offset = 0): Promise<Call[]> {
     return this.callRepository
       .createQueryBuilder('call')
       .where('call.initiatorId = :userId OR call.receiverId = :userId', { userId })
       .orderBy('call.createdAt', 'DESC')
+      .skip(offset)
       .take(limit)
+      .getMany() as Promise<Call[]>;
+  }
+
+  // H10: Find stale ringing calls that have exceeded the timeout
+  async getStaleRingingCalls(timeoutMs: number): Promise<Call[]> {
+    const cutoff = new Date(Date.now() - timeoutMs);
+    return this.callRepository
+      .createQueryBuilder('call')
+      .where('call.status = :status', { status: 'ringing' })
+      .andWhere('call.createdAt < :cutoff', { cutoff })
       .getMany() as Promise<Call[]>;
   }
 

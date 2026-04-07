@@ -74,16 +74,40 @@ export function CallDialog() {
     }
   }, [remoteStream]);
 
+  // Create a hidden audio element for audio-only calls to handle speaker toggle
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
+    // Apply volume to both video and audio elements
     if (remoteVideoRef.current) {
-      remoteVideoRef.current.volume = isSpeakerOn ? 1.0 : 0.5;
+      remoteVideoRef.current.volume = isSpeakerOn ? 1.0 : 0.3;
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.3;
     }
   }, [isSpeakerOn]);
 
-  // Auto-hide controls after 5s during video call
+  // For audio-only calls, create a hidden audio element to play remote stream
+  useEffect(() => {
+    if (remoteStream && callInfo?.callType === 'audio') {
+      if (!remoteAudioRef.current) {
+        remoteAudioRef.current = new Audio();
+        remoteAudioRef.current.autoplay = true;
+      }
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.3;
+    }
+    return () => {
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null;
+      }
+    };
+  }, [remoteStream, callInfo?.callType, isSpeakerOn]);
+
+  // Auto-hide controls after 10s during video call (matches WhatsApp behavior)
   useEffect(() => {
     if (callState === 'connected' && callInfo?.callType === 'video' && showControls) {
-      const timer = setTimeout(() => setShowControls(false), 5000);
+      const timer = setTimeout(() => setShowControls(false), 10000);
       return () => clearTimeout(timer);
     }
   }, [callState, callInfo?.callType, showControls]);
@@ -187,9 +211,11 @@ export function CallDialog() {
                 <AudioLines className="w-3 h-3" /> NC
               </span>
             )}
-            <span className="flex items-center gap-1 bg-green-500/20 text-green-400 text-[10px] px-2 py-1 rounded-full">
-              <Shield className="w-3 h-3" /> E2E
-            </span>
+            {callState === 'connected' && (
+              <span className="flex items-center gap-1 bg-green-500/20 text-green-400 text-[10px] px-2 py-1 rounded-full" title="WebRTC SRTP encrypted">
+                <Shield className="w-3 h-3" /> Encrypted
+              </span>
+            )}
             {callState !== 'incoming' && (
               <>
                 <Button
@@ -302,7 +328,7 @@ export function CallDialog() {
 
               {/* Local video PiP */}
               {localStream && (
-                <div className="absolute bottom-4 right-4 w-36 h-48 md:w-48 md:h-36 rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl bg-gray-900 cursor-move">
+                <div className="absolute bottom-4 right-4 w-32 h-44 md:w-44 md:h-32 rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl bg-gray-900 cursor-move">
                   <video
                     ref={localVideoRef}
                     autoPlay

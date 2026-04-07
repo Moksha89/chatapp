@@ -124,22 +124,34 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const originalVideoTrackRef = useRef<MediaStreamTrack | null>(null);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  // Map of peer connections for group calls (keyed by participant userId)
+  const groupPeerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 3;
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const CALL_TIMEOUT_MS = 45000; // 45 second timeout for outgoing calls
   // Refs to prevent stale closures in socket event handlers
   const callStateRef = useRef<CallState>(callState);
   const callInfoRef = useRef<CallInfo | null>(callInfo);
   const callDurationRef = useRef(callDuration);
   const callIdRef = useRef<string>(''); // Track current callId for ICE candidates
+  // Audio element ref for speaker toggle on audio-only calls
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   callStateRef.current = callState;
   callInfoRef.current = callInfo;
   callDurationRef.current = callDuration;
 
-  // Save call history to localStorage
+  // Save call history to localStorage (keep up to 500 entries)
   useEffect(() => {
-    localStorage.setItem('call-history', JSON.stringify(callHistory.slice(0, 100)));
+    const trimmed = callHistory.slice(0, 500);
+    localStorage.setItem('call-history', JSON.stringify(trimmed));
+    if (callHistory.length > 500) {
+      setCallHistory(trimmed);
+    }
   }, [callHistory]);
 
   const addToHistory = useCallback((entry: Omit<CallHistoryEntry, 'id' | 'timestamp'>) => {
@@ -155,27 +167,35 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('call-history');
   }, []);
 
-  // Monitor connection quality
+  // Monitor connection quality — checks both audio AND video packet loss
   const startQualityMonitor = useCallback(() => {
     if (qualityTimerRef.current) clearInterval(qualityTimerRef.current);
     qualityTimerRef.current = setInterval(async () => {
       if (!peerConnectionRef.current) return;
       try {
         const stats = await peerConnectionRef.current.getStats();
-        let packetsLost = 0;
-        let packetsReceived = 0;
+        let audioPacketsLost = 0;
+        let audioPacketsReceived = 0;
+        let videoPacketsLost = 0;
+        let videoPacketsReceived = 0;
         let roundTripTime = 0;
         stats.forEach(report => {
           if (report.type === 'inbound-rtp' && report.kind === 'audio') {
-            packetsLost = report.packetsLost || 0;
-            packetsReceived = report.packetsReceived || 0;
+            audioPacketsLost = report.packetsLost || 0;
+            audioPacketsReceived = report.packetsReceived || 0;
+          }
+          if (report.type === 'inbound-rtp' && report.kind === 'video') {
+            videoPacketsLost = report.packetsLost || 0;
+            videoPacketsReceived = report.packetsReceived || 0;
           }
           if (report.type === 'candidate-pair' && report.state === 'succeeded') {
             roundTripTime = report.currentRoundTripTime || 0;
           }
         });
-        const totalPackets = packetsLost + packetsReceived;
-        const lossRate = totalPackets > 0 ? packetsLost / totalPackets : 0;
+        const totalPacketsLost = audioPacketsLost + videoPacketsLost;
+        const totalPacketsReceived = audioPacketsReceived + videoPacketsReceived;
+        const totalPackets = totalPacketsLost + totalPacketsReceived;
+        const lossRate = totalPackets > 0 ? totalPacketsLost / totalPackets : 0;
         if (lossRate < 0.01 && roundTripTime < 0.15) setConnectionQuality('excellent');
         else if (lossRate < 0.03 && roundTripTime < 0.3) setConnectionQuality('good');
         else if (lossRate < 0.08 && roundTripTime < 0.5) setConnectionQuality('fair');
@@ -199,6 +219,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
+    }
+    // Clean up all group peer connections
+    groupPeerConnectionsRef.current.forEach(pc => pc.close());
+    groupPeerConnectionsRef.current.clear();
+    // Stop recording if active
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+      recordedChunksRef.current = [];
+    }
+    // Clean up remote audio element
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
+      remoteAudioRef.current = null;
+    }
+    // Clear call timeout
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
     }
     setRemoteStream(null);
     setCallInfo(null);
@@ -340,10 +379,36 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           });
           cleanup();
         }, 500);
-        // Show browser-native alert so user knows what went wrong
-        alert(`Cannot access ${callType === 'video' ? 'camera/microphone' : 'microphone'}. Please allow ${callType === 'video' ? 'camera and microphone' : 'microphone'} access in your browser settings and try again.`);
+        // Use non-blocking notification instead of alert()
+        const msg = `Cannot access ${callType === 'video' ? 'camera/microphone' : 'microphone'}. Please allow access in your browser settings.`;
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Permission Required', { body: msg });
+        }
+        console.warn('[Call]', msg);
         return;
       }
+
+      // Set outgoing call timeout (45 seconds)
+      callTimeoutRef.current = setTimeout(() => {
+        if (callStateRef.current === 'calling') {
+          console.log('[Call] Outgoing call timed out');
+          addToHistory({
+            peerId: targetUserId,
+            peerName: targetUserName,
+            callType,
+            direction: 'outgoing',
+            status: 'no-answer',
+            duration: 0,
+          });
+          if (callInfoRef.current?.callId) {
+            socketService.emit('call:end', {
+              callId: callInfoRef.current.callId,
+              targetUserId,
+            });
+          }
+          cleanup();
+        }
+      }, CALL_TIMEOUT_MS);
 
       const pc = createPeerConnection(targetUserId, '');
 
@@ -407,27 +472,58 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       })));
 
       const stream = await getMediaStream(callType);
-      // For group calls, initiate connections to each participant
-      participantIds.forEach(pid => {
-        const pc = createPeerConnection(pid, '');
+      // For group calls, create separate peer connections for each participant
+      // stored in groupPeerConnectionsRef Map (not the single peerConnectionRef)
+      for (const pid of participantIds) {
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        groupPeerConnectionsRef.current.set(pid, pc);
+
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            socketService.emit('call:ice-candidate', {
+              callId: callIdRef.current,
+              targetUserId: pid,
+              candidate: event.candidate.toJSON(),
+            });
+          }
+        };
+
+        pc.ontrack = (event) => {
+          setGroupParticipants(prev => prev.map(p =>
+            p.id === pid ? { ...p, stream: event.streams[0] } : p
+          ));
+        };
+
+        pc.onconnectionstatechange = () => {
+          if (pc.connectionState === 'connected') {
+            setCallState('connected');
+            startQualityMonitor();
+            if (!callTimerRef.current) {
+              callTimerRef.current = setInterval(() => {
+                setCallDuration(prev => prev + 1);
+              }, 1000);
+            }
+          }
+        };
+
         stream.getTracks().forEach(track => {
           pc.addTrack(track, stream);
         });
-        pc.createOffer().then(offer => {
-          pc.setLocalDescription(offer);
-          socketService.emit('call:initiate', {
-            targetUserId: pid,
-            callType,
-            offer: pc.localDescription,
-            isGroupCall: true,
-          });
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socketService.emit('call:initiate', {
+          targetUserId: pid,
+          callType,
+          offer: pc.localDescription,
+          isGroupCall: true,
         });
-      });
+      }
     } catch (error) {
       console.error('Failed to initiate group call:', error);
       cleanup();
     }
-  }, [getMediaStream, createPeerConnection, cleanup]);
+  }, [getMediaStream, cleanup, startQualityMonitor]);
 
   const answerCall = useCallback(async () => {
     if (!callInfo || !pendingOfferRef.current) return;
@@ -450,7 +546,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         answer: pc.localDescription,
       });
 
-      setCallState('connected');
+      // Don't set 'connected' here — let onconnectionstatechange handle it
+      // when the RTCPeerConnection actually reaches 'connected' state
     } catch (error) {
       console.error('Failed to answer call:', error);
       cleanup();
@@ -482,12 +579,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         callId: callInfo.callId,
         targetUserId: callInfo.peerId,
       });
+      // Fix H5: Determine correct status based on actual call state
+      const wasConnected = callStateRef.current === 'connected';
       addToHistory({
         peerId: callInfo.peerId,
         peerName: callInfo.peerName,
         callType: callInfo.callType,
         direction: callInfo.isOutgoing ? 'outgoing' : 'incoming',
-        status: 'answered',
+        status: wasConnected ? 'answered' : 'no-answer',
         duration: callDuration,
         isGroupCall: callInfo.isGroupCall,
       });
@@ -514,13 +613,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [localStream]);
 
   const toggleSpeaker = useCallback(() => {
-    if (remoteStream) {
-      const audioTracks = remoteStream.getAudioTracks();
-      if (audioTracks.length > 0) {
-        setIsSpeakerOn(prev => !prev);
+    setIsSpeakerOn(prev => {
+      const newVal = !prev;
+      // Apply volume to remote audio element (for audio-only calls)
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.volume = newVal ? 1.0 : 0.3;
       }
-    }
-  }, [remoteStream]);
+      return newVal;
+    });
+  }, []);
 
   const switchCamera = useCallback(async () => {
     if (!localStream || !peerConnectionRef.current) return;
@@ -595,9 +696,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         setLocalStream(new MediaStream(localStream.getTracks()));
         setIsScreenSharing(true);
         
-        // Handle user stopping screen share via browser UI
+        // Handle user stopping screen share via browser UI — use stable ref-based approach
         screenTrack.onended = () => {
-          toggleScreenShare();
+          // Directly stop screen sharing instead of calling toggleScreenShare (avoids stale closure)
+          if (screenStreamRef.current) {
+            screenStreamRef.current.getTracks().forEach(t => t.stop());
+            screenStreamRef.current = null;
+          }
+          if (originalVideoTrackRef.current && peerConnectionRef.current) {
+            const videoSender = peerConnectionRef.current.getSenders().find(s => s.track?.kind === 'video');
+            if (videoSender) {
+              videoSender.replaceTrack(originalVideoTrackRef.current);
+            }
+            originalVideoTrackRef.current = null;
+          }
+          setIsScreenSharing(false);
         };
       } catch (error) {
         console.error('Failed to share screen:', error);
@@ -606,9 +719,60 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [isScreenSharing, localStream]);
 
   const toggleRecording = useCallback(() => {
-    setIsRecording(prev => !prev);
-    // Recording is handled via UI indicator; actual recording would need server-side support
-  }, []);
+    if (isRecording) {
+      // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      // Start recording using MediaRecorder API
+      try {
+        const streamsToRecord: MediaStreamTrack[] = [];
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach(t => streamsToRecord.push(t));
+        }
+        if (remoteStream) {
+          remoteStream.getTracks().forEach(t => streamsToRecord.push(t));
+        }
+        if (streamsToRecord.length === 0) {
+          console.warn('[Call] No streams available to record');
+          return;
+        }
+        const combinedStream = new MediaStream(streamsToRecord);
+        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : MediaRecorder.isTypeSupported('video/webm')
+          ? 'video/webm'
+          : 'audio/webm';
+        const recorder = new MediaRecorder(combinedStream, { mimeType });
+        recordedChunksRef.current = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            recordedChunksRef.current.push(e.data);
+          }
+        };
+        recorder.onstop = () => {
+          if (recordedChunksRef.current.length > 0) {
+            const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `call-recording-${new Date().toISOString().slice(0, 19)}.webm`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+          recordedChunksRef.current = [];
+          mediaRecorderRef.current = null;
+        };
+        recorder.start(1000); // collect data every second
+        mediaRecorderRef.current = recorder;
+        setIsRecording(true);
+      } catch (error) {
+        console.error('[Call] Failed to start recording:', error);
+      }
+    }
+  }, [isRecording, remoteStream]);
 
   const toggleNoiseCancellation = useCallback(() => {
     setIsNoiseCancellation(prev => {
@@ -620,7 +784,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             echoCancellation: newVal,
             noiseSuppression: newVal,
             autoGainControl: newVal,
-          }).catch(() => {});
+          }).catch((err) => {
+            console.warn('[Call] Noise cancellation not supported by this browser:', err);
+          });
         });
       }
       return newVal;
@@ -699,24 +865,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           gain.connect(audioCtx.destination);
           osc.frequency.value = freq;
           osc.type = 'sine';
-          gain.gain.setValueAtTime(0.2, startTime);
+          gain.gain.setValueAtTime(0.15, startTime);
           gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
           osc.start(startTime);
           osc.stop(startTime + duration);
         };
-        // Ring pattern: two tones repeated
-        for (let i = 0; i < 3; i++) {
+        // Ring pattern: two tones repeated (longer ring for incoming)
+        for (let i = 0; i < 5; i++) {
           playTone(440, audioCtx.currentTime + i * 0.6, 0.25);
           playTone(520, audioCtx.currentTime + i * 0.6 + 0.25, 0.25);
         }
-        setTimeout(() => audioCtx.close(), 3000);
+        setTimeout(() => audioCtx.close(), 5000);
       } catch { /* audio not available */ }
 
       // Browser notification for incoming call
       if ('Notification' in window && Notification.permission === 'granted') {
         const callNotification = new Notification(`Incoming ${data.callType} call`, {
           body: `${data.callerName} is calling you`,
-          icon: '/logo192.png',
+          icon: '/favicon.ico',
           tag: `call-${data.callId}`,
           requireInteraction: true,
         });
@@ -731,9 +897,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     const handleCallAnswered = async (data: { callId: string; answer: RTCSessionDescriptionInit }) => {
       console.log('Call answered:', data);
+      // Clear the call timeout since the callee answered
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
       if (peerConnectionRef.current) {
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
-        setCallState('connected');
+        // Don't set 'connected' here — let onconnectionstatechange handle it
+        // when the RTCPeerConnection actually reaches 'connected' state
       }
     };
 
@@ -759,12 +931,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // Use refs to get current values (not stale closure values)
       const info = callInfoRef.current;
       if (info) {
+        const wasConnected = callStateRef.current === 'connected';
         addToHistory({
           peerId: info.peerId,
           peerName: info.peerName,
           callType: info.callType,
           direction: info.isOutgoing ? 'outgoing' : 'incoming',
-          status: 'answered',
+          status: wasConnected ? 'answered' : 'no-answer',
           duration: callDurationRef.current,
         });
       }

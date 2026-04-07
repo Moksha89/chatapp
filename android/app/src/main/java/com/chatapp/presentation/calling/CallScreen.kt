@@ -1,7 +1,13 @@
 package com.chatapp.presentation.calling
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,11 +23,34 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import java.util.Locale
+
+// M10: Check network connectivity before attempting a call
+private fun isNetworkAvailable(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        ?: return false
+    val network = connectivityManager.activeNetwork ?: return false
+    val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+}
+
+// H7: Check required permissions for calls
+private fun hasCallPermissions(context: Context, callType: String): Boolean {
+    val audioPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+    if (audioPermission != PackageManager.PERMISSION_GRANTED) return false
+    if (callType == "video") {
+        val cameraPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+        if (cameraPermission != PackageManager.PERMISSION_GRANTED) return false
+    }
+    return true
+}
 
 @Composable
 fun CallScreen(
@@ -32,7 +61,8 @@ fun CallScreen(
     onAcceptCall: () -> Unit = {},
     onToggleMute: () -> Unit = {},
     onToggleSpeaker: () -> Unit = {},
-    onToggleVideo: () -> Unit = {}
+    onToggleVideo: () -> Unit = {},
+    onFlipCamera: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var isMuted by remember { mutableStateOf(false) }
@@ -41,6 +71,41 @@ fun CallScreen(
     var callDuration by remember { mutableIntStateOf(0) }
     var isConnected by remember { mutableStateOf(false) }
     var callState by remember { mutableStateOf(if (isIncoming) "ringing" else "connecting") }
+    var isFrontCamera by remember { mutableStateOf(true) }
+    var hasPermissions by remember { mutableStateOf(hasCallPermissions(context, callType)) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    var hasNetwork by remember { mutableStateOf(isNetworkAvailable(context)) }
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
+
+    // H7: Permission launcher for requesting audio/camera permissions
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasPermissions = permissions.values.all { it }
+        if (!hasPermissions) {
+            showPermissionDialog = true
+        }
+    }
+
+    // H7: Request permissions on launch if not already granted
+    LaunchedEffect(Unit) {
+        if (!hasPermissions) {
+            val permissionsToRequest = mutableListOf(Manifest.permission.RECORD_AUDIO)
+            if (callType == "video") {
+                permissionsToRequest.add(Manifest.permission.CAMERA)
+            }
+            permissionLauncher.launch(permissionsToRequest.toTypedArray())
+        }
+    }
+
+    // M10: Check network connectivity
+    LaunchedEffect(Unit) {
+        hasNetwork = isNetworkAvailable(context)
+        if (!hasNetwork) {
+            callState = "no_network"
+        }
+    }
 
     // Show "User unavailable" after timeout instead of fake connecting
     LaunchedEffect(callState) {
@@ -49,21 +114,23 @@ fun CallScreen(
             if (!isConnected) {
                 callState = "unavailable"
             }
-        } else if (callState == "unavailable") {
+        } else if (callState == "unavailable" || callState == "no_network") {
             kotlinx.coroutines.delay(3000)
             onEndCall()
         }
     }
 
-    // Set up audio for call
-    LaunchedEffect(callType) {
-        try {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-            if (callType == "video") {
-                audioManager.isSpeakerphoneOn = true
-            }
-        } catch (_: Exception) {}
+    // H6: Only set up audio mode when call is actually connected
+    LaunchedEffect(isConnected) {
+        if (isConnected) {
+            try {
+                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                if (callType == "video") {
+                    audioManager.isSpeakerphoneOn = true
+                }
+            } catch (_: Exception) { /* Audio setup failed gracefully */ }
+        }
     }
 
     // Cleanup audio on dispose
@@ -99,6 +166,31 @@ fun CallScreen(
             }
         }
     }
+
+    // H7: Permission denied dialog
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false; onEndCall() },
+            title = { Text("Permission Required") },
+            text = {
+                Text(
+                    if (callType == "video")
+                        "Camera and microphone permissions are required for video calls."
+                    else
+                        "Microphone permission is required for voice calls."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showPermissionDialog = false; onEndCall() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    // L6: Use theme colors
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val errorColor = MaterialTheme.colorScheme.error
 
     Box(
         modifier = Modifier
@@ -225,13 +317,14 @@ fun CallScreen(
 
                     Text(
                         text = when {
+                            callState == "no_network" -> "No network connection"
                             isIncoming && !isConnected -> "Incoming ${callType} call..."
                             callState == "unavailable" -> "User unavailable"
                             callState == "connecting" -> "Calling..."
                             isConnected -> formatDuration(callDuration)
                             else -> "Calling..."
                         },
-                        color = if (callState == "unavailable") Color(0xFFFF6B6B) else Color.White.copy(alpha = 0.7f),
+                        color = if (callState == "unavailable" || callState == "no_network") errorColor else Color.White.copy(alpha = 0.7f),
                         fontSize = 16.sp
                     )
 
@@ -311,11 +404,15 @@ fun CallScreen(
                             }
                         )
 
+                        // C6: Camera flip with actual toggle and callback
                         CallControlButton(
                             icon = Icons.Default.FlipCameraAndroid,
-                            label = "Flip",
+                            label = if (isFrontCamera) "Back" else "Front",
                             isActive = false,
-                            onClick = { /* Camera flip - needs WebRTC */ }
+                            onClick = {
+                                isFrontCamera = !isFrontCamera
+                                onFlipCamera()
+                            }
                         )
                     }
                 }
@@ -330,7 +427,7 @@ fun CallScreen(
                     ) {
                         FloatingActionButton(
                             onClick = onEndCall,
-                            containerColor = Color.Red,
+                            containerColor = errorColor,
                             modifier = Modifier.size(64.dp)
                         ) {
                             Icon(Icons.Default.CallEnd, contentDescription = "Reject", tint = Color.White, modifier = Modifier.size(32.dp))
@@ -351,7 +448,7 @@ fun CallScreen(
                 } else {
                     FloatingActionButton(
                         onClick = onEndCall,
-                        containerColor = Color.Red,
+                        containerColor = errorColor,
                         modifier = Modifier.size(64.dp)
                     ) {
                         Icon(Icons.Default.CallEnd, contentDescription = "End Call", tint = Color.White, modifier = Modifier.size(32.dp))
@@ -359,6 +456,37 @@ fun CallScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+        // M10: No network overlay
+        if (!hasNetwork) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.WifiOff,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No network connection",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Check your internet and try again",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
     }
@@ -388,13 +516,14 @@ fun CallControlButton(
     }
 }
 
+// L5: Use explicit Locale to avoid locale-dependent formatting
 fun formatDuration(seconds: Int): String {
     val hrs = seconds / 3600
     val mins = (seconds % 3600) / 60
     val secs = seconds % 60
     return if (hrs > 0) {
-        String.format("%d:%02d:%02d", hrs, mins, secs)
+        String.format(Locale.US, "%d:%02d:%02d", hrs, mins, secs)
     } else {
-        String.format("%02d:%02d", mins, secs)
+        String.format(Locale.US, "%02d:%02d", mins, secs)
     }
 }

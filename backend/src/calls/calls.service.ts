@@ -3,6 +3,9 @@ import { DatabaseService, Call, CallParticipant } from '../database/database.ser
 
 @Injectable()
 export class CallsService {
+  // H9: Mutex to prevent race conditions in endCall
+  private endCallLocks: Set<string> = new Set();
+
   constructor(private readonly databaseService: DatabaseService) {}
 
   async initiateCall(
@@ -132,49 +135,75 @@ export class CallsService {
   }
 
   async endCall(callId: string, userId: string): Promise<Call & { callMessage: string }> {
-    const call = await this.databaseService.findCallById(callId);
-    if (!call) throw new NotFoundException('Call not found');
-
-    const now = new Date();
-    let duration = 0;
-    if (call.startedAt) {
-      duration = Math.floor((now.getTime() - new Date(call.startedAt).getTime()) / 1000);
+    // H9: Prevent race condition with lock
+    if (this.endCallLocks.has(callId)) {
+      // Another endCall is already in progress for this call — wait briefly and return current state
+      const call = await this.databaseService.findCallById(callId);
+      if (!call) throw new NotFoundException('Call not found');
+      return { ...call, callMessage: this.formatCallMessage(call, call.duration || 0) };
     }
+    this.endCallLocks.add(callId);
 
-    // Mark all active participants as left
-    const participants = await this.databaseService.findCallParticipantsByCallId(callId);
-    for (const p of participants) {
-      if (p.status === 'joined' || p.status === 'invited') {
-        const newStatus = p.status === 'invited' ? 'missed' : 'left';
-        await this.databaseService.updateCallParticipant(p.id, {
-          status: newStatus,
-          leftAt: now,
-        });
+    try {
+      const call = await this.databaseService.findCallById(callId);
+      if (!call) throw new NotFoundException('Call not found');
+
+      // If already ended, return immediately
+      if (call.status === 'ended') {
+        return { ...call, callMessage: this.formatCallMessage(call, call.duration || 0) };
       }
+
+      const now = new Date();
+      let duration = 0;
+      if (call.startedAt) {
+        duration = Math.floor((now.getTime() - new Date(call.startedAt).getTime()) / 1000);
+      }
+
+      // Mark all active participants as left
+      const participants = await this.databaseService.findCallParticipantsByCallId(callId);
+      for (const p of participants) {
+        if (p.status === 'joined' || p.status === 'invited') {
+          const newStatus = p.status === 'invited' ? 'missed' : 'left';
+          await this.databaseService.updateCallParticipant(p.id, {
+            status: newStatus,
+            leftAt: now,
+          });
+        }
+      }
+
+      await this.databaseService.updateCall(callId, {
+        status: 'ended',
+        endedAt: now,
+        duration,
+      });
+
+      const callMessage = this.formatCallMessage(call, duration);
+      const updatedCall = await this.databaseService.findCallById(callId);
+      return { ...updatedCall!, callMessage };
+    } finally {
+      this.endCallLocks.delete(callId);
     }
-
-    await this.databaseService.updateCall(callId, {
-      status: 'ended',
-      endedAt: now,
-      duration,
-    });
-
-    const callMessage = this.formatCallMessage(call, duration);
-    const updatedCall = await this.databaseService.findCallById(callId);
-    return { ...updatedCall!, callMessage };
   }
 
   async leaveCall(callId: string, userId: string): Promise<Call> {
     const call = await this.databaseService.findCallById(callId);
     if (!call) throw new NotFoundException('Call not found');
 
+    // M11: If already ended, don't trigger double endCall
+    if (call.status === 'ended') {
+      return call;
+    }
+
     const participant = await this.databaseService.findCallParticipant(callId, userId);
     if (!participant) throw new ForbiddenException('Not in this call');
 
-    await this.databaseService.updateCallParticipant(participant.id, {
-      status: 'left',
-      leftAt: new Date(),
-    });
+    // Only update if not already left
+    if (participant.status === 'joined') {
+      await this.databaseService.updateCallParticipant(participant.id, {
+        status: 'left',
+        leftAt: new Date(),
+      });
+    }
 
     // Check if any participants are still in the call
     const activeParticipants = await this.databaseService.getActiveCallParticipants(callId);
@@ -231,8 +260,9 @@ export class CallsService {
     return updated!;
   }
 
-  async getCallHistory(userId: string, limit = 50): Promise<Array<Call & { participants: CallParticipant[] }>> {
-    const calls = await this.databaseService.getCallHistory(userId, limit);
+  // L7: Added offset parameter for pagination support
+  async getCallHistory(userId: string, limit = 50, offset = 0): Promise<Array<Call & { participants: CallParticipant[] }>> {
+    const calls = await this.databaseService.getCallHistory(userId, limit, offset);
     const results: Array<Call & { participants: CallParticipant[] }> = [];
     
     for (const call of calls) {
@@ -260,6 +290,11 @@ export class CallsService {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  // H10: Get stale ringing calls that have exceeded the timeout
+  async getStaleRingingCalls(timeoutMs: number): Promise<Call[]> {
+    return this.databaseService.getStaleRingingCalls(timeoutMs);
   }
 
   private formatCallMessage(call: Call, duration: number): string {

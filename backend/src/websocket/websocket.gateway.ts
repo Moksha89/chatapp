@@ -331,6 +331,32 @@ export class WebsocketGateway
     }
   }
 
+  // H10: Server-side call timeout — clean up stale 'ringing' calls every 30 seconds
+  @Interval(30000)
+  async handleStaleCallCleanup() {
+    try {
+      const staleCalls = await this.callsService.getStaleRingingCalls(60000); // 60 seconds
+      for (const call of staleCalls) {
+        try {
+          const result = await this.callsService.endCall(call.id, call.initiatorId);
+          if (result.chatId) {
+            await this.callsService.createCallMessage(result.id, result.chatId, result.initiatorId, result.callMessage);
+          }
+          // Notify the initiator that the call timed out
+          this.websocketService.emitToUser(call.initiatorId, 'call:ended', {
+            callId: call.id,
+            reason: 'timeout',
+          });
+          this.logger.log(`Stale call cleaned up: ${call.id}`);
+        } catch {
+          // Call may already be ended
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Stale call cleanup error: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
   private broadcastPresence(userId: string, isOnline: boolean) {
     this.server.emit('presence:update', {
       userId,
@@ -549,6 +575,54 @@ export class WebsocketGateway
     });
 
     return { success: true };
+  }
+
+  // C8: Handle call renegotiation (ICE restart)
+  @SubscribeMessage('call:renegotiate')
+  async handleCallRenegotiate(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string; offer: RTCSessionDescriptionInit },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    this.websocketService.emitToUser(data.targetUserId, 'call:renegotiate', {
+      callId: data.callId,
+      fromUserId: client.userId,
+      offer: data.offer,
+    });
+
+    this.logger.log(`Call renegotiation: ${data.callId} from ${client.userId}`);
+    return { success: true };
+  }
+
+  // C9: Handle adding participant to a direct/group call
+  @SubscribeMessage('call:add-participant')
+  async handleCallAddParticipant(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { callId: string; targetUserId: string; callType?: 'audio' | 'video' },
+  ) {
+    if (!client.userId) return { error: 'Not authenticated' };
+
+    try {
+      await this.callsService.addParticipant(data.callId, client.userId, data.targetUserId);
+      const caller = await this.usersService.findById(client.userId);
+
+      this.websocketService.emitToUser(data.targetUserId, 'call:incoming', {
+        callId: data.callId,
+        callerId: client.userId,
+        callerName: caller?.displayName || 'Unknown',
+        callerPhoto: caller?.profilePhoto || null,
+        callType: data.callType || 'audio',
+        isGroupCall: true,
+      });
+
+      this.logger.log(`Participant ${data.targetUserId} added to call ${data.callId}`);
+      return { success: true };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Failed to add participant' };
+    }
   }
 
   // Group Call Support — DB-backed tracking + mesh networking
