@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useCall } from '../context/CallContext';
@@ -15,25 +15,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { NewChatDialog } from './NewChatDialog';
-import { LabelsManager } from './LabelsManager';
-import { QuickRepliesManager } from './QuickRepliesManager';
-import { BusinessProfileSettings } from './BusinessProfileSettings';
-import { LinkedDevicesManager } from './LinkedDevicesManager';
-import { CreateGroupDialog } from './CreateGroupDialog';
-import { StatusManager } from './StatusManager';
-import { BroadcastManager } from './BroadcastManager';
-import { ProductCatalog } from './ProductCatalog';
-import { AutoReplySettings } from './AutoReplySettings';
-import { PrivacySettings } from './PrivacySettings';
-import { FriendsPanel } from './FriendsPanel';
-import { NotificationSettings } from './NotificationSettings';
-import { StorageManager } from './StorageManager';
-import { ThemeSettings } from './ThemeSettings';
-import { DataSaverSettings } from './DataSaverSettings';
-import { HelpSupportScreen } from './HelpSupportScreen';
-import { AutoUpdateSettings } from './AutoUpdateSettings';
-import { ChatBackupSettings } from './ChatBackupSettings';
+
+// Lazy load settings panels — only loaded when user opens them
+const NewChatDialog = lazy(() => import('./NewChatDialog').then(m => ({ default: m.NewChatDialog })));
+const LabelsManager = lazy(() => import('./LabelsManager').then(m => ({ default: m.LabelsManager })));
+const QuickRepliesManager = lazy(() => import('./QuickRepliesManager').then(m => ({ default: m.QuickRepliesManager })));
+const BusinessProfileSettings = lazy(() => import('./BusinessProfileSettings').then(m => ({ default: m.BusinessProfileSettings })));
+const LinkedDevicesManager = lazy(() => import('./LinkedDevicesManager').then(m => ({ default: m.LinkedDevicesManager })));
+const CreateGroupDialog = lazy(() => import('./CreateGroupDialog').then(m => ({ default: m.CreateGroupDialog })));
+const StatusManager = lazy(() => import('./StatusManager').then(m => ({ default: m.StatusManager })));
+const BroadcastManager = lazy(() => import('./BroadcastManager').then(m => ({ default: m.BroadcastManager })));
+const ProductCatalog = lazy(() => import('./ProductCatalog').then(m => ({ default: m.ProductCatalog })));
+const AutoReplySettings = lazy(() => import('./AutoReplySettings').then(m => ({ default: m.AutoReplySettings })));
+const PrivacySettings = lazy(() => import('./PrivacySettings').then(m => ({ default: m.PrivacySettings })));
+const FriendsPanel = lazy(() => import('./FriendsPanel').then(m => ({ default: m.FriendsPanel })));
+const NotificationSettings = lazy(() => import('./NotificationSettings').then(m => ({ default: m.NotificationSettings })));
+const StorageManager = lazy(() => import('./StorageManager').then(m => ({ default: m.StorageManager })));
+const ThemeSettings = lazy(() => import('./ThemeSettings').then(m => ({ default: m.ThemeSettings })));
+const DataSaverSettings = lazy(() => import('./DataSaverSettings').then(m => ({ default: m.DataSaverSettings })));
+const HelpSupportScreen = lazy(() => import('./HelpSupportScreen').then(m => ({ default: m.HelpSupportScreen })));
+const AutoUpdateSettings = lazy(() => import('./AutoUpdateSettings').then(m => ({ default: m.AutoUpdateSettings })));
+const ChatBackupSettings = lazy(() => import('./ChatBackupSettings').then(m => ({ default: m.ChatBackupSettings })));
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
@@ -549,25 +551,27 @@ export function ChatSidebar() {
         )}
       </ScrollArea>
 
-      <NewChatDialog open={showNewChat} onOpenChange={setShowNewChat} />
-      <LabelsManager isOpen={showLabels} onClose={() => setShowLabels(false)} />
-      <QuickRepliesManager isOpen={showQuickReplies} onClose={() => setShowQuickReplies(false)} />
-      <BusinessProfileSettings isOpen={showBusinessProfile} onClose={() => setShowBusinessProfile(false)} />
-      <LinkedDevicesManager isOpen={showLinkedDevices} onClose={() => setShowLinkedDevices(false)} />
-      <CreateGroupDialog open={showCreateGroup} onOpenChange={setShowCreateGroup} />
-      <StatusManager isOpen={showStatus} onClose={() => setShowStatus(false)} />
-      <BroadcastManager isOpen={showBroadcast} onClose={() => setShowBroadcast(false)} />
-      <ProductCatalog isOpen={showProducts} onClose={() => setShowProducts(false)} />
-      <AutoReplySettings isOpen={showAutoReply} onClose={() => setShowAutoReply(false)} />
-      <PrivacySettings isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
-      <FriendsPanel isOpen={showFriends} onClose={() => setShowFriends(false)} />
-      <NotificationSettings isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
-      <StorageManager isOpen={showStorage} onClose={() => setShowStorage(false)} />
-      <ThemeSettings isOpen={showThemes} onClose={() => setShowThemes(false)} />
-      <DataSaverSettings isOpen={showDataSaver} onClose={() => setShowDataSaver(false)} />
-      <HelpSupportScreen isOpen={showHelp} onClose={() => setShowHelp(false)} />
-      <AutoUpdateSettings isOpen={showAutoUpdate} onClose={() => setShowAutoUpdate(false)} />
-      <ChatBackupSettings isOpen={showBackup} onClose={() => setShowBackup(false)} />
+      <Suspense fallback={null}>
+        {showNewChat && <NewChatDialog open={showNewChat} onOpenChange={setShowNewChat} />}
+        {showLabels && <LabelsManager isOpen={showLabels} onClose={() => setShowLabels(false)} />}
+        {showQuickReplies && <QuickRepliesManager isOpen={showQuickReplies} onClose={() => setShowQuickReplies(false)} />}
+        {showBusinessProfile && <BusinessProfileSettings isOpen={showBusinessProfile} onClose={() => setShowBusinessProfile(false)} />}
+        {showLinkedDevices && <LinkedDevicesManager isOpen={showLinkedDevices} onClose={() => setShowLinkedDevices(false)} />}
+        {showCreateGroup && <CreateGroupDialog open={showCreateGroup} onOpenChange={setShowCreateGroup} />}
+        {showStatus && <StatusManager isOpen={showStatus} onClose={() => setShowStatus(false)} />}
+        {showBroadcast && <BroadcastManager isOpen={showBroadcast} onClose={() => setShowBroadcast(false)} />}
+        {showProducts && <ProductCatalog isOpen={showProducts} onClose={() => setShowProducts(false)} />}
+        {showAutoReply && <AutoReplySettings isOpen={showAutoReply} onClose={() => setShowAutoReply(false)} />}
+        {showPrivacy && <PrivacySettings isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />}
+        {showFriends && <FriendsPanel isOpen={showFriends} onClose={() => setShowFriends(false)} />}
+        {showNotifications && <NotificationSettings isOpen={showNotifications} onClose={() => setShowNotifications(false)} />}
+        {showStorage && <StorageManager isOpen={showStorage} onClose={() => setShowStorage(false)} />}
+        {showThemes && <ThemeSettings isOpen={showThemes} onClose={() => setShowThemes(false)} />}
+        {showDataSaver && <DataSaverSettings isOpen={showDataSaver} onClose={() => setShowDataSaver(false)} />}
+        {showHelp && <HelpSupportScreen isOpen={showHelp} onClose={() => setShowHelp(false)} />}
+        {showAutoUpdate && <AutoUpdateSettings isOpen={showAutoUpdate} onClose={() => setShowAutoUpdate(false)} />}
+        {showBackup && <ChatBackupSettings isOpen={showBackup} onClose={() => setShowBackup(false)} />}
+      </Suspense>
 
       {/* Chat Context Menu */}
       {contextMenu && (

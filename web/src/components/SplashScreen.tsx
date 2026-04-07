@@ -10,10 +10,10 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 600),
-      setTimeout(() => setPhase(2), 1200),
-      setTimeout(() => setPhase(3), 1800),
-      setTimeout(() => onComplete(), 3200),
+      setTimeout(() => setPhase(1), 300),
+      setTimeout(() => setPhase(2), 600),
+      setTimeout(() => setPhase(3), 900),
+      setTimeout(() => onComplete(), 1200),
     ];
     return () => timers.forEach(clearTimeout);
   }, [onComplete]);
@@ -23,9 +23,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) { clearInterval(interval); return 100; }
-        return prev + 2;
+        return prev + 5;
       });
-    }, 50);
+    }, 20);
     return () => clearInterval(interval);
   }, []);
 
