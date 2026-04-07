@@ -30,6 +30,28 @@ export class ChatsController {
     return this.chatsService.createChat(user.id, createChatDto);
   }
 
+  // IMPORTANT: Static routes MUST come before parameterized :id route
+  @Get('search/messages')
+  @ApiOperation({ summary: 'Search messages across all chats' })
+  @ApiResponse({ status: 200, description: 'Search results' })
+  @ApiQuery({ name: 'q', required: true, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async searchMessages(
+    @CurrentUser() user: CurrentUserData,
+    @Query('q') query: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 50;
+    return this.chatsService.searchMessages(user.id, query, parsedLimit);
+  }
+
+  @Get('starred/messages')
+  @ApiOperation({ summary: 'Get all starred messages' })
+  @ApiResponse({ status: 200, description: 'Starred messages retrieved' })
+  async getStarredMessages(@CurrentUser() user: CurrentUserData) {
+    return this.chatsService.getStarredMessages(user.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get chat details' })
   @ApiResponse({ status: 200, description: 'Chat retrieved successfully' })
@@ -133,27 +155,6 @@ export class ChatsController {
   ) {
     await this.chatsService.markMessagesRead(id, user.id, body.messageIds);
     return { message: 'Messages marked as read' };
-  }
-
-  @Get('search/messages')
-  @ApiOperation({ summary: 'Search messages across all chats' })
-  @ApiResponse({ status: 200, description: 'Search results' })
-  @ApiQuery({ name: 'q', required: true, type: String })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  async searchMessages(
-    @CurrentUser() user: CurrentUserData,
-    @Query('q') query: string,
-    @Query('limit') limit?: string,
-  ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 50;
-    return this.chatsService.searchMessages(user.id, query, parsedLimit);
-  }
-
-  @Get('starred/messages')
-  @ApiOperation({ summary: 'Get all starred messages' })
-  @ApiResponse({ status: 200, description: 'Starred messages retrieved' })
-  async getStarredMessages(@CurrentUser() user: CurrentUserData) {
-    return this.chatsService.getStarredMessages(user.id);
   }
 
   @Post(':id/messages/:messageId/star')
