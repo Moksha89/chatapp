@@ -187,7 +187,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if ((olderMessages as Message[]).length === 0) {
         setHasMoreMessages(false);
       } else {
-        setMessages((prev) => [...(olderMessages as Message[]), ...prev]);
+        setMessages((prev) => [...(olderMessages as Message[]).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()), ...prev]);
       }
     } catch (error) {
       console.error('Failed to load more messages:', error);
@@ -208,7 +208,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // Load messages and mark unread as read in a single API call
       setIsLoadingMessages(true);
       api.getMessages(chat.id).then((msgs: unknown[]) => {
-        const typedMsgs = msgs as Message[];
+        const typedMsgs = (msgs as Message[]).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         setMessages(typedMsgs);
         // Mark unread messages as read on the server
         if (user) {
