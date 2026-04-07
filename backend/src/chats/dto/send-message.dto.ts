@@ -55,4 +55,9 @@ export class SendMessageDto {
   @ApiPropertyOptional({ description: 'Whether this is a view-once media message' })
   @IsOptional()
   isViewOnce?: boolean;
+
+  @ApiPropertyOptional({ description: 'ISO date string for scheduled message delivery' })
+  @IsString()
+  @IsOptional()
+  scheduledAt?: string;
 }

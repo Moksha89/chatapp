@@ -726,40 +726,47 @@ class ApiService {
 
 
 
-  // Bug #13 fix: Add 401 retry logic to uploadMedia
-  async uploadMedia(file: File): Promise<{
+  // Upload media with optional progress callback
+  async uploadMedia(file: File, onProgress?: (progress: number) => void): Promise<{
     id: string;
     filename: string;
     mimeType: string;
     size: number;
     url: string;
   }> {
-    const formData = new FormData();
-    formData.append('file', file);
+    const doUpload = (token: string | null): Promise<Response> => {
+      if (onProgress) {
+        // Use XHR for real progress tracking
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `${API_URL}/media/upload`);
+          if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) onProgress(e.loaded / e.total);
+          };
+          xhr.onload = () => {
+            resolve(new Response(xhr.responseText, { status: xhr.status, statusText: xhr.statusText }));
+          };
+          xhr.onerror = () => reject(new Error('Upload failed'));
+          const fd = new FormData();
+          fd.append('file', file);
+          xhr.send(fd);
+        });
+      }
+      const formData = new FormData();
+      formData.append('file', file);
+      const headers: HeadersInit = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      return fetch(`${API_URL}/media/upload`, { method: 'POST', headers, body: formData });
+    };
 
-    const headers: HeadersInit = {};
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    }
-
-    let response = await fetch(`${API_URL}/media/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+    let response = await doUpload(this.accessToken);
 
     // Retry on 401 with refreshed token
     if (response.status === 401 && this.accessToken) {
       const newToken = await this.refreshAccessToken();
       if (newToken) {
-        headers['Authorization'] = `Bearer ${newToken}`;
-        const retryFormData = new FormData();
-        retryFormData.append('file', file);
-        response = await fetch(`${API_URL}/media/upload`, {
-          method: 'POST',
-          headers,
-          body: retryFormData,
-        });
+        response = await doUpload(newToken);
       }
     }
 

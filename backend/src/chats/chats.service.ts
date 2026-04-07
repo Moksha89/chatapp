@@ -325,7 +325,9 @@ export class ChatsService {
       isEdited: false,
       isDeleted: false,
       editedAt: null,
-      expiresAt: null,
+      expiresAt: chat?.disappearingMessagesDuration
+        ? new Date(Date.now() + chat.disappearingMessagesDuration * 1000)
+        : (data.scheduledAt ? new Date(data.scheduledAt) : null),
       isViewOnce: data.isViewOnce || false,
       isViewed: false,
     });

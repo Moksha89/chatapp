@@ -25,6 +25,7 @@ import {
   StickerEntity,
   FaqEntity,
   MessageStarEntity,
+  StatusEntity,
 } from './entities';
 
 export interface User {
@@ -313,6 +314,8 @@ export class DatabaseService implements OnModuleInit {
     private faqRepository: Repository<FaqEntity>,
     @InjectRepository(MessageStarEntity)
     private messageStarRepository: Repository<MessageStarEntity>,
+    @InjectRepository(StatusEntity)
+    private statusRepository: Repository<StatusEntity>,
   ) {}
 
   async onModuleInit() {
@@ -885,6 +888,14 @@ export class DatabaseService implements OnModuleInit {
   // Delete expired messages (for disappearing messages feature)
   async deleteExpiredMessages(): Promise<number> {
     const result = await this.messageRepository.delete({
+      expiresAt: LessThan(new Date()),
+    });
+    return result.affected ?? 0;
+  }
+
+  // Delete expired statuses (24-hour expiry)
+  async deleteExpiredStatuses(): Promise<number> {
+    const result = await this.statusRepository.delete({
       expiresAt: LessThan(new Date()),
     });
     return result.affected ?? 0;

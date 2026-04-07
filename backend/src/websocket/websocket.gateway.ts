@@ -19,6 +19,8 @@ import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CallsService } from '../calls/calls.service';
 import { DatabaseService } from '../database/database.service';
+import { BroadcastsService } from '../broadcasts/broadcasts.service';
+import { StatusService } from '../status/status.service';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -27,8 +29,11 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((o: string) => o.trim())
+      : ['https://abhi.so', 'http://localhost:5173', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
+    credentials: true,
   },
   namespace: '/chat',
 })
@@ -50,6 +55,8 @@ export class WebsocketGateway
     private readonly callsService: CallsService,
     private readonly databaseService: DatabaseService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => BroadcastsService))
+    private readonly broadcastsService: BroadcastsService,
   ) {}
 
   async onModuleInit() {
@@ -884,7 +891,7 @@ export class WebsocketGateway
     }
   }
 
-  // Bug #5 fix: Cron job to delete expired disappearing messages (runs every 60 seconds)
+  // Cron job to delete expired disappearing messages (runs every 60 seconds)
   @Interval(60000)
   async handleDisappearingMessagesCron() {
     try {
@@ -897,7 +904,75 @@ export class WebsocketGateway
     }
   }
 
-  // Proxy Support for Calls
+  // Cron job to delete expired statuses (runs every 5 minutes)
+  @Interval(300000)
+  async handleStatusExpirationCron() {
+    try {
+      const deleted = await this.databaseService.deleteExpiredStatuses();
+      if (deleted > 0) {
+        this.logger.log(`Cleaned up ${deleted} expired statuses`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to cleanup expired statuses:', error);
+    }
+  }
+
+  // Broadcast message delivery
+  @SubscribeMessage('broadcast:send')
+  async handleBroadcastSend(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { broadcastId: string; content: string; type?: string },
+  ) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      const broadcast = await this.broadcastsService.getBroadcastById(data.broadcastId, client.userId);
+      const sender = await this.usersService.findById(client.userId);
+      const senderName = sender?.displayName || sender?.phoneNumber || 'Unknown';
+      const sentMessages: string[] = [];
+
+      for (const recipientId of broadcast.recipientIds) {
+        // Find or create direct chat with each recipient
+        try {
+          const chat = await this.chatsService.createChat(client.userId, {
+            type: 'direct',
+            participantId: recipientId,
+          });
+
+          const message = await this.chatsService.sendMessage(
+            chat.id,
+            client.userId,
+            client.deviceId,
+            { content: data.content, type: (data.type as 'text') || 'text' },
+          );
+
+          this.websocketService.emitToUserOrQueue(recipientId, 'message:new', {
+            message,
+            chatId: chat.id,
+          });
+
+          if (!this.websocketService.isUserOnline(recipientId)) {
+            this.notificationsService.sendMessageNotification(
+              recipientId, senderName, data.content, chat.id, data.type || 'text',
+            ).catch(err => this.logger.warn(`Broadcast push failed: ${err.message}`));
+          }
+
+          sentMessages.push(message.id);
+        } catch (err) {
+          this.logger.warn(`Failed to send broadcast to ${recipientId}: ${err instanceof Error ? err.message : err}`);
+        }
+      }
+
+      return { success: true, sentCount: sentMessages.length, totalRecipients: broadcast.recipientIds.length };
+    } catch (error) {
+      console.error('Broadcast send error:', error);
+      return { error: 'Failed to send broadcast message' };
+    }
+  }
+
+  // TURN/STUN server configuration for calls
   @SubscribeMessage('call:proxy:configure')
   async handleProxyConfigure(
     @ConnectedSocket() client: AuthenticatedSocket,
@@ -907,24 +982,59 @@ export class WebsocketGateway
       return { error: 'Not authenticated' };
     }
 
-    // Store proxy configuration for the user's calls
-    // When enabled, ICE candidates will be relayed through TURN servers
-    const iceServers = data.enabled && data.proxyServer
-      ? [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: `turn:${data.proxyServer}`, username: 'proxy', credential: 'proxy' },
-        ]
-      : [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-        ];
+    const turnUrl = this.configService.get<string>('TURN_SERVER_URL');
+    const turnUser = this.configService.get<string>('TURN_SERVER_USERNAME') || 'chatapp';
+    const turnCred = this.configService.get<string>('TURN_SERVER_CREDENTIAL') || 'chatapp';
+
+    const iceServers = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+    ];
+
+    // Add TURN server if configured (required for NAT traversal)
+    if (turnUrl) {
+      iceServers.push(
+        { urls: `turn:${turnUrl}`, username: turnUser, credential: turnCred } as typeof iceServers[0],
+        { urls: `turns:${turnUrl}`, username: turnUser, credential: turnCred } as typeof iceServers[0],
+      );
+    } else if (data.enabled && data.proxyServer) {
+      iceServers.push(
+        { urls: `turn:${data.proxyServer}`, username: 'proxy', credential: 'proxy' } as typeof iceServers[0],
+      );
+    }
 
     client.emit('call:proxy:configured', {
-      enabled: data.enabled,
+      enabled: true,
       iceServers,
     });
 
-    console.log(`Proxy ${data.enabled ? 'enabled' : 'disabled'} for user ${client.userId}`);
+    return { success: true, iceServers };
+  }
+
+  // Get ICE servers configuration on connection
+  @SubscribeMessage('call:get-ice-servers')
+  async handleGetIceServers(@ConnectedSocket() client: AuthenticatedSocket) {
+    if (!client.userId) {
+      return { error: 'Not authenticated' };
+    }
+
+    const turnUrl = this.configService.get<string>('TURN_SERVER_URL');
+    const turnUser = this.configService.get<string>('TURN_SERVER_USERNAME') || 'chatapp';
+    const turnCred = this.configService.get<string>('TURN_SERVER_CREDENTIAL') || 'chatapp';
+
+    const iceServers: Array<{ urls: string; username?: string; credential?: string }> = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ];
+
+    if (turnUrl) {
+      iceServers.push(
+        { urls: `turn:${turnUrl}`, username: turnUser, credential: turnCred },
+        { urls: `turns:${turnUrl}`, username: turnUser, credential: turnCred },
+      );
+    }
+
     return { success: true, iceServers };
   }
 

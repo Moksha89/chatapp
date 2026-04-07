@@ -77,7 +77,7 @@ type RecordingState = 'idle' | 'recording';
 
 export function ChatArea() {
   const { user } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, onlineUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats, refreshChats } = useChat();
+  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, onlineUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats, refreshChats, loadMoreMessages } = useChat();
   const { initiateCall, callState } = useCall();
   const { showError } = useToast();
   const [inputValue, setInputValue] = useState('');
@@ -143,7 +143,9 @@ export function ChatArea() {
   const [searchMatchCount, setSearchMatchCount] = useState(0);
   // Link preview detection
   const [linkPreviews, setLinkPreviews] = useState<Map<string, { title: string; description: string; image?: string; url: string }>>(new Map());
-  // Offline queue indicator
+  // Connection status: 'online' | 'offline' | 'reconnecting'
+  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline' | 'reconnecting'>(navigator.onLine ? 'online' : 'offline');
+  // Offline queue indicator (keep for backwards compat)
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   // Image quality/compression
   const [imageQuality, setImageQuality] = useState(85);
@@ -183,13 +185,29 @@ export function ChatArea() {
     } catch { /* ignore */ }
   }, [inputValue, activeChat?.id]);
 
-  // Offline detection
+  // Connection status detection (offline + socket reconnecting)
   useEffect(() => {
-    const goOffline = () => setIsOffline(true);
-    const goOnline = () => setIsOffline(false);
+    const goOffline = () => { setIsOffline(true); setConnectionStatus('offline'); };
+    const goOnline = () => { setIsOffline(false); setConnectionStatus(socketService.isConnected() ? 'online' : 'reconnecting'); };
     window.addEventListener('offline', goOffline);
     window.addEventListener('online', goOnline);
-    return () => { window.removeEventListener('offline', goOffline); window.removeEventListener('online', goOnline); };
+
+    // Socket connection status polling
+    const checkSocket = setInterval(() => {
+      if (!navigator.onLine) {
+        setConnectionStatus('offline');
+      } else if (!socketService.isConnected()) {
+        setConnectionStatus('reconnecting');
+      } else {
+        setConnectionStatus('online');
+      }
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online', goOnline);
+      clearInterval(checkSocket);
+    };
   }, []);
 
   // Search match count tracking
@@ -265,7 +283,7 @@ export function ChatArea() {
     setShowScrollToBottom(distanceFromBottom > 200);
   }, []);
 
-  // Bug #5 fix: Attach scroll listener to the actual Radix viewport element
+  // Attach scroll listener to the actual Radix viewport element (scroll-to-bottom + infinite scroll)
   useEffect(() => {
     if (!scrollRef.current) return;
     const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
@@ -273,10 +291,14 @@ export function ChatArea() {
     const onScroll = () => {
       const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
       setShowScrollToBottom(distanceFromBottom > 200);
+      // Infinite scroll: load more messages when near top
+      if (viewport.scrollTop < 100) {
+        loadMoreMessages();
+      }
     };
     viewport.addEventListener('scroll', onScroll);
     return () => viewport.removeEventListener('scroll', onScroll);
-  }, [activeChat]);
+  }, [activeChat, loadMoreMessages]);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -393,18 +415,46 @@ export function ChatArea() {
   const uploadAndSendMedia = useCallback(async (file: File, type: MediaMessage['type']) => {
     if (!activeChat) return;
 
+    // File size limits (in bytes)
+    const MAX_FILE_SIZES: Record<string, number> = {
+      image: 16 * 1024 * 1024,    // 16MB for images
+      video: 64 * 1024 * 1024,    // 64MB for videos
+      audio: 16 * 1024 * 1024,    // 16MB for audio
+      'video-note': 16 * 1024 * 1024, // 16MB for video notes
+      file: 100 * 1024 * 1024,    // 100MB for files
+    };
+
+    // File type validation (allowed MIME types)
+    const ALLOWED_TYPES: Record<string, string[]> = {
+      image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
+      video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'],
+      audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/mp4'],
+      'video-note': ['video/mp4', 'video/webm'],
+      file: [], // Allow all types for generic files
+    };
+
+    const maxSize = MAX_FILE_SIZES[type] || MAX_FILE_SIZES.file;
+    if (file.size > maxSize) {
+      showError('File too large', `Maximum size for ${type} is ${Math.round(maxSize / (1024 * 1024))}MB`);
+      return;
+    }
+
+    const allowedTypes = ALLOWED_TYPES[type];
+    if (allowedTypes && allowedTypes.length > 0 && !allowedTypes.includes(file.type)) {
+      showError('Invalid file type', `${file.type || 'Unknown type'} is not allowed for ${type}`);
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
-
-      const result = await api.uploadMedia(file);
+      // Real upload progress using XHR
+      const result = await api.uploadMedia(file, (progress: number) => {
+        setUploadProgress(Math.round(progress * 90)); // 0-90% for upload
+      });
       
-      clearInterval(progressInterval);
-      setUploadProgress(100);
+      setUploadProgress(95);
 
       await api.sendMediaMessage(activeChat.id, {
         content: file.name,
@@ -416,6 +466,7 @@ export function ChatArea() {
         tempId: `temp-${Date.now()}`,
       });
 
+      setUploadProgress(100);
       setTimeout(() => {
         setIsUploading(false);
         setUploadProgress(0);
@@ -1118,10 +1169,15 @@ export function ChatArea() {
         </div>
       </div>
 
-      {/* Offline indicator */}
-      {isOffline && (
+      {/* Connection status indicator */}
+      {connectionStatus === 'offline' && (
         <div className="px-4 py-1.5 bg-red-500 text-white text-xs font-medium flex items-center justify-center gap-2">
           <WifiOff className="h-3 w-3" /> No internet connection — messages will be queued
+        </div>
+      )}
+      {connectionStatus === 'reconnecting' && (
+        <div className="px-4 py-1.5 bg-amber-500 text-white text-xs font-medium flex items-center justify-center gap-2">
+          <WifiOff className="h-3 w-3 animate-pulse" /> Reconnecting to server...
         </div>
       )}
 
@@ -1332,6 +1388,19 @@ export function ChatArea() {
                           {formatMessageTime(message.createdAt)}
                         </span>
                         {isOwn && getStatusIcon(message.status)}
+                        {isOwn && message.status === 'failed' && (
+                          <button
+                            className="ml-1 text-[10px] text-red-500 hover:text-red-700 underline font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (activeChat && message.content) {
+                                sendMessage(message.content, message.type as 'text');
+                              }
+                            }}
+                          >
+                            Retry
+                          </button>
+                        )}
                       </div>
                       {message.reactions && Object.keys(message.reactions).length > 0 && !message.isDeleted && (
                         <MessageReactions
