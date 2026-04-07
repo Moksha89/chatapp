@@ -576,15 +576,15 @@ export function ChatArea() {
 
   const handleVoiceCall = () => {
     const targetUserId = getOtherParticipantId();
-    if (targetUserId && callState === 'idle') {
-      initiateCall(targetUserId, getChatName(), 'audio');
+    if (targetUserId && callState === 'idle' && activeChat) {
+      initiateCall(targetUserId, getChatName(), 'audio', activeChat.id);
     }
   };
 
   const handleVideoCall = () => {
     const targetUserId = getOtherParticipantId();
-    if (targetUserId && callState === 'idle') {
-      initiateCall(targetUserId, getChatName(), 'video');
+    if (targetUserId && callState === 'idle' && activeChat) {
+      initiateCall(targetUserId, getChatName(), 'video', activeChat.id);
     }
   };
 

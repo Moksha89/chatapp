@@ -53,7 +53,7 @@ interface CallContextType {
   callHistory: CallHistoryEntry[];
   groupParticipants: GroupCallParticipant[];
   isMinimized: boolean;
-  initiateCall: (targetUserId: string, targetUserName: string, callType: CallType) => Promise<void>;
+  initiateCall: (targetUserId: string, targetUserName: string, callType: CallType, chatId?: string) => Promise<void>;
   initiateGroupCall: (participantIds: string[], participantNames: string[], callType: CallType) => Promise<void>;
   answerCall: () => Promise<void>;
   rejectCall: () => void;
@@ -128,6 +128,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const localStreamRef = useRef<MediaStream | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 3;
+  // Refs to prevent stale closures in socket event handlers
+  const callStateRef = useRef<CallState>(callState);
+  const callInfoRef = useRef<CallInfo | null>(callInfo);
+  const callDurationRef = useRef(callDuration);
+  const callIdRef = useRef<string>(''); // Track current callId for ICE candidates
+  callStateRef.current = callState;
+  callInfoRef.current = callInfo;
+  callDurationRef.current = callDuration;
 
   // Save call history to localStorage
   useEffect(() => {
@@ -242,11 +250,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const createPeerConnection = useCallback((targetUserId: string, callId: string) => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    // Store callId in ref so ICE candidates always use the latest callId
+    if (callId) callIdRef.current = callId;
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        // Use callIdRef to always get the latest callId (may be set after peer connection creation)
         socketService.emit('call:ice-candidate', {
-          callId,
+          callId: callIdRef.current || callId,
           targetUserId,
           candidate: event.candidate.toJSON(),
         });
@@ -299,9 +310,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isNoiseCancellation]);
 
-  const initiateCall = useCallback(async (targetUserId: string, targetUserName: string, callType: CallType) => {
+  const initiateCall = useCallback(async (targetUserId: string, targetUserName: string, callType: CallType, chatId?: string) => {
     try {
       setCallState('calling');
+      callIdRef.current = ''; // Reset callId ref
       setCallInfo({
         callId: '',
         peerId: targetUserId,
@@ -323,10 +335,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       socketService.emit('call:initiate', {
         targetUserId,
         callType,
+        chatId,
         offer: pc.localDescription,
       }, (response: unknown) => {
         const res = response as { success: boolean; callId?: string; error?: string };
         if (res.success && res.callId) {
+          // Update both state and ref so ICE candidates use the correct callId
+          callIdRef.current = res.callId;
           setCallInfo(prev => prev ? { ...prev, callId: res.callId! } : null);
         } else {
           console.error('Failed to initiate call:', res.error);
@@ -606,7 +621,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     });
   }, [callInfo, localStream]);
 
-  // Socket event listeners
+  // Socket event listeners — registered ONCE, use refs to avoid stale closures
+  // This prevents the critical bug where listeners were re-registered every time
+  // callState/callDuration changed, causing call popups to close immediately
   useEffect(() => {
     const handleIncomingCall = (data: {
       callId: string;
@@ -617,7 +634,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       isGroupCall?: boolean;
     }) => {
       console.log('Incoming call:', data);
-      if (callState !== 'idle') {
+      // Use ref to get current callState (not stale closure value)
+      if (callStateRef.current !== 'idle') {
         socketService.emit('call:reject', {
           callId: data.callId,
           targetUserId: data.callerId,
@@ -636,6 +654,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
 
       pendingOfferRef.current = data.offer;
+      callIdRef.current = data.callId;
       setCallInfo({
         callId: data.callId,
         peerId: data.callerId,
@@ -696,11 +715,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     const handleCallRejected = (data: { callId: string; reason: string }) => {
       console.log('Call rejected:', data);
-      if (callInfo) {
+      // Use ref to get current callInfo (not stale closure value)
+      const info = callInfoRef.current;
+      if (info) {
         addToHistory({
-          peerId: callInfo.peerId,
-          peerName: callInfo.peerName,
-          callType: callInfo.callType,
+          peerId: info.peerId,
+          peerName: info.peerName,
+          callType: info.callType,
           direction: 'outgoing',
           status: 'rejected',
           duration: 0,
@@ -711,14 +732,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     const handleCallEnded = (data: { callId: string }) => {
       console.log('Call ended:', data);
-      if (callInfo) {
+      // Use refs to get current values (not stale closure values)
+      const info = callInfoRef.current;
+      if (info) {
         addToHistory({
-          peerId: callInfo.peerId,
-          peerName: callInfo.peerName,
-          callType: callInfo.callType,
-          direction: callInfo.isOutgoing ? 'outgoing' : 'incoming',
+          peerId: info.peerId,
+          peerName: info.peerName,
+          callType: info.callType,
+          direction: info.isOutgoing ? 'outgoing' : 'incoming',
           status: 'answered',
-          duration: callDuration,
+          duration: callDurationRef.current,
         });
       }
       cleanup();
@@ -747,7 +770,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       unsubEnded();
       unsubIceCandidate();
     };
-  }, [callState, callInfo, callDuration, cleanup, addToHistory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleanup, addToHistory]);
 
   return (
     <CallContext.Provider
