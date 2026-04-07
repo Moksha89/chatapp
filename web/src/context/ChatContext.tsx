@@ -520,12 +520,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               if (exists) return prev;
               return [...prev, decryptedMessage];
             });
-            socketService.markDelivered(decryptedMessage.id);
           }
-          // Also mark delivered for non-active chat messages
-          if (activeChat?.id !== chatId) {
-            socketService.markDelivered(decryptedMessage.id);
-          }
+          // Mark delivered for all incoming messages regardless of active chat
+          socketService.markDelivered(decryptedMessage.id);
 
           // Feature #9: Play notification sound + browser push notification
           // Only notify when NOT viewing the active chat or window is hidden

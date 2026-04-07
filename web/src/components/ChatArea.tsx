@@ -208,18 +208,24 @@ export function ChatArea() {
   useEffect(() => {
     const urlRegex = /https?:\/\/[^\s]+/g;
     messages.forEach(msg => {
-      if (msg.content && !msg.isDeleted && !linkPreviews.has(msg.id)) {
+      if (msg.content && !msg.isDeleted) {
         const urls = msg.content.match(urlRegex);
         if (urls && urls.length > 0) {
           setLinkPreviews(prev => {
+            if (prev.has(msg.id)) return prev;
             const next = new Map(prev);
-            next.set(msg.id, { title: new URL(urls[0]).hostname, description: urls[0], url: urls[0] });
+            try {
+              next.set(msg.id, { title: new URL(urls[0]).hostname, description: urls[0], url: urls[0] });
+            } catch {
+              next.set(msg.id, { title: urls[0], description: urls[0], url: urls[0] });
+            }
             return next;
           });
         }
       }
     });
-  }, [messages, linkPreviews]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   // Keyboard shortcuts: Ctrl+F for search
   useEffect(() => {
@@ -641,7 +647,9 @@ export function ChatArea() {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new window.Image();
+      const objectUrl = URL.createObjectURL(file);
       img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
         // Max dimension 2048px (WhatsApp-style)
         const maxDim = 2048;
         let { width, height } = img;
@@ -661,7 +669,7 @@ export function ChatArea() {
           }
         }, 'image/jpeg', quality / 100);
       };
-      img.src = URL.createObjectURL(file);
+      img.src = objectUrl;
     });
   }, []);
 
