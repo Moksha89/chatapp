@@ -113,6 +113,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const chatsRef = useRef<Chat[]>(chats);
   chatsRef.current = chats;
+  const activeChatRef = useRef<Chat | null>(activeChat);
+  activeChatRef.current = activeChat;
 
   const initializeE2EE = useCallback(async () => {
     if (!isAuthenticated || !deviceId) return;
@@ -513,8 +515,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             }
           }
       
-          // Always add message to active chat messages
-          if (activeChat?.id === chatId) {
+          // Always add message to active chat messages (use ref to avoid stale closure)
+          if (activeChatRef.current?.id === chatId) {
             setMessages((prev) => {
               const exists = prev.some((m) => m.id === decryptedMessage.id);
               if (exists) return prev;
@@ -526,7 +528,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
           // Feature #9: Play notification sound + browser push notification
           // Only notify when NOT viewing the active chat or window is hidden
-          if (message.senderId !== user?.id && (activeChat?.id !== chatId || document.hidden)) {
+          if (message.senderId !== user?.id && (activeChatRef.current?.id !== chatId || document.hidden)) {
             try {
               const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
               const oscillator = audioCtx.createOscillator();
@@ -549,7 +551,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                 ?.participants.find(p => p.userId === message.senderId)?.user?.displayName || 'New message';
               const notification = new Notification(senderName, {
                 body: decryptedMessage.content || 'Sent a media file',
-                icon: '/logo192.png',
+                icon: '/favicon.ico',
                 tag: `msg-${message.id}`,
                 silent: true,
               });
@@ -567,7 +569,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           setChats((prev) =>
             prev.map((chat) =>
               chat.id === chatId
-                ? { ...chat, lastMessage: decryptedMessage, unreadCount: activeChat?.id === chatId ? 0 : chat.unreadCount + 1 }
+                ? { ...chat, lastMessage: decryptedMessage, unreadCount: activeChatRef.current?.id === chatId ? 0 : chat.unreadCount + 1 }
                 : chat
             )
           );
@@ -648,7 +650,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         messageId: string; 
         reactions: { [emoji: string]: string[] };
       };
-      if (activeChat?.id === chatId) {
+      if (activeChatRef.current?.id === chatId) {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === messageId ? { ...msg, reactions } : msg
@@ -660,7 +662,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // Real-time poll vote updates
     const handlePollVoteUpdated = (data: unknown) => {
       const { chatId, messageId, content } = data as { chatId: string; messageId: string; content: string };
-      if (activeChat?.id === chatId) {
+      if (activeChatRef.current?.id === chatId) {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === messageId ? { ...msg, content } : msg
@@ -677,7 +679,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         content: string;
         editedAt: string;
       };
-      if (activeChat?.id === chatId) {
+      if (activeChatRef.current?.id === chatId) {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === messageId ? { ...msg, content, isEdited: true, editedAt } : msg
@@ -689,7 +691,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // Real-time delete updates from other users
     const handleMessageDeleted = (data: unknown) => {
       const { chatId, messageId } = data as { chatId: string; messageId: string };
-      if (activeChat?.id === chatId) {
+      if (activeChatRef.current?.id === chatId) {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === messageId ? { ...msg, isDeleted: true, content: 'This message was deleted' } : msg
@@ -723,6 +725,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const unsubReactionUpdated = socketService.on('message:reaction:updated', handleReactionUpdated);
     const unsubMessageEdited = socketService.on('message:edited', handleMessageEdited);
     const unsubMessageDeleted = socketService.on('message:deleted', handleMessageDeleted);
+
+    // Request notification permission on first load
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then((permission) => {
+        console.log('Notification permission:', permission);
+      });
+    }
     const unsubPresence = socketService.on('presence:update', handlePresenceUpdate);
     const unsubPollVote = socketService.on('poll:vote:updated', handlePollVoteUpdated);
 
@@ -747,7 +756,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unsubPollVote();
       unsubReconnect();
     };
-  }, [isAuthenticated, activeChat]);
+  }, [isAuthenticated]);
 
   return (
     <ChatContext.Provider
