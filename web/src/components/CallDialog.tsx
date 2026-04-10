@@ -96,6 +96,10 @@ export function CallDialog() {
       }
       remoteAudioRef.current.srcObject = remoteStream;
       remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.3;
+      // Explicitly play to handle browsers that block autoplay
+      remoteAudioRef.current.play().catch(err => {
+        console.warn('[CallDialog] Audio autoplay blocked, will retry on user gesture:', err);
+      });
     }
     return () => {
       if (remoteAudioRef.current) {

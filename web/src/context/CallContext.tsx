@@ -72,28 +72,20 @@ interface CallContextType {
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
 
-const TURN_URL = import.meta.env.VITE_TURN_URL || 'turn:openrelay.metered.ca';
-const TURN_USERNAME = import.meta.env.VITE_TURN_USERNAME || 'openrelayproject';
-const TURN_CREDENTIAL = import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject';
-
-const ICE_SERVERS = [
+// Default ICE servers — will be overridden by backend-provided servers on socket connect
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
   {
-    urls: `${TURN_URL}:80`,
-    username: TURN_USERNAME,
-    credential: TURN_CREDENTIAL,
+    urls: 'turn:208.110.87.24:3478',
+    username: 'chatapp',
+    credential: 'ChatAppTurn2024!',
   },
   {
-    urls: `${TURN_URL}:443`,
-    username: TURN_USERNAME,
-    credential: TURN_CREDENTIAL,
-  },
-  {
-    urls: `${TURN_URL}:443?transport=tcp`,
-    username: TURN_USERNAME,
-    credential: TURN_CREDENTIAL,
+    urls: 'turn:208.110.87.24:3478?transport=tcp',
+    username: 'chatapp',
+    credential: 'ChatAppTurn2024!',
   },
 ];
 
@@ -141,6 +133,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const callIdRef = useRef<string>(''); // Track current callId for ICE candidates
   // Audio element ref for speaker toggle on audio-only calls
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  // ICE candidate queue — buffer candidates until callId is assigned
+  const iceCandidateQueueRef = useRef<{ targetUserId: string; candidate: RTCIceCandidateInit }[]>([]);
+  // Dynamic ICE servers from backend (fetched on socket connect)
+  const iceServersRef = useRef<RTCIceServer[]>(DEFAULT_ICE_SERVERS);
+  // Ringback tone ref for outgoing calls
+  const ringbackRef = useRef<{ ctx: AudioContext; interval: NodeJS.Timeout } | null>(null);
   callStateRef.current = callState;
   callInfoRef.current = callInfo;
   callDurationRef.current = callDuration;
@@ -262,6 +260,62 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       qualityTimerRef.current = null;
     }
     pendingOfferRef.current = null;
+    iceCandidateQueueRef.current = [];
+    // Stop ringback tone if playing
+    stopRingback();
+  }, []);
+
+  // Ringback tone for outgoing calls (plays "ring... ring..." pattern like a phone)
+  const startRingback = useCallback(() => {
+    try {
+      stopRingback();
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const playRingback = () => {
+        // UK/US ringback: 440Hz + 480Hz for 2s, silence for 4s
+        const now = ctx.currentTime;
+        for (let i = 0; i < 2; i++) {
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(ctx.destination);
+          osc1.frequency.value = 440;
+          osc2.frequency.value = 480;
+          osc1.type = 'sine';
+          osc2.type = 'sine';
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+          osc1.start(now);
+          osc2.start(now);
+          osc1.stop(now + 2);
+          osc2.stop(now + 2);
+        }
+      };
+      playRingback();
+      const interval = setInterval(playRingback, 4000); // Ring every 4 seconds
+      ringbackRef.current = { ctx, interval };
+    } catch { /* audio not available */ }
+  }, []);
+
+  const stopRingback = useCallback(() => {
+    if (ringbackRef.current) {
+      clearInterval(ringbackRef.current.interval);
+      ringbackRef.current.ctx.close().catch(() => {});
+      ringbackRef.current = null;
+    }
+  }, []);
+
+  // Flush queued ICE candidates once callId is available
+  const flushIceCandidateQueue = useCallback((callId: string) => {
+    const queue = iceCandidateQueueRef.current;
+    if (queue.length > 0) {
+      console.log(`[Call] Flushing ${queue.length} queued ICE candidates for callId: ${callId}`);
+      queue.forEach(({ targetUserId, candidate }) => {
+        socketService.emit('call:ice-candidate', { callId, targetUserId, candidate });
+      });
+      iceCandidateQueueRef.current = [];
+    }
   }, []);
 
   const attemptReconnect = useCallback(async () => {
@@ -288,15 +342,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [callInfo, cleanup]);
 
   const createPeerConnection = useCallback((targetUserId: string, callId: string) => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
     // Store callId in ref so ICE candidates always use the latest callId
     if (callId) callIdRef.current = callId;
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        // Use callIdRef to always get the latest callId (may be set after peer connection creation)
+        const currentCallId = callIdRef.current || callId;
+        if (!currentCallId) {
+          // Queue ICE candidates until callId is available (prevents sending with empty callId)
+          console.log('[Call] Queuing ICE candidate (no callId yet)');
+          iceCandidateQueueRef.current.push({ targetUserId, candidate: event.candidate.toJSON() });
+          return;
+        }
         socketService.emit('call:ice-candidate', {
-          callId: callIdRef.current || callId,
+          callId: currentCallId,
           targetUserId,
           candidate: event.candidate.toJSON(),
         });
@@ -327,6 +387,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     peerConnectionRef.current = pc;
     return pc;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleanup, startQualityMonitor, attemptReconnect]);
 
   const getMediaStream = useCallback(async (callType: CallType) => {
@@ -419,6 +480,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      // Start ringback tone for outgoing call
+      startRingback();
+
       console.log('[Call] Emitting call:initiate to server');
       socketService.emit('call:initiate', {
         targetUserId,
@@ -432,6 +496,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           // Update both state and ref so ICE candidates use the correct callId
           callIdRef.current = res.callId;
           setCallInfo(prev => prev ? { ...prev, callId: res.callId! } : null);
+          // Flush queued ICE candidates now that we have a callId
+          flushIceCandidateQueue(res.callId);
         } else {
           console.error('[Call] Server rejected call:', res.error);
           addToHistory({
@@ -449,7 +515,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       console.error('[Call] Failed to initiate call:', error);
       cleanup();
     }
-  }, [getMediaStream, createPeerConnection, cleanup, addToHistory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getMediaStream, createPeerConnection, cleanup, addToHistory, startRingback, stopRingback, flushIceCandidateQueue]);
 
   const initiateGroupCall = useCallback(async (participantIds: string[], participantNames: string[], callType: CallType) => {
     try {
@@ -475,7 +542,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // For group calls, create separate peer connections for each participant
       // stored in groupPeerConnectionsRef Map (not the single peerConnectionRef)
       for (const pid of participantIds) {
-        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
         groupPeerConnectionsRef.current.set(pid, pc);
 
         pc.onicecandidate = (event) => {
@@ -897,6 +964,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     const handleCallAnswered = async (data: { callId: string; answer: RTCSessionDescriptionInit }) => {
       console.log('Call answered:', data);
+      // Stop ringback tone — callee has answered
+      stopRingback();
       // Clear the call timeout since the callee answered
       if (callTimeoutRef.current) {
         clearTimeout(callTimeoutRef.current);
@@ -911,6 +980,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     const handleCallRejected = (data: { callId: string; reason: string }) => {
       console.log('Call rejected:', data);
+      // Stop ringback tone — callee rejected
+      stopRingback();
       // Use ref to get current callInfo (not stale closure value)
       const info = callInfoRef.current;
       if (info) {
@@ -954,11 +1025,43 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Handle call renegotiation (ICE restart from remote peer)
+    const handleCallRenegotiate = async (data: { callId: string; fromUserId: string; offer: RTCSessionDescriptionInit }) => {
+      console.log('[Call] Renegotiation offer received:', data.callId);
+      if (peerConnectionRef.current) {
+        try {
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.offer));
+          const answer = await peerConnectionRef.current.createAnswer();
+          await peerConnectionRef.current.setLocalDescription(answer);
+          socketService.emit('call:answer', {
+            callId: data.callId,
+            targetUserId: data.fromUserId,
+            answer: peerConnectionRef.current.localDescription,
+          });
+          console.log('[Call] Renegotiation answer sent');
+        } catch (error) {
+          console.error('[Call] Renegotiation failed:', error);
+        }
+      }
+    };
+
+    // Fetch dynamic ICE servers from backend on connect
+    socketService.emit('call:get-ice-servers', {}, (response: unknown) => {
+      const res = response as { success?: boolean; iceServers?: RTCIceServer[] };
+      if (res?.success && res.iceServers && res.iceServers.length > 0) {
+        console.log('[Call] Received ICE servers from backend:', res.iceServers.length);
+        iceServersRef.current = res.iceServers;
+      } else {
+        console.log('[Call] Using default ICE servers');
+      }
+    });
+
     const unsubIncoming = socketService.on('call:incoming', handleIncomingCall as (data: unknown) => void);
     const unsubAnswered = socketService.on('call:answered', handleCallAnswered as (data: unknown) => void);
     const unsubRejected = socketService.on('call:rejected', handleCallRejected as (data: unknown) => void);
     const unsubEnded = socketService.on('call:ended', handleCallEnded as (data: unknown) => void);
     const unsubIceCandidate = socketService.on('call:ice-candidate', handleIceCandidate as (data: unknown) => void);
+    const unsubRenegotiate = socketService.on('call:renegotiate', handleCallRenegotiate as (data: unknown) => void);
 
     return () => {
       unsubIncoming();
@@ -966,6 +1069,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       unsubRejected();
       unsubEnded();
       unsubIceCandidate();
+      unsubRenegotiate();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleanup, addToHistory]);

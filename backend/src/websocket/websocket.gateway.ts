@@ -1105,7 +1105,7 @@ export class WebsocketGateway
     if (turnUrl) {
       iceServers.push(
         { urls: `turn:${turnUrl}`, username: turnUser, credential: turnCred },
-        { urls: `turns:${turnUrl}`, username: turnUser, credential: turnCred },
+        { urls: `turn:${turnUrl}?transport=tcp`, username: turnUser, credential: turnCred },
       );
     }
 
