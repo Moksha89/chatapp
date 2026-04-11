@@ -20,6 +20,10 @@ android {
 
         buildConfigField("String", "API_BASE_URL", "\"https://abhi.so\"")
         buildConfigField("String", "SOCKET_URL", "\"https://abhi.so\"")
+        buildConfigField("String", "TURN_SERVER_URL", "\"turn:208.110.87.24:3478\"")
+        buildConfigField("String", "TURN_USERNAME", System.getenv("TURN_USERNAME")?.let { "\"$it\"" } ?: "\"chatapp\"")
+        buildConfigField("String", "TURN_PASSWORD", System.getenv("TURN_PASSWORD")?.let { "\"$it\"" } ?: "\"\"")
+
     }
 
     signingConfigs {
@@ -94,6 +98,9 @@ dependencies {
 
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.biometric:biometric:1.1.0")
+
+    // WebRTC for voice/video calling
+    implementation("io.getstream:stream-webrtc-android:1.1.1")
 
         implementation("io.coil-kt:coil-compose:2.5.0")
 
