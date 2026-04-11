@@ -25,7 +25,7 @@ export class UserEntity {
   @Column({ type: 'varchar', nullable: true })
   status: string | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastSeen: Date | null;
 
   @Column({ default: true })

@@ -17,7 +17,7 @@ export class WebSessionEntity {
   @Column()
   status: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   expiresAt: Date;
 
   @CreateDateColumn()

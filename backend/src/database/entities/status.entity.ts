@@ -24,7 +24,7 @@ export class StatusEntity {
   @Column({ type: 'varchar', nullable: true })
   textColor: string | null;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   expiresAt: Date;
 
   @Column({ type: 'simple-array', nullable: true })

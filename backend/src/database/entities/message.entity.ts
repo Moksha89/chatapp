@@ -42,10 +42,10 @@ export class MessageEntity {
   @Column({ type: 'int', nullable: true })
   mediaDuration: number | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   deliveredAt: Date | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   readAt: Date | null;
 
   @Column({ default: false })
@@ -66,10 +66,10 @@ export class MessageEntity {
   @Column({ type: 'boolean', default: false })
   isDeleted: boolean;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   editedAt: Date | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 
   @Column({ type: 'boolean', default: false })
