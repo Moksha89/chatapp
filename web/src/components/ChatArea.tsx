@@ -749,6 +749,76 @@ export function ChatArea() {
     });
   }, []);
 
+  // Video compression using Canvas + MediaRecorder re-encoding
+  const compressVideo = useCallback(async (file: File): Promise<File> => {
+    // Only compress if > 10MB
+    if (file.size < 10 * 1024 * 1024) return file;
+
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      const objectUrl = URL.createObjectURL(file);
+      video.src = objectUrl;
+
+      video.onloadedmetadata = () => {
+        // Scale down to max 720p
+        let { videoWidth: w, videoHeight: h } = video;
+        const maxDim = 720;
+        if (h > maxDim) {
+          const ratio = maxDim / h;
+          w = Math.round(w * ratio);
+          h = maxDim;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+
+        const stream = canvas.captureStream(24); // 24fps
+        // Try to get audio from video
+        try {
+          const audioCtx = new AudioContext();
+          const source = audioCtx.createMediaElementSource(video);
+          const dest = audioCtx.createMediaStreamDestination();
+          source.connect(dest);
+          source.connect(audioCtx.destination);
+          dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+        } catch { /* no audio track or not supported */ }
+
+        const recorder = new MediaRecorder(stream, {
+          mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm',
+          videoBitsPerSecond: 1_500_000, // 1.5 Mbps
+        });
+        const chunks: Blob[] = [];
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          URL.revokeObjectURL(objectUrl);
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '.webm'), { type: 'video/webm' });
+          resolve(compressed.size < file.size ? compressed : file);
+        };
+
+        video.onended = () => { recorder.stop(); };
+        recorder.start();
+        video.play();
+
+        const drawFrame = () => {
+          if (video.ended || video.paused) return;
+          ctx?.drawImage(video, 0, 0, w, h);
+          requestAnimationFrame(drawFrame);
+        };
+        drawFrame();
+
+        // Safety timeout: stop after 5 minutes max
+        setTimeout(() => { if (recorder.state === 'recording') { video.pause(); recorder.stop(); } }, 5 * 60 * 1000);
+      };
+
+      video.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    });
+  }, []);
+
   // Enhanced upload with compression option
   const handleImageUpload = useCallback(async (file: File) => {
     const quality = imageQuality;
@@ -759,6 +829,12 @@ export function ChatArea() {
       uploadAndSendMedia(file, 'image');
     }
   }, [imageQuality, compressImage, uploadAndSendMedia]);
+
+  // Video upload with compression
+  const handleVideoUpload = useCallback(async (file: File) => {
+    const compressed = await compressVideo(file);
+    uploadAndSendMedia(compressed, 'video');
+  }, [compressVideo, uploadAndSendMedia]);
 
   // Camera capture handler
   const handleCameraCapture = useCallback(async (mode: 'photo' | 'video') => {
