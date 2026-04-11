@@ -85,15 +85,29 @@ export function renderPollContent(message: { id?: string; content?: string; chat
 export function renderLocationContent(message: { content?: string }) {
   try {
     const loc = JSON.parse(message.content || '{}');
+    const lat = loc.latitude;
+    const lng = loc.longitude;
+    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.005},${lat - 0.003},${lng + 0.005},${lat + 0.003}&layer=mapnik&marker=${lat},${lng}`;
+    const linkUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
     return (
-      <div className="min-w-[200px]">
-        <div className="bg-[#E8F0FE] rounded-xl p-3 flex items-center gap-2">
-          <MapPin className="h-6 w-6 text-red-500" />
-          <div>
-            <p className="text-sm font-medium">{loc.name || 'Location'}</p>
-            <p className="text-xs text-gray-500">{loc.latitude?.toFixed(4)}, {loc.longitude?.toFixed(4)}</p>
+      <div className="min-w-[240px] max-w-[300px]">
+        <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="block">
+          <div className="rounded-t-xl overflow-hidden h-[150px] bg-gray-200 relative">
+            <iframe
+              src={mapUrl}
+              className="w-full h-full border-0 pointer-events-none"
+              title="Location map"
+              loading="lazy"
+            />
           </div>
-        </div>
+          <div className="bg-[#E8F0FE] rounded-b-xl p-3 flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{loc.name || 'Shared Location'}</p>
+              <p className="text-xs text-gray-500">{lat?.toFixed(5)}, {lng?.toFixed(5)}</p>
+            </div>
+          </div>
+        </a>
       </div>
     );
   } catch {
