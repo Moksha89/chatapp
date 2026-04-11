@@ -91,6 +91,7 @@ interface ChatContextType {
   setSearchQuery: (query: string) => void;
   setChatFilter: (filter: string) => void;
   getFilteredChats: () => Chat[];
+  addMessage: (message: Message) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -460,6 +461,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [chats, chatFilter, searchQuery]);
 
   // Delete Message
+  const addMessage = useCallback((message: Message) => {
+    setMessages((prev) => {
+      const exists = prev.some((m) => m.id === message.id);
+      if (exists) return prev;
+      return [...prev, message];
+    });
+    // Also update sidebar lastMessage
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === message.chatId
+          ? { ...chat, lastMessage: message }
+          : chat
+      )
+    );
+  }, []);
+
   const deleteMessage = useCallback(async (messageId: string, deleteForEveryone: boolean) => {
     if (!activeChat) return;
     try {
@@ -791,6 +808,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         setSearchQuery,
         setChatFilter,
         getFilteredChats,
+        addMessage,
       }}
     >
       {children}

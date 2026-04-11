@@ -5,13 +5,17 @@ import { CreateChatDto } from './dto/create-chat.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserData } from '../common/decorators';
+import { WebsocketService } from '../websocket/websocket.service';
 
 @ApiTags('Chats')
 @Controller('chats')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ChatsController {
-  constructor(private readonly chatsService: ChatsService) {}
+  constructor(
+    private readonly chatsService: ChatsService,
+    private readonly websocketService: WebsocketService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List chats' })
@@ -142,7 +146,19 @@ export class ChatsController {
     @Param('id') id: string,
     @Body() sendMessageDto: SendMessageDto,
   ) {
-    return this.chatsService.sendMessage(id, user.id, user.deviceId, sendMessageDto);
+    const message = await this.chatsService.sendMessage(id, user.id, user.deviceId, sendMessageDto);
+
+    // Emit socket events so other participants see the message in real-time
+    // (especially important for media messages sent via HTTP instead of WebSocket)
+    const participants = await this.chatsService.getOtherParticipants(id, user.id);
+    for (const participantId of participants) {
+      this.websocketService.emitToUserOrQueue(participantId, 'message:new', {
+        message,
+        chatId: id,
+      });
+    }
+
+    return message;
   }
 
   @Post(':id/messages/read')

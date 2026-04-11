@@ -78,7 +78,7 @@ type RecordingState = 'idle' | 'recording';
 
 export function ChatArea() {
   const { user } = useAuth();
-  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, onlineUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats, refreshChats, loadMoreMessages } = useChat();
+  const { activeChat, messages, isLoadingMessages, sendMessage, typingUsers, onlineUsers, selectChat, addReaction, removeReaction, editMessage, deleteMessage, toggleStar, forwardMessage, replyingTo, setReplyingTo, chats, refreshChats, loadMoreMessages, addMessage } = useChat();
   const { initiateCall, callState } = useCall();
   const { showError } = useToast();
   const [inputValue, setInputValue] = useState('');
@@ -463,7 +463,7 @@ export function ChatArea() {
       
       setUploadProgress(95);
 
-      await api.sendMediaMessage(activeChat.id, {
+      const sentMessage = await api.sendMediaMessage(activeChat.id, {
         content: file.name,
         type,
         mediaUrl: result.url,
@@ -472,6 +472,11 @@ export function ChatArea() {
         mediaSize: result.size,
         tempId: `temp-${Date.now()}`,
       });
+
+      // Add the sent media message to the chat so it appears immediately
+      if (sentMessage) {
+        addMessage(sentMessage);
+      }
 
       setUploadProgress(100);
       setTimeout(() => {
@@ -484,7 +489,7 @@ export function ChatArea() {
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [activeChat, showError]);
+  }, [activeChat, showError, addMessage]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>, type: MediaMessage['type']) => {
     const files = e.target.files;
@@ -1077,6 +1082,16 @@ export function ChatArea() {
         );
       }
       default:
+        // Fallback: if message has mediaUrl but unrecognized type, show as downloadable link
+        if (mediaUrl) {
+          return (
+            <a href={mediaUrl} download={message.mediaName} className="flex items-center gap-2 p-2 bg-white/50 rounded-lg hover:bg-white/70 transition-colors">
+              <FileText className="h-6 w-6 text-gray-500" />
+              <span className="text-sm truncate">{message.mediaName || message.content || 'Download'}</span>
+              <Download className="h-4 w-4 text-gray-400" />
+            </a>
+          );
+        }
         return <p className="text-sm break-words">{message.content}</p>;
     }
   };
