@@ -23,7 +23,7 @@ export class ContactEntity {
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastContactDate: Date | null;
 
   @CreateDateColumn()

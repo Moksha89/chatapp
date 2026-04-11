@@ -14,10 +14,10 @@ export class MessageStatusEntity {
   @Column({ type: 'varchar', default: 'sent' })
   status: string; // 'sent' | 'delivered' | 'seen'
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   deliveredAt: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   seenAt: Date | null;
 
   @CreateDateColumn()

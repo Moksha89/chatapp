@@ -21,7 +21,7 @@ export class DeviceEntity {
   @Column({ default: false })
   isPrimary: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastSeen: Date | null;
 
   @Column({ type: 'text', nullable: true })

@@ -16,10 +16,10 @@ export class ChatParticipantEntity {
   @Column()
   role: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime' })
   joinedAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastReadAt: Date | null;
 
   @Column({ type: 'boolean', default: false })
@@ -28,7 +28,7 @@ export class ChatParticipantEntity {
   @Column({ type: 'boolean', default: false })
   isMuted: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   mutedUntil: Date | null;
 
   @Column({ type: 'boolean', default: false })

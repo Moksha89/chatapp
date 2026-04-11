@@ -15,10 +15,10 @@ export class CallParticipantEntity {
   @Column({ type: 'varchar', default: 'invited' })
   status: string; // 'invited' | 'joined' | 'left' | 'declined' | 'missed'
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   joinedAt: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   leftAt: Date | null;
 
   @Column({ type: 'boolean', default: false })

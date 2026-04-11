@@ -9,6 +9,20 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      '/auth': { target: 'http://localhost:3000', changeOrigin: true },
+      '/users': { target: 'http://localhost:3000', changeOrigin: true },
+      '/chats': { target: 'http://localhost:3000', changeOrigin: true },
+      '/media': { target: 'http://localhost:3000', changeOrigin: true },
+      '/status': { target: 'http://localhost:3000', changeOrigin: true },
+      '/contacts': { target: 'http://localhost:3000', changeOrigin: true },
+      '/calls': { target: 'http://localhost:3000', changeOrigin: true },
+      '/version': { target: 'http://localhost:3000', changeOrigin: true },
+      '/admin': { target: 'http://localhost:3000', changeOrigin: true },
+      '/socket.io': { target: 'http://localhost:3000', changeOrigin: true, ws: true },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 800,
     target: 'es2020',

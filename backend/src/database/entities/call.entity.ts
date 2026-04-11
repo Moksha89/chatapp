@@ -24,10 +24,10 @@ export class CallEntity {
   @Column({ type: 'varchar', default: 'ringing' })
   status: string; // 'ringing' | 'active' | 'ended' | 'missed' | 'declined'
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   startedAt: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   endedAt: Date | null;
 
   @Column({ type: 'int', nullable: true })

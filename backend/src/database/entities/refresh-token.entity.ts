@@ -14,7 +14,7 @@ export class RefreshTokenEntity {
   @Column()
   tokenHash: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime' })
   expiresAt: Date;
 
   @CreateDateColumn()

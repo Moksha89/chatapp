@@ -18,7 +18,7 @@ export class FcmTokenEntity {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastUsedAt: Date | null;
 
   @ManyToOne(() => UserEntity)
