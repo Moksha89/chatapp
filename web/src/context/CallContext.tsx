@@ -379,9 +379,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           setCallDuration(prev => prev + 1);
         }, 1000);
       } else if (pc.connectionState === 'disconnected') {
-        attemptReconnect();
+        // Only attempt reconnect if the call was previously connected.
+        // During 'calling' state (outgoing, not yet answered), let the 45s timeout handle it.
+        if (callStateRef.current === 'connected') {
+          attemptReconnect();
+        }
       } else if (pc.connectionState === 'failed') {
-        attemptReconnect();
+        // Only attempt reconnect if the call was previously connected.
+        // During 'calling' state, ICE may fail because the peer is offline — let timeout handle it.
+        if (callStateRef.current === 'connected') {
+          attemptReconnect();
+        }
       }
     };
 
@@ -461,12 +469,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             status: 'no-answer',
             duration: 0,
           });
-          if (callInfoRef.current?.callId) {
-            socketService.emit('call:end', {
-              callId: callInfoRef.current.callId,
-              targetUserId,
-            });
-          }
+            const endCallId = callIdRef.current || callInfoRef.current?.callId;
+            if (endCallId) {
+              socketService.emit('call:end', {
+                callId: endCallId,
+                targetUserId,
+              });
+            }
           cleanup();
         }
       }, CALL_TIMEOUT_MS);

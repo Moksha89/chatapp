@@ -313,8 +313,8 @@ export class CallsService {
     chatId: string,
     senderId: string,
     callMessage: string,
-  ): Promise<void> {
-    await this.databaseService.createMessage({
+  ) {
+    return await this.databaseService.createMessage({
       chatId,
       senderId,
       senderDeviceId: null,

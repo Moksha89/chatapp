@@ -487,16 +487,21 @@ export class WebsocketGateway
 
       // Create call message in chat
       if (result.chatId) {
-        await this.callsService.createCallMessage(result.id, result.chatId, result.initiatorId, result.callMessage);
+        const savedMsg = await this.callsService.createCallMessage(result.id, result.chatId, result.initiatorId, result.callMessage);
 
-        // Notify chat participants about the call message
+        // Notify ALL chat participants about the call message (including the caller)
         const chatParticipants = await this.chatsService.getOtherParticipants(result.chatId, client.userId);
         for (const pid of chatParticipants) {
           this.websocketService.emitToUser(pid, 'message:new', {
             chatId: result.chatId,
-            message: { type: 'call', content: result.callMessage },
+            message: savedMsg || { type: 'call', content: result.callMessage },
           });
         }
+        // Also notify the caller so the call message appears in their chat immediately
+        this.websocketService.emitToUser(client.userId, 'message:new', {
+          chatId: result.chatId,
+          message: savedMsg || { type: 'call', content: result.callMessage },
+        });
       }
 
       this.logger.log(`Call ended: ${data.callId} (duration: ${result.duration}s)`);
