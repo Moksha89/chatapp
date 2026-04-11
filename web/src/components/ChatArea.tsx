@@ -1055,44 +1055,147 @@ export function ChatArea() {
         );
       case 'file': {
         const ext = (message.mediaName || '').split('.').pop()?.toLowerCase() || '';
-        const getFileIcon = () => {
-          if (['pdf'].includes(ext)) return <FileText className="h-8 w-8 text-red-500" />;
-          if (['doc','docx'].includes(ext)) return <FileText className="h-8 w-8 text-blue-600" />;
-          if (['xls','xlsx','csv'].includes(ext)) return <FileText className="h-8 w-8 text-green-600" />;
-          if (['ppt','pptx'].includes(ext)) return <FileText className="h-8 w-8 text-orange-500" />;
-          if (['zip','rar','7z','tar','gz'].includes(ext)) return <FileDown className="h-8 w-8 text-yellow-600" />;
-          return <FileText className="h-8 w-8 text-gray-500" />;
+        const mimeType = message.mediaType || '';
+        const isPreviewable = ['pdf'].includes(ext) || mimeType === 'application/pdf';
+        const isImageFile = mimeType.startsWith('image/') || ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
+        const isVideoFile = mimeType.startsWith('video/') || ['mp4','webm','mov','avi','mkv'].includes(ext);
+        const isAudioFile = mimeType.startsWith('audio/') || ['mp3','wav','ogg','aac','m4a','flac'].includes(ext);
+
+        // If the file is actually an image/video/audio, render it with preview
+        if (isImageFile) {
+          return (
+            <div className="max-w-xs relative group">
+              <img src={mediaUrl} alt={message.mediaName || 'Image'} className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setShowMediaLightbox(mediaUrl)} loading="lazy" />
+              <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <a href={mediaUrl} target="_blank" rel="noopener noreferrer" className="bg-black/50 text-white rounded-full p-1.5 hover:bg-black/70" onClick={e => e.stopPropagation()} title="Preview">
+                  <Eye className="h-3 w-3" />
+                </a>
+                <a href={mediaUrl} download={message.mediaName} className="bg-black/50 text-white rounded-full p-1.5 hover:bg-black/70" onClick={e => e.stopPropagation()} title="Download">
+                  <Download className="h-3 w-3" />
+                </a>
+              </div>
+              {message.mediaSize && <span className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded-full">{formatFileSize(message.mediaSize)}</span>}
+            </div>
+          );
+        }
+        if (isVideoFile) {
+          return (
+            <div className="max-w-xs relative group">
+              <video src={mediaUrl} controls preload="metadata" className="rounded-lg max-w-full" />
+              {message.mediaSize && <div className="absolute top-2 left-2"><span className="bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">{formatFileSize(message.mediaSize)}</span></div>}
+            </div>
+          );
+        }
+        if (isAudioFile) {
+          return (
+            <div className="min-w-[220px]">
+              <audio src={mediaUrl} controls preload="metadata" className="w-full" />
+              <p className={`text-[10px] mt-1 truncate ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{message.mediaName} · {formatFileSize(message.mediaSize || 0)}</p>
+            </div>
+          );
+        }
+
+        // WhatsApp-style document card with preview + download
+        const getFileIconColor = () => {
+          if (['pdf'].includes(ext)) return { icon: <FileText className="h-10 w-10 text-white" />, bg: 'bg-red-500' };
+          if (['doc','docx'].includes(ext)) return { icon: <FileText className="h-10 w-10 text-white" />, bg: 'bg-blue-600' };
+          if (['xls','xlsx','csv'].includes(ext)) return { icon: <FileText className="h-10 w-10 text-white" />, bg: 'bg-green-600' };
+          if (['ppt','pptx'].includes(ext)) return { icon: <FileText className="h-10 w-10 text-white" />, bg: 'bg-orange-500' };
+          if (['zip','rar','7z','tar','gz'].includes(ext)) return { icon: <FileDown className="h-10 w-10 text-white" />, bg: 'bg-yellow-600' };
+          if (['txt','md','json','xml','html','css','js','ts'].includes(ext)) return { icon: <FileText className="h-10 w-10 text-white" />, bg: 'bg-gray-600' };
+          return { icon: <FileText className="h-10 w-10 text-white" />, bg: 'bg-gray-500' };
         };
+        const { icon: fileIcon, bg: iconBg } = getFileIconColor();
         return (
-          <a 
-            href={mediaUrl} 
-            download={message.mediaName}
-            className="flex items-center gap-3 p-3 bg-white/50 rounded-xl hover:bg-white/70 transition-colors min-w-[200px]"
-          >
-            {getFileIcon()}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{message.mediaName}</p>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase font-bold text-gray-400">{ext}</span>
-                <span className="text-[10px] text-gray-400">{formatFileSize(message.mediaSize || 0)}</span>
+          <div className={`min-w-[260px] max-w-xs rounded-xl overflow-hidden ${isOwn ? 'bg-white/10' : 'bg-gray-50 border border-gray-100'}`}>
+            {/* Document preview header */}
+            <div className={`flex items-center gap-3 p-3 ${isOwn ? 'bg-white/10' : 'bg-white'}`}>
+              <div className={`${iconBg} rounded-lg p-2 flex-shrink-0`}>
+                {fileIcon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium truncate ${isOwn ? 'text-white' : 'text-gray-800'}`}>{message.mediaName || 'Document'}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${isOwn ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-500'}`}>{ext || 'FILE'}</span>
+                  <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{formatFileSize(message.mediaSize || 0)}</span>
+                </div>
               </div>
             </div>
-            <Download className="h-5 w-5 text-gray-400 hover:text-[#246BFD] transition-colors" />
-          </a>
+            {/* Action buttons: Preview + Download */}
+            <div className={`flex border-t ${isOwn ? 'border-white/10' : 'border-gray-100'}`}>
+              <a
+                href={mediaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${isOwn ? 'text-white hover:bg-white/10' : 'text-[#246BFD] hover:bg-[#246BFD]/5'}`}
+                onClick={e => e.stopPropagation()}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Preview
+              </a>
+              <div className={`w-px ${isOwn ? 'bg-white/10' : 'bg-gray-100'}`} />
+              <a
+                href={mediaUrl}
+                download={message.mediaName}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${isOwn ? 'text-white hover:bg-white/10' : 'text-[#246BFD] hover:bg-[#246BFD]/5'}`}
+                onClick={e => e.stopPropagation()}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </a>
+            </div>
+          </div>
         );
       }
-      default:
-        // Fallback: if message has mediaUrl but unrecognized type, show as downloadable link
+      default: {
+        // Fallback: if message has mediaUrl, detect type from MIME/extension and render preview
         if (mediaUrl) {
+          const fallbackMime = message.mediaType || '';
+          const fallbackExt = (message.mediaName || '').split('.').pop()?.toLowerCase() || '';
+          // Image fallback
+          if (fallbackMime.startsWith('image/') || ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(fallbackExt)) {
+            return (
+              <div className="max-w-xs relative group">
+                <img src={mediaUrl} alt={message.mediaName || 'Image'} className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setShowMediaLightbox(mediaUrl)} loading="lazy" />
+                <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <a href={mediaUrl} target="_blank" rel="noopener noreferrer" className="bg-black/50 text-white rounded-full p-1.5 hover:bg-black/70" onClick={e => e.stopPropagation()}><Eye className="h-3 w-3" /></a>
+                  <a href={mediaUrl} download={message.mediaName} className="bg-black/50 text-white rounded-full p-1.5 hover:bg-black/70" onClick={e => e.stopPropagation()}><Download className="h-3 w-3" /></a>
+                </div>
+              </div>
+            );
+          }
+          // Video fallback
+          if (fallbackMime.startsWith('video/') || ['mp4','webm','mov','avi'].includes(fallbackExt)) {
+            return (
+              <div className="max-w-xs"><video src={mediaUrl} controls preload="metadata" className="rounded-lg max-w-full" /></div>
+            );
+          }
+          // Audio fallback
+          if (fallbackMime.startsWith('audio/') || ['mp3','wav','ogg','aac'].includes(fallbackExt)) {
+            return (
+              <div className="min-w-[220px]"><audio src={mediaUrl} controls preload="metadata" className="w-full" /></div>
+            );
+          }
+          // Generic file fallback — WhatsApp-style card with preview + download
           return (
-            <a href={mediaUrl} download={message.mediaName} className="flex items-center gap-2 p-2 bg-white/50 rounded-lg hover:bg-white/70 transition-colors">
-              <FileText className="h-6 w-6 text-gray-500" />
-              <span className="text-sm truncate">{message.mediaName || message.content || 'Download'}</span>
-              <Download className="h-4 w-4 text-gray-400" />
-            </a>
+            <div className={`min-w-[240px] max-w-xs rounded-xl overflow-hidden ${isOwn ? 'bg-white/10' : 'bg-gray-50 border border-gray-100'}`}>
+              <div className={`flex items-center gap-3 p-3 ${isOwn ? 'bg-white/10' : 'bg-white'}`}>
+                <div className="bg-gray-500 rounded-lg p-2 flex-shrink-0"><FileText className="h-10 w-10 text-white" /></div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${isOwn ? 'text-white' : 'text-gray-800'}`}>{message.mediaName || message.content || 'File'}</p>
+                  <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{formatFileSize(message.mediaSize || 0)}</span>
+                </div>
+              </div>
+              <div className={`flex border-t ${isOwn ? 'border-white/10' : 'border-gray-100'}`}>
+                <a href={mediaUrl} target="_blank" rel="noopener noreferrer" className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium ${isOwn ? 'text-white hover:bg-white/10' : 'text-[#246BFD] hover:bg-[#246BFD]/5'}`} onClick={e => e.stopPropagation()}><Eye className="h-3.5 w-3.5" />Preview</a>
+                <div className={`w-px ${isOwn ? 'bg-white/10' : 'bg-gray-100'}`} />
+                <a href={mediaUrl} download={message.mediaName} className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium ${isOwn ? 'text-white hover:bg-white/10' : 'text-[#246BFD] hover:bg-[#246BFD]/5'}`} onClick={e => e.stopPropagation()}><Download className="h-3.5 w-3.5" />Download</a>
+              </div>
+            </div>
           );
         }
         return <p className="text-sm break-words">{message.content}</p>;
+      }
     }
   };
 
