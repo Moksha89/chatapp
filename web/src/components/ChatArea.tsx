@@ -1056,7 +1056,6 @@ export function ChatArea() {
       case 'file': {
         const ext = (message.mediaName || '').split('.').pop()?.toLowerCase() || '';
         const mimeType = message.mediaType || '';
-        const isPreviewable = ['pdf'].includes(ext) || mimeType === 'application/pdf';
         const isImageFile = mimeType.startsWith('image/') || ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
         const isVideoFile = mimeType.startsWith('video/') || ['mp4','webm','mov','avi','mkv'].includes(ext);
         const isAudioFile = mimeType.startsWith('audio/') || ['mp3','wav','ogg','aac','m4a','flac'].includes(ext);
