@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OtpProvider, OtpSendResult, OtpVerifyResult } from './otp-provider.interface';
+import { RedisService } from '../redis/redis.service';
 
 interface TwilioClient {
   messages: { create: (params: { body: string; from: string; to: string }) => Promise<{ sid: string }> };
@@ -13,7 +14,10 @@ export class TwilioOtpProvider implements OtpProvider {
   private twilioClient: TwilioClient | null = null;
   private initPromise: Promise<void>;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly redisService?: RedisService,
+  ) {
     this.initPromise = this.initializeTwilio();
   }
 
@@ -45,15 +49,104 @@ export class TwilioOtpProvider implements OtpProvider {
     }
   }
 
+  private async storeOtp(phone: string, otp: string, ttlSeconds: number): Promise<void> {
+    const data = JSON.stringify({ otp, usageCount: 0 });
+    if (this.redisService?.connected) {
+      try {
+        const client = this.redisService.getClient();
+        if (client) {
+          await client.setex(`otp:${phone}`, ttlSeconds, data);
+          this.logger.log(`OTP stored in Redis for ${phone}`);
+          return;
+        }
+      } catch (err) {
+        this.logger.warn(`Redis OTP store failed, falling back to memory: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+    // Fallback to in-memory (works for single instance)
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+    this.otpStore.set(phone, { otp, expiresAt, usageCount: 0 });
+    this.logger.log(`OTP stored in memory for ${phone}`);
+  }
+
+  private async getStoredOtp(phone: string): Promise<{ otp: string; usageCount: number } | null> {
+    if (this.redisService?.connected) {
+      try {
+        const client = this.redisService.getClient();
+        if (client) {
+          const data = await client.get(`otp:${phone}`);
+          if (data) {
+            return JSON.parse(data) as { otp: string; usageCount: number };
+          }
+          return null;
+        }
+      } catch (err) {
+        this.logger.warn(`Redis OTP get failed, falling back to memory: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+    // Fallback to in-memory
+    const stored = this.otpStore.get(phone);
+    if (!stored) return null;
+    if (new Date() > stored.expiresAt) {
+      this.otpStore.delete(phone);
+      return null;
+    }
+    return { otp: stored.otp, usageCount: stored.usageCount };
+  }
+
+  private async updateOtpUsage(phone: string, usageCount: number): Promise<void> {
+    if (this.redisService?.connected) {
+      try {
+        const client = this.redisService.getClient();
+        if (client) {
+          const ttl = await client.ttl(`otp:${phone}`);
+          if (ttl > 0) {
+            const data = JSON.stringify({ otp: '', usageCount }); // otp not needed after verify
+            // Re-read to preserve otp value
+            const existing = await client.get(`otp:${phone}`);
+            if (existing) {
+              const parsed = JSON.parse(existing) as { otp: string; usageCount: number };
+              parsed.usageCount = usageCount;
+              await client.setex(`otp:${phone}`, ttl, JSON.stringify(parsed));
+            }
+          }
+          return;
+        }
+      } catch (err) {
+        this.logger.warn(`Redis OTP update failed: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+    // Fallback to in-memory
+    const stored = this.otpStore.get(phone);
+    if (stored) {
+      stored.usageCount = usageCount;
+    }
+  }
+
+  private async deleteStoredOtp(phone: string): Promise<void> {
+    if (this.redisService?.connected) {
+      try {
+        const client = this.redisService.getClient();
+        if (client) {
+          await client.del(`otp:${phone}`);
+          return;
+        }
+      } catch (err) {
+        this.logger.warn(`Redis OTP delete failed: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+    this.otpStore.delete(phone);
+  }
+
   async sendOtp(phoneNumber: string): Promise<OtpSendResult> {
     await this.initPromise;
     
     const normalizedPhone = this.normalizePhoneNumber(phoneNumber);
     const devOtp = this.configService.get<string>('DEV_OTP');
     const otp = devOtp || Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    const ttlSeconds = 5 * 60; // 5 minutes
 
-    this.otpStore.set(normalizedPhone, { otp, expiresAt, usageCount: 0 });
+    await this.storeOtp(normalizedPhone, otp, ttlSeconds);
     this.logger.log(`OTP stored for ${normalizedPhone}`);
 
     if (!this.twilioClient) {
@@ -98,29 +191,26 @@ export class TwilioOtpProvider implements OtpProvider {
   async verifyOtp(phoneNumber: string, otp: string): Promise<OtpVerifyResult> {
     const normalizedPhone = this.normalizePhoneNumber(phoneNumber);
     this.logger.log(`Verifying OTP for ${normalizedPhone}`);
-    const stored = this.otpStore.get(normalizedPhone);
+    const stored = await this.getStoredOtp(normalizedPhone);
 
     if (!stored) {
       this.logger.warn(`No OTP found for ${normalizedPhone}`);
       return { success: false, message: 'OTP not found or expired' };
     }
 
-    if (new Date() > stored.expiresAt) {
-      this.otpStore.delete(normalizedPhone);
-      return { success: false, message: 'OTP expired' };
-    }
-
     if (stored.otp !== otp) {
-      this.logger.warn(`OTP mismatch for ${normalizedPhone}: expected ${stored.otp}, got ${otp}`);
+      this.logger.warn(`OTP mismatch for ${normalizedPhone}`);
       return { success: false, message: 'Invalid OTP' };
     }
 
     // Allow up to 2 uses (login attempt + register), then invalidate
-    stored.usageCount++;
-    if (stored.usageCount >= 2) {
-      this.otpStore.delete(normalizedPhone);
+    const newUsageCount = stored.usageCount + 1;
+    if (newUsageCount >= 2) {
+      await this.deleteStoredOtp(normalizedPhone);
+    } else {
+      await this.updateOtpUsage(normalizedPhone, newUsageCount);
     }
-    this.logger.log(`OTP verified successfully for ${normalizedPhone} (usage ${stored.usageCount || 'invalidated'})`);
+    this.logger.log(`OTP verified successfully for ${normalizedPhone} (usage ${newUsageCount})`);
     return { success: true, message: 'OTP verified successfully' };
   }
 }
