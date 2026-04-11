@@ -9,7 +9,6 @@ import {
   Sun,
   Contrast,
   Droplets,
-  Crop,
   Type,
   X,
   Send,
