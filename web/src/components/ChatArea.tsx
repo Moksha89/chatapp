@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { MessageContextMenu, MessageReactions } from './MessageContextMenu';
 import { ChatDialogs } from './chat';
+import { MediaEditor } from './MediaEditor';
 import {
   renderPollContent,
   renderLocationContent,
@@ -158,6 +159,9 @@ export function ChatArea() {
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   // Seen-by dialog for group messages
   const [showSeenByDialog, setShowSeenByDialog] = useState<string | null>(null);
+  // Media editor
+  const [mediaEditorFile, setMediaEditorFile] = useState<File | null>(null);
+  const [mediaEditorType, setMediaEditorType] = useState<MediaMessage['type']>('image');
 
   // Fix #2: Persist mute notifications to localStorage
   useEffect(() => {
@@ -485,10 +489,17 @@ export function ChatArea() {
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>, type: MediaMessage['type']) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      // Support multiple image sharing (batch select)
-      Array.from(files).forEach(file => {
-        uploadAndSendMedia(file, type);
-      });
+      const file = files[0];
+      // Open media editor for images and videos
+      if ((type === 'image' || type === 'video') && (file.type.startsWith('image/') || file.type.startsWith('video/'))) {
+        setMediaEditorFile(file);
+        setMediaEditorType(type);
+      } else {
+        // Direct upload for other file types or batch
+        Array.from(files).forEach(f => {
+          uploadAndSendMedia(f, type);
+        });
+      }
     }
     e.target.value = '';
     setShowAttachMenu(false);
@@ -2223,6 +2234,25 @@ export function ChatArea() {
         availableUsersForAdd={availableUsersForAdd}
         setAvailableUsersForAdd={setAvailableUsersForAdd}
       />
+
+      {/* Media Editor Dialog */}
+      {mediaEditorFile && (
+        <MediaEditor
+          file={mediaEditorFile}
+          open={!!mediaEditorFile}
+          onClose={() => setMediaEditorFile(null)}
+          onSend={async (editedFile) => {
+            setMediaEditorFile(null);
+            if (mediaEditorType === 'image') {
+              await handleImageUpload(editedFile);
+            } else if (mediaEditorType === 'video') {
+              await handleVideoUpload(editedFile);
+            } else {
+              await uploadAndSendMedia(editedFile, mediaEditorType);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
