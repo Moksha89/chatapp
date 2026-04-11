@@ -61,6 +61,42 @@ export function CallDialog() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [showControls, setShowControls] = useState(true);
+  const ringtoneRef = useRef<{ ctx: AudioContext; interval: ReturnType<typeof setInterval> } | null>(null);
+
+  // Ringtone audio for incoming calls (Web)
+  useEffect(() => {
+    if (callState === 'incoming') {
+      try {
+        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        const playRing = () => {
+          const now = ctx.currentTime;
+          // Classic phone ring: 440Hz + 480Hz, 1s on, 2s off
+          for (const freq of [440, 480]) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+            osc.start(now);
+            osc.stop(now + 1);
+          }
+        };
+        playRing();
+        const interval = setInterval(playRing, 3000);
+        ringtoneRef.current = { ctx, interval };
+      } catch { /* audio not available */ }
+    }
+    return () => {
+      if (ringtoneRef.current) {
+        clearInterval(ringtoneRef.current.interval);
+        ringtoneRef.current.ctx.close().catch(() => {});
+        ringtoneRef.current = null;
+      }
+    };
+  }, [callState]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {

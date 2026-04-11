@@ -3,9 +3,17 @@ package com.chatapp.presentation.calling
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
+import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -85,6 +93,87 @@ fun CallScreen(
     var hasNetwork by remember { mutableStateOf(isNetworkAvailable(context)) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
+
+    // Wakelock: Keep screen on during active calls
+    DisposableEffect(Unit) {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        @Suppress("DEPRECATION")
+        val wakeLock = powerManager?.newWakeLock(
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "chatapp:call_wakelock"
+        )
+        wakeLock?.acquire(60 * 60 * 1000L) // 1 hour max
+        onDispose {
+            if (wakeLock?.isHeld == true) {
+                wakeLock.release()
+            }
+        }
+    }
+
+    // Ringtone: Play ringtone for incoming calls, ringback tone for outgoing calls
+    DisposableEffect(callStateEnum) {
+        var mediaPlayer: MediaPlayer? = null
+        var vibrator: Vibrator? = null
+
+        if (callStateEnum == CallState.INCOMING) {
+            try {
+                val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                mediaPlayer = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            .build()
+                    )
+                    setDataSource(context, ringtoneUri)
+                    isLooping = true
+                    prepare()
+                    start()
+                }
+                vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                    vibratorManager?.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                }
+                vibrator?.let { vib ->
+                    val pattern = longArrayOf(0, 1000, 1000)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vib.vibrate(pattern, 0)
+                    }
+                }
+            } catch (_: Exception) { }
+        } else if (callStateEnum == CallState.CALLING) {
+            try {
+                val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                mediaPlayer = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING)
+                            .build()
+                    )
+                    setDataSource(context, ringtoneUri)
+                    isLooping = true
+                    setVolume(0.3f, 0.3f)
+                    prepare()
+                    start()
+                }
+            } catch (_: Exception) { }
+        }
+
+        onDispose {
+            mediaPlayer?.let {
+                if (it.isPlaying) it.stop()
+                it.release()
+            }
+            vibrator?.cancel()
+        }
+    }
 
     // Initiate the call via ViewModel when this screen opens (outgoing call)
     LaunchedEffect(Unit) {
@@ -201,6 +290,23 @@ fun CallScreen(
     // L6: Use theme colors
     val primaryColor = MaterialTheme.colorScheme.primary
     val errorColor = MaterialTheme.colorScheme.error
+
+    // Full-screen incoming call UI (Fiberchat-inspired pickup screen)
+    if (callStateEnum == CallState.INCOMING) {
+        IncomingCallScreen(
+            callerName = callerName,
+            callType = callType,
+            pulseScale = pulseScale,
+            onAccept = {
+                callViewModel.answerCall()
+                onAcceptCall()
+            },
+            onReject = {
+                callViewModel.rejectCall()
+            }
+        )
+        return
+    }
 
     Box(
         modifier = Modifier
@@ -426,39 +532,13 @@ fun CallScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Accept/Reject buttons for incoming calls
-                if (callStateEnum == CallState.INCOMING) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        FloatingActionButton(
-                            onClick = { callViewModel.rejectCall() },
-                            containerColor = errorColor,
-                            modifier = Modifier.size(64.dp)
-                        ) {
-                            Icon(Icons.Default.CallEnd, contentDescription = "Reject", tint = Color.White, modifier = Modifier.size(32.dp))
-                        }
-
-                        FloatingActionButton(
-                            onClick = {
-                                callViewModel.answerCall()
-                                onAcceptCall()
-                            },
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(64.dp)
-                        ) {
-                            Icon(Icons.Default.Call, contentDescription = "Accept", tint = Color.White, modifier = Modifier.size(32.dp))
-                        }
-                    }
-                } else {
-                    FloatingActionButton(
-                        onClick = { callViewModel.endCall() },
-                        containerColor = errorColor,
-                        modifier = Modifier.size(64.dp)
-                    ) {
-                        Icon(Icons.Default.CallEnd, contentDescription = "End Call", tint = Color.White, modifier = Modifier.size(32.dp))
-                    }
+                // End call button (incoming calls handled by IncomingCallScreen)
+                FloatingActionButton(
+                    onClick = { callViewModel.endCall() },
+                    containerColor = errorColor,
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    Icon(Icons.Default.CallEnd, contentDescription = "End Call", tint = Color.White, modifier = Modifier.size(32.dp))
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -492,6 +572,122 @@ fun CallScreen(
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 14.sp
                     )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Full-screen incoming call screen (Fiberchat-inspired pickup_screen)
+ */
+@Composable
+fun IncomingCallScreen(
+    callerName: String,
+    callType: String,
+    pulseScale: Float,
+    onAccept: () -> Unit,
+    onReject: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF1B5E20), Color(0xFF0D1B2A), Color(0xFF1B2B34))
+                )
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(top = 60.dp)
+            ) {
+                Icon(
+                    if (callType == "video") Icons.Default.Videocam else Icons.Default.Call,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (callType == "video") "Incoming Video Call" else "Incoming Voice Call",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(contentAlignment = Alignment.Center) {
+                    Surface(
+                        modifier = Modifier.size(180.dp).scale(pulseScale).clip(CircleShape),
+                        color = Color.White.copy(alpha = 0.1f)
+                    ) {}
+                    Surface(
+                        modifier = Modifier.size(155.dp).scale(pulseScale * 0.95f).clip(CircleShape),
+                        color = Color.White.copy(alpha = 0.15f)
+                    ) {}
+                    Surface(
+                        modifier = Modifier.size(130.dp).clip(CircleShape),
+                        color = MaterialTheme.colorScheme.primary
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = callerName.firstOrNull()?.toString() ?: "?",
+                                color = Color.White,
+                                fontSize = 56.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(text = callerName, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "End-to-end encrypted", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+                }
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(bottom = 48.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        FloatingActionButton(
+                            onClick = onReject,
+                            containerColor = Color(0xFFE53935),
+                            modifier = Modifier.size(72.dp)
+                        ) {
+                            Icon(Icons.Default.CallEnd, contentDescription = "Decline", tint = Color.White, modifier = Modifier.size(36.dp))
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(text = "Decline", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        FloatingActionButton(
+                            onClick = onAccept,
+                            containerColor = Color(0xFF43A047),
+                            modifier = Modifier.size(72.dp)
+                        ) {
+                            Icon(Icons.Default.Call, contentDescription = "Accept", tint = Color.White, modifier = Modifier.size(36.dp))
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(text = "Accept", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                    }
                 }
             }
         }
