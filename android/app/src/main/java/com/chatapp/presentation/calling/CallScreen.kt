@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import java.util.Locale
 
 // M10: Check network connectivity before attempting a call
@@ -57,26 +58,53 @@ fun CallScreen(
     callerName: String,
     callType: String = "voice",
     isIncoming: Boolean = false,
+    targetUserId: String = "",
+    chatId: String = "",
     onEndCall: () -> Unit,
     onAcceptCall: () -> Unit = {},
     onToggleMute: () -> Unit = {},
     onToggleSpeaker: () -> Unit = {},
     onToggleVideo: () -> Unit = {},
-    onFlipCamera: () -> Unit = {}
+    onFlipCamera: () -> Unit = {},
+    callViewModel: CallViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    var isMuted by remember { mutableStateOf(false) }
-    var isSpeaker by remember { mutableStateOf(callType == "video") }
-    var isVideoEnabled by remember { mutableStateOf(callType == "video") }
-    var callDuration by remember { mutableIntStateOf(0) }
-    var isConnected by remember { mutableStateOf(false) }
-    var callState by remember { mutableStateOf(if (isIncoming) "ringing" else "connecting") }
+    val uiState by callViewModel.uiState.collectAsState()
+
+    // Derive state from ViewModel
+    val isMuted = uiState.isMuted
+    val isSpeaker = uiState.isSpeaker
+    val isVideoEnabled = uiState.isVideoEnabled
+    val callDuration = uiState.callDuration
+    val isConnected = uiState.callState == CallState.CONNECTED
+    val callStateEnum = uiState.callState
+
     var isFrontCamera by remember { mutableStateOf(true) }
     var hasPermissions by remember { mutableStateOf(hasCallPermissions(context, callType)) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     var hasNetwork by remember { mutableStateOf(isNetworkAvailable(context)) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
+
+    // Initiate the call via ViewModel when this screen opens (outgoing call)
+    LaunchedEffect(Unit) {
+        if (!isIncoming && targetUserId.isNotEmpty() && chatId.isNotEmpty()) {
+            if (uiState.callState == CallState.IDLE) {
+                callViewModel.initiateCall(targetUserId, callerName, callType, chatId)
+            }
+        }
+    }
+
+    // Navigate back when call ends (state goes to IDLE after being active)
+    var wasActive by remember { mutableStateOf(false) }
+    LaunchedEffect(callStateEnum) {
+        if (callStateEnum != CallState.IDLE) {
+            wasActive = true
+        }
+        if (callStateEnum == CallState.IDLE && wasActive) {
+            onEndCall()
+        }
+    }
 
     // H7: Permission launcher for requesting audio/camera permissions
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -102,22 +130,6 @@ fun CallScreen(
     // M10: Check network connectivity
     LaunchedEffect(Unit) {
         hasNetwork = isNetworkAvailable(context)
-        if (!hasNetwork) {
-            callState = "no_network"
-        }
-    }
-
-    // Show "User unavailable" after timeout instead of fake connecting
-    LaunchedEffect(callState) {
-        if (callState == "connecting") {
-            kotlinx.coroutines.delay(8000)
-            if (!isConnected) {
-                callState = "unavailable"
-            }
-        } else if (callState == "unavailable" || callState == "no_network") {
-            kotlinx.coroutines.delay(3000)
-            onEndCall()
-        }
     }
 
     // H6: Only set up audio mode when call is actually connected
@@ -157,14 +169,12 @@ fun CallScreen(
         label = "pulse"
     )
 
-    // Call timer
-    LaunchedEffect(isConnected) {
-        if (isConnected) {
-            while (true) {
-                kotlinx.coroutines.delay(1000)
-                callDuration++
-            }
-        }
+    // Speaker toggle effect
+    LaunchedEffect(isSpeaker) {
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.isSpeakerphoneOn = isSpeaker
+        } catch (_: Exception) {}
     }
 
     // H7: Permission denied dialog
@@ -316,15 +326,19 @@ fun CallScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = when {
-                            callState == "no_network" -> "No network connection"
-                            isIncoming && !isConnected -> "Incoming ${callType} call..."
-                            callState == "unavailable" -> "User unavailable"
-                            callState == "connecting" -> "Calling..."
-                            isConnected -> formatDuration(callDuration)
-                            else -> "Calling..."
+                        text = when (callStateEnum) {
+                            CallState.IDLE -> "Ended"
+                            CallState.CALLING -> "Calling..."
+                            CallState.INCOMING -> "Incoming ${callType} call..."
+                            CallState.CONNECTED -> formatDuration(callDuration)
+                            CallState.RECONNECTING -> "Reconnecting..."
+                            CallState.ENDED -> "Call ended"
                         },
-                        color = if (callState == "unavailable" || callState == "no_network") errorColor else Color.White.copy(alpha = 0.7f),
+                        color = when (callStateEnum) {
+                            CallState.RECONNECTING -> Color(0xFFFF9800)
+                            CallState.ENDED -> errorColor
+                            else -> Color.White.copy(alpha = 0.7f)
+                        },
                         fontSize = 16.sp
                     )
 
@@ -370,11 +384,7 @@ fun CallScreen(
                         label = if (isMuted) "Unmute" else "Mute",
                         isActive = isMuted,
                         onClick = {
-                            isMuted = !isMuted
-                            try {
-                                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                                audioManager.isMicrophoneMute = isMuted
-                            } catch (_: Exception) {}
+                            callViewModel.toggleMute()
                             onToggleMute()
                         }
                     )
@@ -384,11 +394,7 @@ fun CallScreen(
                         label = "Speaker",
                         isActive = isSpeaker,
                         onClick = {
-                            isSpeaker = !isSpeaker
-                            try {
-                                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                                audioManager.isSpeakerphoneOn = isSpeaker
-                            } catch (_: Exception) {}
+                            callViewModel.toggleSpeaker()
                             onToggleSpeaker()
                         }
                     )
@@ -399,7 +405,7 @@ fun CallScreen(
                             label = "Camera",
                             isActive = isVideoEnabled,
                             onClick = {
-                                isVideoEnabled = !isVideoEnabled
+                                callViewModel.toggleVideo()
                                 onToggleVideo()
                             }
                         )
@@ -411,6 +417,7 @@ fun CallScreen(
                             isActive = false,
                             onClick = {
                                 isFrontCamera = !isFrontCamera
+                                callViewModel.switchCamera()
                                 onFlipCamera()
                             }
                         )
@@ -419,14 +426,14 @@ fun CallScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Accept/Reject buttons
-                if (isIncoming && !isConnected) {
+                // Accept/Reject buttons for incoming calls
+                if (callStateEnum == CallState.INCOMING) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         FloatingActionButton(
-                            onClick = onEndCall,
+                            onClick = { callViewModel.rejectCall() },
                             containerColor = errorColor,
                             modifier = Modifier.size(64.dp)
                         ) {
@@ -435,8 +442,7 @@ fun CallScreen(
 
                         FloatingActionButton(
                             onClick = {
-                                isConnected = true
-                                callState = "connected"
+                                callViewModel.answerCall()
                                 onAcceptCall()
                             },
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -447,7 +453,7 @@ fun CallScreen(
                     }
                 } else {
                     FloatingActionButton(
-                        onClick = onEndCall,
+                        onClick = { callViewModel.endCall() },
                         containerColor = errorColor,
                         modifier = Modifier.size(64.dp)
                     ) {

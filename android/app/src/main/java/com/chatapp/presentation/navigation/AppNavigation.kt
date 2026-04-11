@@ -68,11 +68,11 @@ sealed class Screen(val route: String) {
     object Broadcasts : Screen("broadcasts")
     object AutoReplies : Screen("auto_replies")
     object ChatSearch : Screen("chat_search")
-    object VoiceCall : Screen("voice_call/{chatId}?callerName={callerName}") {
-        fun createRoute(chatId: String, callerName: String) = "voice_call/$chatId?callerName=${Uri.encode(callerName)}"
+    object VoiceCall : Screen("voice_call/{chatId}?callerName={callerName}&targetUserId={targetUserId}") {
+        fun createRoute(chatId: String, callerName: String, targetUserId: String = "") = "voice_call/$chatId?callerName=${Uri.encode(callerName)}&targetUserId=${Uri.encode(targetUserId)}"
     }
-    object VideoCall : Screen("video_call/{chatId}?callerName={callerName}") {
-        fun createRoute(chatId: String, callerName: String) = "video_call/$chatId?callerName=${Uri.encode(callerName)}"
+    object VideoCall : Screen("video_call/{chatId}?callerName={callerName}&targetUserId={targetUserId}") {
+        fun createRoute(chatId: String, callerName: String, targetUserId: String = "") = "video_call/$chatId?callerName=${Uri.encode(callerName)}&targetUserId=${Uri.encode(targetUserId)}"
     }
     object UserProfile : Screen("user_profile/{chatId}?name={name}") {
         fun createRoute(chatId: String, name: String = "User") = "user_profile/$chatId?name=${Uri.encode(name)}"
@@ -442,13 +442,18 @@ fun AppNavigation() {
             route = Screen.VoiceCall.route,
             arguments = listOf(
                 navArgument("chatId") { type = NavType.StringType },
-                navArgument("callerName") { type = NavType.StringType; defaultValue = "Unknown" }
+                navArgument("callerName") { type = NavType.StringType; defaultValue = "Unknown" },
+                navArgument("targetUserId") { type = NavType.StringType; defaultValue = "" }
             )
         ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
             val callerName = backStackEntry.arguments?.getString("callerName") ?: "Unknown"
+            val targetUserId = backStackEntry.arguments?.getString("targetUserId") ?: ""
             CallScreen(
                 callerName = callerName,
                 callType = "voice",
+                targetUserId = targetUserId,
+                chatId = chatId,
                 onEndCall = { navController.popBackStack() }
             )
         }
@@ -457,13 +462,18 @@ fun AppNavigation() {
             route = Screen.VideoCall.route,
             arguments = listOf(
                 navArgument("chatId") { type = NavType.StringType },
-                navArgument("callerName") { type = NavType.StringType; defaultValue = "Unknown" }
+                navArgument("callerName") { type = NavType.StringType; defaultValue = "Unknown" },
+                navArgument("targetUserId") { type = NavType.StringType; defaultValue = "" }
             )
         ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
             val callerName = backStackEntry.arguments?.getString("callerName") ?: "Unknown"
+            val targetUserId = backStackEntry.arguments?.getString("targetUserId") ?: ""
             CallScreen(
                 callerName = callerName,
                 callType = "video",
+                targetUserId = targetUserId,
+                chatId = chatId,
                 onEndCall = { navController.popBackStack() }
             )
         }

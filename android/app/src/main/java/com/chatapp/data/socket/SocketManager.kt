@@ -26,10 +26,11 @@ sealed class SocketEvent {
     data class TypingStop(val chatId: String, val userId: String) : SocketEvent()
     data class UserOnline(val userId: String) : SocketEvent()
     data class UserOffline(val userId: String) : SocketEvent()
-    data class IncomingCall(val callerId: String, val callerName: String, val callType: String, val chatId: String) : SocketEvent()
-    data class CallAnswered(val chatId: String) : SocketEvent()
-    data class CallRejected(val chatId: String) : SocketEvent()
-    data class CallEnded(val chatId: String) : SocketEvent()
+    data class IncomingCall(val callId: String, val callerId: String, val callerName: String, val callType: String, val chatId: String, val offer: String? = null) : SocketEvent()
+    data class CallAnswered(val callId: String, val chatId: String, val answer: String? = null) : SocketEvent()
+    data class CallRejected(val callId: String, val chatId: String, val reason: String = "") : SocketEvent()
+    data class CallEnded(val callId: String, val chatId: String, val duration: Int = 0) : SocketEvent()
+    data class IceCandidateReceived(val callId: String, val candidateSdp: String, val sdpMid: String, val sdpMLineIndex: Int) : SocketEvent()
     data class MessageReaction(val messageId: String, val reactions: Map<String, List<String>>) : SocketEvent()
     data class MessageEdited(val messageId: String, val content: String) : SocketEvent()
     data class MessageDeleted(val messageId: String) : SocketEvent()
@@ -233,11 +234,15 @@ class SocketManager @Inject constructor(
             on("call:incoming") { args ->
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
+                    val offerObj = data.optJSONObject("offer")
+                    val offerSdp = offerObj?.optString("sdp")
                     _events.tryEmit(SocketEvent.IncomingCall(
+                        callId = data.optString("callId", ""),
                         callerId = data.optString("callerId", ""),
                         callerName = data.optString("callerName", ""),
                         callType = data.optString("callType", "voice"),
-                        chatId = data.optString("chatId", "")
+                        chatId = data.optString("chatId", ""),
+                        offer = offerSdp
                     ))
                 }
             }
@@ -245,21 +250,50 @@ class SocketManager @Inject constructor(
             on("call:answered") { args ->
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
-                    _events.tryEmit(SocketEvent.CallAnswered(data.optString("chatId", "")))
+                    val answerObj = data.optJSONObject("answer")
+                    val answerSdp = answerObj?.optString("sdp")
+                    _events.tryEmit(SocketEvent.CallAnswered(
+                        callId = data.optString("callId", ""),
+                        chatId = data.optString("chatId", ""),
+                        answer = answerSdp
+                    ))
                 }
             }
 
             on("call:rejected") { args ->
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
-                    _events.tryEmit(SocketEvent.CallRejected(data.optString("chatId", "")))
+                    _events.tryEmit(SocketEvent.CallRejected(
+                        callId = data.optString("callId", ""),
+                        chatId = data.optString("chatId", ""),
+                        reason = data.optString("reason", "")
+                    ))
                 }
             }
 
             on("call:ended") { args ->
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
-                    _events.tryEmit(SocketEvent.CallEnded(data.optString("chatId", "")))
+                    _events.tryEmit(SocketEvent.CallEnded(
+                        callId = data.optString("callId", ""),
+                        chatId = data.optString("chatId", ""),
+                        duration = data.optInt("duration", 0)
+                    ))
+                }
+            }
+
+            on("call:ice-candidate") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as JSONObject
+                    val candidateObj = data.optJSONObject("candidate")
+                    if (candidateObj != null) {
+                        _events.tryEmit(SocketEvent.IceCandidateReceived(
+                            callId = data.optString("callId", ""),
+                            candidateSdp = candidateObj.optString("candidate", ""),
+                            sdpMid = candidateObj.optString("sdpMid", ""),
+                            sdpMLineIndex = candidateObj.optInt("sdpMLineIndex", 0)
+                        ))
+                    }
                 }
             }
 
@@ -309,25 +343,85 @@ class SocketManager @Inject constructor(
         socket?.emit("typing:stop", JSONObject().put("chatId", chatId))
     }
 
-    fun initiateCall(chatId: String, targetUserId: String, callType: String) {
+    fun initiateCall(chatId: String, targetUserId: String, callType: String, offer: org.webrtc.SessionDescription? = null) {
         val data = JSONObject().apply {
             put("chatId", chatId)
             put("targetUserId", targetUserId)
             put("callType", callType)
+            offer?.let {
+                put("offer", JSONObject().apply {
+                    put("type", it.type.canonicalForm())
+                    put("sdp", it.description)
+                })
+            }
         }
-        socket?.emit("call:initiate", data)
+        socket?.emit("call:initiate", data, io.socket.client.Ack { ackArgs ->
+            if (ackArgs.isNotEmpty()) {
+                try {
+                    val response = ackArgs[0] as JSONObject
+                    val success = response.optBoolean("success", false)
+                    val callId = response.optString("callId", "")
+                    if (success && callId.isNotEmpty()) {
+                        Log.d(tag, "Call initiated, callId: $callId")
+                        _callIdCallback?.invoke(callId)
+                    } else {
+                        Log.e(tag, "Call initiate failed: ${response.optString("error", "unknown")}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(tag, "Error parsing call:initiate response", e)
+                }
+            }
+        })
     }
 
-    fun answerCall(chatId: String) {
-        socket?.emit("call:answer", JSONObject().put("chatId", chatId))
+    private var _callIdCallback: ((String) -> Unit)? = null
+
+    fun setCallIdCallback(callback: ((String) -> Unit)?) {
+        _callIdCallback = callback
     }
 
-    fun rejectCall(chatId: String) {
-        socket?.emit("call:reject", JSONObject().put("chatId", chatId))
+    fun answerCall(callId: String, targetUserId: String, answer: org.webrtc.SessionDescription? = null) {
+        val data = JSONObject().apply {
+            put("callId", callId)
+            put("targetUserId", targetUserId)
+            answer?.let {
+                put("answer", JSONObject().apply {
+                    put("type", it.type.canonicalForm())
+                    put("sdp", it.description)
+                })
+            }
+        }
+        socket?.emit("call:answer", data)
     }
 
-    fun endCall(chatId: String) {
-        socket?.emit("call:end", JSONObject().put("chatId", chatId))
+    fun rejectCall(callId: String, targetUserId: String) {
+        val data = JSONObject().apply {
+            put("callId", callId)
+            put("targetUserId", targetUserId)
+            put("reason", "Call rejected")
+        }
+        socket?.emit("call:reject", data)
+    }
+
+    fun endCall(callId: String, targetUserId: String) {
+        val data = JSONObject().apply {
+            put("callId", callId)
+            put("targetUserId", targetUserId)
+        }
+        socket?.emit("call:end", data)
+    }
+
+    fun sendIceCandidate(callId: String, targetUserId: String, candidate: org.webrtc.IceCandidate) {
+        val data = JSONObject().apply {
+            put("callId", callId)
+            put("targetUserId", targetUserId)
+            put("candidate", JSONObject().apply {
+                put("candidate", candidate.sdp)
+                put("sdpMid", candidate.sdpMid)
+                put("sdpMLineIndex", candidate.sdpMLineIndex)
+            })
+        }
+        socket?.emit("call:ice-candidate", data)
     }
 
     fun markDelivered(messageId: String) {
