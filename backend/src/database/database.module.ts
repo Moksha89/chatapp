@@ -86,14 +86,20 @@ const entities = [
         const synchronize = configService.get<string>('DB_SYNCHRONIZE') !== 'false';
         
         if (databaseUrl) {
+          const poolSize = parseInt(configService.get<string>('DB_POOL_SIZE') || '20', 10);
           return {
             type: 'postgres',
             url: databaseUrl,
             entities,
             synchronize,
-            migrationsRun: !synchronize, // Run migrations if synchronize is disabled
+            migrationsRun: !synchronize,
             migrations: ['dist/database/migrations/*.js'],
             logging: nodeEnv === 'development',
+            extra: {
+              max: poolSize,
+              idleTimeoutMillis: 30000,
+              connectionTimeoutMillis: 5000,
+            },
           };
         }
         

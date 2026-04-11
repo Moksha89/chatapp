@@ -9,7 +9,11 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "tsc --noEmit",
-    "test": "jest --config jest.config.js"
+    "test": "jest --config jest.config.js",
+    "migration:generate": "npx typeorm migration:generate -d src/database/typeorm.config.ts",
+    "migration:run": "npx typeorm migration:run -d src/database/typeorm.config.ts",
+    "migration:revert": "npx typeorm migration:revert -d src/database/typeorm.config.ts",
+    "migration:show": "npx typeorm migration:show -d src/database/typeorm.config.ts"
   },
   "keywords": [],
   "author": "",
