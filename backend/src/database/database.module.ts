@@ -97,9 +97,10 @@ const entities = [
           };
         }
         
+        const dbPath = configService.get<string>('SQLITE_DB_PATH') || 'chatapp.db';
         return {
           type: 'better-sqlite3',
-          database: ':memory:',
+          database: dbPath,
           entities,
           synchronize: true,
           logging: false,

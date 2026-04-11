@@ -11,19 +11,36 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     const redisUrl = this.configService.get<string>('REDIS_URL');
-    if (!redisUrl) {
-      this.logger.log('No REDIS_URL configured — Redis features disabled');
+    const redisHost = this.configService.get<string>('REDIS_HOST');
+    const redisPort = this.configService.get<number>('REDIS_PORT');
+
+    if (!redisUrl && !redisHost) {
+      this.logger.log('No Redis configured — Redis features disabled');
       return;
     }
 
     try {
       const { default: Redis } = await import('ioredis');
-      this.client = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
-        retryStrategy: (times: number) => Math.min(times * 200, 2000),
-        enableReadyCheck: true,
-        lazyConnect: true,
-      });
+
+      if (redisUrl) {
+        this.client = new Redis(redisUrl, {
+          maxRetriesPerRequest: 3,
+          retryStrategy: (times: number) => Math.min(times * 200, 2000),
+          enableReadyCheck: true,
+          lazyConnect: true,
+        });
+      } else {
+        this.client = new Redis({
+          host: redisHost || '127.0.0.1',
+          port: redisPort || 6379,
+          password: this.configService.get<string>('REDIS_PASSWORD') || undefined,
+          maxRetriesPerRequest: 3,
+          retryStrategy: (times: number) => Math.min(times * 200, 2000),
+          enableReadyCheck: true,
+          lazyConnect: true,
+        });
+      }
+
       await this.client.connect();
       this.isConnected = true;
       this.logger.log('Redis connected for session/presence management');
