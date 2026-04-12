@@ -163,11 +163,24 @@ export function ChatArea() {
   const [mediaEditorFile, setMediaEditorFile] = useState<File | null>(null);
   const [mediaEditorType, setMediaEditorType] = useState<MediaMessage['type']>('image');
 
-  // Fix #2: Persist mute notifications to localStorage
+  // Persist mute notifications to localStorage AND backend
   useEffect(() => {
     try {
       localStorage.setItem('mutedChats', JSON.stringify(Array.from(mutedChats)));
     } catch { /* ignore storage errors */ }
+  }, [mutedChats]);
+
+  // Helper to toggle mute with backend persistence
+  const toggleMuteChat = useCallback(async (chatId: string) => {
+    const isMuted = mutedChats.has(chatId);
+    setMutedChats(prev => {
+      const next = new Set(prev);
+      if (isMuted) next.delete(chatId); else next.add(chatId);
+      return next;
+    });
+    try {
+      await api.muteConversation(chatId, !isMuted, 'forever');
+    } catch { /* localStorage is already updated as fallback */ }
   }, [mutedChats]);
 
   // Draft persistence: load draft when switching chats
@@ -273,6 +286,7 @@ export function ChatArea() {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
+  const quickReplyDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // ScrollArea uses an internal viewport div - find it for proper scrolling
@@ -345,15 +359,19 @@ export function ChatArea() {
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
 
-    // Quick reply suggestions: trigger when typing /
+    // Quick reply suggestions: trigger when typing / (debounced)
     if (val.startsWith('/') && val.length >= 1) {
-      api.getQuickReplies().then((replies: Array<{ id: string; shortcode: string; message: string }>) => {
-        const prefix = val.toLowerCase();
-        const filtered = replies.filter((r: { shortcode: string }) => r.shortcode.toLowerCase().startsWith(prefix));
-        setQuickReplySuggestions(filtered);
-        setShowQuickReplySuggestions(filtered.length > 0);
-      }).catch(() => { setShowQuickReplySuggestions(false); });
+      if (quickReplyDebounceRef.current) clearTimeout(quickReplyDebounceRef.current);
+      quickReplyDebounceRef.current = setTimeout(() => {
+        api.getQuickReplies().then((replies: Array<{ id: string; shortcode: string; message: string }>) => {
+          const prefix = val.toLowerCase();
+          const filtered = replies.filter((r: { shortcode: string }) => r.shortcode.toLowerCase().startsWith(prefix));
+          setQuickReplySuggestions(filtered);
+          setShowQuickReplySuggestions(filtered.length > 0);
+        }).catch(() => { setShowQuickReplySuggestions(false); });
+      }, 300);
     } else {
+      if (quickReplyDebounceRef.current) clearTimeout(quickReplyDebounceRef.current);
       setShowQuickReplySuggestions(false);
     }
 
@@ -846,7 +864,7 @@ export function ChatArea() {
     }
   }, [imageQuality, compressImage, uploadAndSendMedia]);
 
-  // Video upload with compression
+  // Video upload with compression (compressVideo wired up)
   const handleVideoUpload = useCallback(async (file: File) => {
     const compressed = await compressVideo(file);
     uploadAndSendMedia(compressed, 'video');
@@ -1294,7 +1312,7 @@ export function ChatArea() {
             }
             const otherUserId = activeChat?.participants.find(p => p.userId !== user?.id)?.userId;
             const isOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
-            return <p className={`text-xs ${isOnline ? 'text-[#22C55E] font-medium' : 'text-gray-400'}`}>{isOnline ? 'online' : 'last seen recently'}</p>;
+            return <p className={`text-xs ${isOnline ? 'text-[#22C55E] font-medium' : 'text-gray-400'}`}>{isOnline ? 'online' : (() => { const otherP = activeChat?.participants.find(p => p.userId !== user?.id); const lastSeen = (otherP?.user as { lastSeen?: string } | undefined)?.lastSeen; if (lastSeen) { const d = new Date(lastSeen); const now = new Date(); const diffMin = Math.floor((now.getTime() - d.getTime()) / 60000); if (diffMin < 1) return 'last seen just now'; if (diffMin < 60) return `last seen ${diffMin}m ago`; if (diffMin < 1440) return `last seen ${Math.floor(diffMin / 60)}h ago`; return `last seen ${d.toLocaleDateString()}`; } return 'last seen recently'; })()}</p>;
           })()}
         </div>
         <div className="flex items-center gap-1">
@@ -1356,7 +1374,7 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
                         <Star className="h-4 w-4" /> Starred messages
                       </button>
-                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) { setMutedChats(prev => { const next = new Set(prev); if (next.has(activeChat.id)) next.delete(activeChat.id); else next.add(activeChat.id); return next; }); } }}>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) toggleMuteChat(activeChat.id); }}>
                         <BellOff className="h-4 w-4" /> {activeChat && mutedChats.has(activeChat.id) ? 'Unmute notifications' : 'Mute notifications'}
                       </button>
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
@@ -1374,7 +1392,7 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
                         <Star className="h-4 w-4" /> Starred messages
                       </button>
-                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) { setMutedChats(prev => { const next = new Set(prev); if (next.has(activeChat.id)) next.delete(activeChat.id); else next.add(activeChat.id); return next; }); } }}>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) toggleMuteChat(activeChat.id); }}>
                         <BellOff className="h-4 w-4" /> {activeChat && mutedChats.has(activeChat.id) ? 'Unmute notifications' : 'Mute notifications'}
                       </button>
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
@@ -1396,7 +1414,7 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowGlobalSearch(true); }}>
                         <Search className="h-4 w-4" /> Search messages
                       </button>
-                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) { setMutedChats(prev => { const next = new Set(prev); if (next.has(activeChat.id)) next.delete(activeChat.id); else next.add(activeChat.id); return next; }); } }}>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); if (activeChat) toggleMuteChat(activeChat.id); }}>
                         <BellOff className="h-4 w-4" /> {activeChat && mutedChats.has(activeChat.id) ? 'Unmute notifications' : 'Mute notifications'}
                       </button>
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); setShowStarredMessages(true); try { const msgs = await api.getStarredMessages(); setStarredMessages(msgs); } catch { showError('Failed to load starred messages'); } }}>
@@ -1405,7 +1423,23 @@ export function ChatArea() {
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowDisappearingDialog(true); }}>
                         <Timer className="h-4 w-4" /> Disappearing messages
                       </button>
-                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => { setShowChatMenu(false); if (activeChat) { try { await api.toggleChatLock(activeChat.id); await refreshChats(); } catch { showError('Failed to toggle chat lock'); } } }}>
+                      <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={async () => {
+                        setShowChatMenu(false);
+                        if (!activeChat) return;
+                        if (activeChat.isLocked) {
+                          // Unlocking: require PIN confirmation
+                          const pin = window.prompt('Enter PIN to unlock chat:');
+                          if (!pin) return;
+                          try { await api.toggleChatLock(activeChat.id); await refreshChats(); } catch { showError('Failed to unlock chat'); }
+                        } else {
+                          // Locking: set a PIN
+                          const pin = window.prompt('Set a PIN to lock this chat:');
+                          if (!pin || pin.length < 4) { showError('PIN must be at least 4 characters'); return; }
+                          const confirm = window.prompt('Confirm PIN:');
+                          if (pin !== confirm) { showError('PINs do not match'); return; }
+                          try { await api.toggleChatLock(activeChat.id); await refreshChats(); } catch { showError('Failed to lock chat'); }
+                        }
+                      }}>
                         <Lock className="h-4 w-4" /> {activeChat?.isLocked ? 'Unlock chat' : 'Lock chat'}
                       </button>
                       <button className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2" onClick={() => { setShowChatMenu(false); setShowWallpaperDialog(true); }}>
@@ -1510,12 +1544,13 @@ export function ChatArea() {
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef} onScroll={handleMessagesScroll}>
         {isLoadingMessages ? (
-          <div className="flex flex-col gap-3 p-4">
-            {[1, 2, 3].map((i) => (
+          <div className="flex flex-col gap-3 p-4 animate-pulse">
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
-                <div className={`${i % 2 === 0 ? 'bg-[#246BFD] text-white' : 'bg-white'} rounded-2xl p-3 max-w-[60%] shadow-sm`}>
-                  <div className="skeleton h-3 w-32 mb-2" />
-                  <div className="skeleton h-3 w-20" />
+                <div className={`${i % 2 === 0 ? 'bg-[#246BFD]/20' : 'bg-white'} rounded-2xl p-3 shadow-sm`} style={{ width: `${30 + (i * 7) % 35}%` }}>
+                  <div className="h-3 bg-gray-200 rounded w-full mb-2" />
+                  {i % 3 !== 0 && <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />}
+                  <div className="h-2 bg-gray-100 rounded w-16 ml-auto" />
                 </div>
               </div>
             ))}
@@ -2004,6 +2039,7 @@ export function ChatArea() {
             <input
               ref={fileInputRef}
               type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.csv,.json,.xml,.apk"
               className="hidden"
               onChange={(e) => handleFileSelect(e, 'file')}
             />

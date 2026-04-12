@@ -478,9 +478,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteMessage = useCallback(async (messageId: string, deleteForEveryone: boolean) => {
-    if (!activeChat) return;
+    const chat = activeChatRef.current;
+    if (!chat) return;
     try {
-      const result = await api.deleteMessage(activeChat.id, messageId, deleteForEveryone);
+      const result = await api.deleteMessage(chat.id, messageId, deleteForEveryone);
       if (deleteForEveryone) {
         setMessages((prev) =>
           prev.map((msg) =>
@@ -488,13 +489,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           )
         );
       } else {
+        // Fix: use functional updater to avoid stale closure — always filters from latest state
         setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
       }
     } catch (error) {
       console.error('Failed to delete message:', error);
       throw error;
     }
-  }, [activeChat]);
+  }, []);
 
     useEffect(() => {
       if (isAuthenticated) {
@@ -774,6 +776,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unsubReconnect();
     };
   }, [isAuthenticated]);
+
+  // Unread badge in browser tab title
+  useEffect(() => {
+    const totalUnread = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+    document.title = totalUnread > 0 ? `(${totalUnread}) Abhi Chat` : 'Abhi Chat';
+  }, [chats]);
 
   return (
     <ChatContext.Provider

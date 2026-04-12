@@ -6,6 +6,7 @@ class SocketService {
   private socket: Socket | null = null;
   private listeners: Map<string, Set<(data: unknown) => void>> = new Map();
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private offlineQueue: Array<{ event: string; data: unknown }> = [];
 
   connect(token: string) {
     if (this.socket?.connected) {
@@ -18,19 +19,19 @@ class SocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket connected');
       this.notifyListeners('_connection', { connected: true });
       this.startHeartbeat();
+      // Flush offline queue on reconnect
+      this.flushOfflineQueue();
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Socket disconnected');
       this.notifyListeners('_connection', { connected: false });
       this.stopHeartbeat();
     });
 
-    this.socket.on('error', (error) => {
-      console.error('Socket error:', error);
+    this.socket.on('error', () => {
+      // Socket errors handled via listeners
     });
 
     this.socket.onAny((event, data) => {
@@ -79,6 +80,18 @@ class SocketService {
         this.socket.emit(event, data, callback);
       } else {
         this.socket.emit(event, data);
+      }
+    } else if (event.startsWith('message:send')) {
+      // Queue messages when offline for later delivery
+      this.offlineQueue.push({ event, data });
+    }
+  }
+
+  private flushOfflineQueue() {
+    while (this.offlineQueue.length > 0) {
+      const item = this.offlineQueue.shift();
+      if (item && this.socket?.connected) {
+        this.socket.emit(item.event, item.data);
       }
     }
   }

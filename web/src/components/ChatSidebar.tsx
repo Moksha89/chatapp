@@ -1,13 +1,14 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import { useChat } from '../context/ChatContext';
 import { useCall } from '../context/CallContext';
 import type { CallHistoryEntry } from '../context/CallContext';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2, Plus, UserPlus, UsersRound, Phone, PhoneMissed, Video, Trash, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Search, MessageSquarePlus, LogOut, User, Tag, MessageSquare, Building2, Smartphone, Users, Circle, Radio, Package, Clock, Shield, Hash, Globe, Download, Check, CheckCheck, Pin, BellOff, Archive, Star, Trash2, Plus, UserPlus, UsersRound, Phone, PhoneMissed, Video, Trash, ArrowUpRight, ArrowDownLeft, Camera } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,8 @@ const ChatBackupSettings = lazy(() => import('./ChatBackupSettings').then(m => (
 
 export function ChatSidebar() {
   const { user, logout } = useAuth();
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(() => user?.profilePhoto || null);
   const { chats, activeChat, selectChat, isLoadingChats, refreshChats, typingUsers, onlineUsers } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'groups' | 'channels' | 'communities' | 'labels' | 'calls'>('all');
@@ -258,6 +261,23 @@ export function ChatSidebar() {
     return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      try {
+        await api.updateProfile({ profilePhoto: dataUrl });
+        setProfilePhoto(dataUrl);
+      } catch {
+        // silently fail — photo will revert on next load
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const formatTime = (dateString?: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -278,11 +298,13 @@ export function ChatSidebar() {
 
   return (
     <div className="w-full md:w-96 border-r border-gray-100 bg-white flex flex-col h-full">
+      <input type="file" ref={profilePhotoInputRef} accept="image/*" className="hidden" onChange={handleProfilePhotoChange} />
       <div className="p-3 bg-white border-b border-gray-100 flex items-center justify-between">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="p-0 h-auto">
               <Avatar className="h-10 w-10">
+                  {profilePhoto && <AvatarImage src={profilePhoto} alt={user?.displayName || 'User'} />}
                   <AvatarFallback className="abhi-avatar text-white font-semibold">
                     {user?.displayName?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
@@ -293,6 +315,10 @@ export function ChatSidebar() {
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
               {user?.displayName}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => profilePhotoInputRef.current?.click()}>
+              <Camera className="mr-2 h-4 w-4" />
+              Change Profile Photo
             </DropdownMenuItem>
             <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setShowLabels(true)}>

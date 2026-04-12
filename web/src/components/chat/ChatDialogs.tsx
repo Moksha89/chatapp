@@ -333,6 +333,7 @@ export function ChatDialogs(props: ChatDialogsProps) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 dialog-overlay">
           <div className="bg-white rounded-lg p-4 w-full max-w-sm">
             <h3 className="font-semibold mb-3">Chat Wallpaper</h3>
+            <p className="text-xs text-gray-500 mb-2">Solid Colors</p>
             <div className="grid grid-cols-4 gap-2 mb-4">
               {['default', '#d9fdd3', '#fde4cf', '#cff4fc', '#f0d9ff', '#ffe4e1', '#e8f5e9', '#fff3e0', '#e3f2fd', '#fce4ec', '#f3e5f5', '#e0f7fa'].map(color => (
                 <button
@@ -348,6 +349,24 @@ export function ChatDialogs(props: ChatDialogsProps) {
                 />
               ))}
             </div>
+            <p className="text-xs text-gray-500 mb-2">Custom Image</p>
+            <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 mb-4">
+              <Upload className="h-4 w-4 text-gray-400" />
+              <span className="text-sm text-gray-600">Upload wallpaper image</span>
+              <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !activeChat) return;
+                try {
+                  const reader = new FileReader();
+                  reader.onload = async () => {
+                    const dataUrl = reader.result as string;
+                    try { await api.setChatWallpaper(activeChat.id, dataUrl); await refreshChats(); } catch { showError('Failed to set wallpaper'); }
+                    setShowWallpaperDialog(false);
+                  };
+                  reader.readAsDataURL(file);
+                } catch { showError('Failed to read image'); }
+              }} />
+            </label>
             <div className="flex justify-end">
               <Button variant="outline" onClick={() => setShowWallpaperDialog(false)}>Cancel</Button>
             </div>
@@ -367,7 +386,13 @@ export function ChatDialogs(props: ChatDialogsProps) {
             </div>
             <div className="flex-1 overflow-y-auto space-y-2">
               {starredMessages.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">No starred messages</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mb-3">
+                    <span className="text-2xl">⭐</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-700">No starred messages</p>
+                  <p className="text-xs text-gray-400 mt-1 max-w-[240px]">Tap and hold any message, then tap the star icon to save it here for quick access.</p>
+                </div>
               ) : starredMessages.map(msg => (
                 <div key={msg.id} className="p-3 bg-gray-50 rounded-lg">
                   <p className="text-sm">{msg.content}</p>

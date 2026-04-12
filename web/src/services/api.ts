@@ -90,7 +90,7 @@ class ApiService {
   }
 
   async sendOtp(phoneNumber: string) {
-    return this.request<{ message: string; otp?: string }>('/auth/send-otp', {
+    return this.request<{ message: string }>('/auth/send-otp', {
       method: 'POST',
       body: JSON.stringify({ phoneNumber }),
     });

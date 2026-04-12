@@ -72,21 +72,11 @@ interface CallContextType {
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
 
-// Default ICE servers — will be overridden by backend-provided servers on socket connect
+// Default ICE servers — STUN only; TURN credentials are fetched securely from the backend
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
-  {
-    urls: 'turn:208.110.87.24:3478',
-    username: 'chatapp',
-    credential: 'ChatAppTurn2024!',
-  },
-  {
-    urls: 'turn:208.110.87.24:3478?transport=tcp',
-    username: 'chatapp',
-    credential: 'ChatAppTurn2024!',
-  },
 ];
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
