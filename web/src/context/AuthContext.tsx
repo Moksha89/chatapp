@@ -20,7 +20,7 @@ interface AuthContextType {
   loginWithToken: (accessToken: string, refreshToken: string, userData: User) => void;
   register: (phoneNumber: string, otp: string, displayName: string, isBusiness?: boolean) => Promise<void>;
   logout: () => void;
-  sendOtp: (phoneNumber: string) => Promise<{ otp?: string }>;
+  sendOtp: (phoneNumber: string) => Promise<{ message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sendOtp = async (phoneNumber: string) => {
     const response = await api.sendOtp(phoneNumber);
-    return { otp: response.otp };
+    return { message: response.message };
   };
 
   const login = async (phoneNumber: string, otp: string) => {

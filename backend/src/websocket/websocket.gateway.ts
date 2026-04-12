@@ -103,9 +103,9 @@ export class WebsocketGateway
         // (handled automatically by addConnection in websocketService)
       }
 
-      console.log(`Client connected: ${client.id} (User: ${client.userId})`);
+      this.logger.log(`Client connected: ${client.id} (User: ${client.userId})`);
     } catch (error) {
-      console.error('Connection error:', error);
+      this.logger.error('Connection error:', error);
       client.emit('error', { message: 'Authentication failed' });
       client.disconnect();
     }
@@ -120,7 +120,7 @@ export class WebsocketGateway
         this.usersService.updateLastSeen(client.userId);
       }
     }
-    console.log(`Client disconnected: ${client.id}`);
+    this.logger.log(`Client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('message:send')
@@ -177,9 +177,26 @@ export class WebsocketGateway
         }
       }
 
+      // Chatbot auto-reply: check if the chat has an active chatbot and trigger reply
+      try {
+        const chatbotReply = await this.chatsService.processChatbotReply(data.chatId, message);
+        if (chatbotReply) {
+          // Send the chatbot reply to all participants including the sender
+          client.emit('message:new', { message: chatbotReply, chatId: data.chatId });
+          for (const participantId of participants) {
+            this.websocketService.emitToUserOrQueue(participantId, 'message:new', {
+              message: chatbotReply,
+              chatId: data.chatId,
+            });
+          }
+        }
+      } catch (err) {
+        this.logger.warn(`Chatbot auto-reply failed: ${err instanceof Error ? err.message : err}`);
+      }
+
       return { success: true, messageId: message.id };
     } catch (error) {
-      console.error('Send message error:', error);
+      this.logger.error('Send message error:', error);
       return { error: 'Failed to send message' };
     }
   }
@@ -203,7 +220,7 @@ export class WebsocketGateway
 
       return { success: true };
     } catch (error) {
-      console.error('Message delivered error:', error);
+      this.logger.error('Message delivered error:', error);
       return { error: 'Failed to mark message as delivered' };
     }
   }
@@ -236,7 +253,7 @@ export class WebsocketGateway
 
       return { success: true };
     } catch (error) {
-      console.error('Message read error:', error);
+      this.logger.error('Message read error:', error);
       return { error: 'Failed to mark messages as read' };
     }
   }
@@ -1046,7 +1063,7 @@ export class WebsocketGateway
 
       return { success: true, sentCount: sentMessages.length, totalRecipients: broadcast.recipientIds.length };
     } catch (error) {
-      console.error('Broadcast send error:', error);
+      this.logger.error('Broadcast send error:', error);
       return { error: 'Failed to send broadcast message' };
     }
   }
@@ -1138,7 +1155,7 @@ export class WebsocketGateway
 
       return { success: true };
     } catch (error) {
-      console.error('View-once error:', error);
+      this.logger.error('View-once error:', error);
       return { error: 'Failed to mark view-once message' };
     }
   }
@@ -1171,7 +1188,7 @@ export class WebsocketGateway
 
       return { success: true, reactions: message.reactions };
     } catch (error) {
-      console.error('Add reaction error:', error);
+      this.logger.error('Add reaction error:', error);
       return { error: 'Failed to add reaction' };
     }
   }
@@ -1203,7 +1220,7 @@ export class WebsocketGateway
 
       return { success: true, reactions: message.reactions };
     } catch (error) {
-      console.error('Remove reaction error:', error);
+      this.logger.error('Remove reaction error:', error);
       return { error: 'Failed to remove reaction' };
     }
   }
@@ -1235,7 +1252,7 @@ export class WebsocketGateway
 
       return { success: true, message };
     } catch (error) {
-      console.error('Edit message error:', error);
+      this.logger.error('Edit message error:', error);
       return { error: error instanceof Error ? error.message : 'Failed to edit message' };
     }
   }
@@ -1268,7 +1285,7 @@ export class WebsocketGateway
 
       return { success: true };
     } catch (error) {
-      console.error('Delete message error:', error);
+      this.logger.error('Delete message error:', error);
       return { error: error instanceof Error ? error.message : 'Failed to delete message' };
     }
   }

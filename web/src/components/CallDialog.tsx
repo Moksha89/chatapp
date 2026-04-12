@@ -171,7 +171,7 @@ export function CallDialog() {
   if (isMinimized) {
     return (
       <div
-        className="fixed bottom-20 right-4 z-50 w-48 h-28 bg-gray-900 rounded-2xl shadow-2xl border border-white/10 overflow-hidden cursor-pointer group"
+        className="fixed bottom-20 right-4 z-[100] w-48 h-28 bg-gray-900 rounded-2xl shadow-2xl border border-white/10 overflow-hidden cursor-pointer group"
         onClick={() => setIsMinimized(false)}
       >
         {isVideoCall && remoteStream ? (
@@ -204,7 +204,7 @@ export function CallDialog() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-gray-900 to-black flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-gray-900 to-black flex items-center justify-center">
       <div className="w-full h-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="p-4 flex items-center justify-between text-white">

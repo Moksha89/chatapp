@@ -1263,7 +1263,8 @@ export class ChatsService {
     }
     // In a production system, this would save to a reports table
     // For now, log the report
-    console.log(`Report from ${userId} on chat ${chatId}: ${reason} - ${details || 'No details'}`);
+    // In production, save to a reports table instead of logging
+    // Report: userId=${userId}, chatId=${chatId}, reason=${reason}
     return { message: 'Report submitted successfully' };
   }
 }
