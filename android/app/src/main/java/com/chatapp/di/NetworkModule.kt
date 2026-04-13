@@ -8,6 +8,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import com.chatapp.data.auth.AuthEventBus
 import okhttp3.Authenticator
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -93,6 +94,8 @@ object NetworkModule {
                     .remove("access_token")
                     .remove("refresh_token")
                     .apply()
+                // Notify the app that the session has expired so it can redirect to login
+                AuthEventBus.emitSessionExpired()
                 null
             }
         }

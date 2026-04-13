@@ -26,6 +26,11 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onLinkedDevices: () -> Unit,
     onLogout: () -> Unit,
+    onNotifications: () -> Unit = {},
+    onPrivacy: () -> Unit = {},
+    onTheme: () -> Unit = {},
+    onStorageData: () -> Unit = {},
+    onHelp: () -> Unit = {},
     userName: String = "User",
     phoneNumber: String = ""
 ) {
@@ -112,6 +117,42 @@ fun SettingsScreen(
             }
 
             item {
+                SettingsItem(
+                    icon = Icons.Default.Notifications,
+                    title = "Notifications",
+                    subtitle = "Message and call notifications",
+                    onClick = onNotifications
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Lock,
+                    title = "Privacy",
+                    subtitle = "Read receipts, blocked contacts",
+                    onClick = onPrivacy
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Palette,
+                    title = "Theme",
+                    subtitle = "Appearance, font size, dark mode",
+                    onClick = onTheme
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Storage,
+                    title = "Storage and Data",
+                    subtitle = "Network usage, auto-download",
+                    onClick = onStorageData
+                )
+            }
+
+            item {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
             }
 
@@ -168,12 +209,29 @@ fun SettingsScreen(
 
             item {
                 SettingsItem(
+                    icon = Icons.Default.Help,
+                    title = "Help",
+                    subtitle = "Help center, contact us",
+                    onClick = onHelp
+                )
+            }
+
+            item {
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            item {
+                SettingsItem(
                     icon = Icons.Default.Logout,
                     title = "Logout",
                     subtitle = "Sign out of your account",
                     onClick = onLogout,
                     tint = Color.Red
                 )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

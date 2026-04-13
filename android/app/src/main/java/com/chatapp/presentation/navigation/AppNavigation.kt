@@ -11,6 +11,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.chatapp.data.auth.AuthEvent
+import com.chatapp.data.auth.AuthEventBus
 import com.chatapp.presentation.auth.LoginScreen
 import com.chatapp.presentation.onboarding.SplashScreen
 import com.chatapp.presentation.onboarding.OnboardingScreen
@@ -28,6 +30,11 @@ import com.chatapp.presentation.contacts.ContactUser
 import com.chatapp.presentation.calling.CallScreen
 import com.chatapp.presentation.profile.UserProfileScreen
 import com.chatapp.presentation.calls.CallHistoryScreen
+import com.chatapp.presentation.settings.NotificationsScreen
+import com.chatapp.presentation.settings.PrivacySettingsScreen
+import com.chatapp.presentation.settings.ThemeSettingsScreen
+import com.chatapp.presentation.settings.StorageDataScreen
+import com.chatapp.presentation.settings.HelpScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -52,11 +59,29 @@ sealed class Screen(val route: String) {
         fun createRoute(chatId: String, name: String = "User") = "user_profile/$chatId?name=${Uri.encode(name)}"
     }
     object CallHistory : Screen("call_history")
+    object Notifications : Screen("notifications")
+    object Privacy : Screen("privacy")
+    object ThemeSettings : Screen("theme_settings")
+    object StorageData : Screen("storage_data")
+    object Help : Screen("help")
 }
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+
+    // Observe auth events — redirect to login when session expires
+    LaunchedEffect(Unit) {
+        AuthEventBus.events.collect { event ->
+            when (event) {
+                is AuthEvent.SessionExpired -> {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -175,6 +200,11 @@ fun AppNavigation() {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onLinkedDevices = { navController.navigate(Screen.LinkedDevices.route) },
+                onNotifications = { navController.navigate(Screen.Notifications.route) },
+                onPrivacy = { navController.navigate(Screen.Privacy.route) },
+                onTheme = { navController.navigate(Screen.ThemeSettings.route) },
+                onStorageData = { navController.navigate(Screen.StorageData.route) },
+                onHelp = { navController.navigate(Screen.Help.route) },
                 userName = chatListState.currentUserName,
                 phoneNumber = chatListState.currentPhoneNumber,
                 onLogout = {
@@ -183,6 +213,26 @@ fun AppNavigation() {
                     }
                 }
             )
+        }
+
+        composable(Screen.Notifications.route) {
+            NotificationsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Privacy.route) {
+            PrivacySettingsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.ThemeSettings.route) {
+            ThemeSettingsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.StorageData.route) {
+            StorageDataScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Help.route) {
+            HelpScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.LinkedDevices.route) {
