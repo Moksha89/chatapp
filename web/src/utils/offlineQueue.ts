@@ -7,7 +7,7 @@ interface QueuedAction {
 }
 
 const DB_NAME = 'chatapp_offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'queue';
 const MAX_RETRIES = 5;
 const BASE_RETRY_DELAY_MS = 1000;

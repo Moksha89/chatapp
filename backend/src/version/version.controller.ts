@@ -53,7 +53,7 @@ export class VersionController {
   @ApiResponse({ status: 200, description: 'Returns the APK file' })
   @ApiResponse({ status: 404, description: 'APK file not found' })
   downloadAndroid(@Res({ passthrough: true }) res: Response): StreamableFile | { error: string } {
-    const apkPath = process.env.APK_FILE_PATH || join(process.cwd(), 'public', 'downloads', 'echat-business.apk');
+    const apkPath = process.env.APK_FILE_PATH || join(process.cwd(), 'uploads', 'abhi-chat.apk');
     
     if (!existsSync(apkPath)) {
       res.status(404);
