@@ -24,21 +24,8 @@ import com.chatapp.presentation.biometric.BiometricHelper
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onBusinessProfile: () -> Unit,
     onLinkedDevices: () -> Unit,
-    onPrivacy: () -> Unit,
     onLogout: () -> Unit,
-    onLabels: () -> Unit = {},
-    onQuickReplies: () -> Unit = {},
-    onProducts: () -> Unit = {},
-    onAutoReplies: () -> Unit = {},
-    onOrders: () -> Unit = {},
-    onBroadcasts: () -> Unit = {},
-    onNotifications: () -> Unit = {},
-    onStorageData: () -> Unit = {},
-    onHelp: () -> Unit = {},
-    onChatBackup: () -> Unit = {},
-    onContactSync: () -> Unit = {},
     userName: String = "User",
     phoneNumber: String = ""
 ) {
@@ -72,7 +59,6 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onBusinessProfile() }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -118,113 +104,10 @@ fun SettingsScreen(
             // Settings Items
             item {
                 SettingsItem(
-                    icon = Icons.Default.Business,
-                    title = "Business Profile",
-                    subtitle = "Edit your business information",
-                    onClick = onBusinessProfile
-                )
-            }
-
-            item {
-                SettingsItem(
                     icon = Icons.Default.Devices,
                     title = "Linked Devices",
                     subtitle = "Manage devices connected to your account",
                     onClick = onLinkedDevices
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Lock,
-                    title = "Privacy",
-                    subtitle = "Read receipts, blocked contacts",
-                    onClick = onPrivacy
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Label,
-                    title = "Labels",
-                    subtitle = "Organize chats with labels",
-                    onClick = onLabels
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Reply,
-                    title = "Quick Replies",
-                    subtitle = "Create message shortcuts",
-                    onClick = onQuickReplies
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Inventory,
-                    title = "Product Catalog",
-                    subtitle = "Manage your products",
-                    onClick = onProducts
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Schedule,
-                    title = "Auto-Reply Messages",
-                    subtitle = "Set up greeting and away messages",
-                    onClick = onAutoReplies
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.ShoppingCart,
-                    title = "Orders",
-                    subtitle = "View and manage customer orders",
-                    onClick = onOrders
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Campaign,
-                    title = "Broadcast Lists",
-                    subtitle = "Send messages to multiple contacts",
-                    onClick = onBroadcasts
-                )
-            }
-
-            item {
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Notifications,
-                    title = "Notifications",
-                    subtitle = "Message and call notifications",
-                    onClick = onNotifications
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Storage,
-                    title = "Storage and Data",
-                    subtitle = "Network usage, auto-download",
-                    onClick = onStorageData
-                )
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Help,
-                    title = "Help",
-                    subtitle = "Help center, contact us",
-                    onClick = onHelp
                 )
             }
 
@@ -256,7 +139,6 @@ fun SettingsScreen(
                         enabled = biometricAvailable,
                         onCheckedChange = { newValue ->
                             if (newValue) {
-                                // Authenticate before enabling
                                 val activity = context as? FragmentActivity
                                 if (activity != null) {
                                     BiometricHelper.authenticate(
@@ -278,15 +160,6 @@ fun SettingsScreen(
                         colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
                     )
                 }
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Contacts,
-                    title = "Contact Sync",
-                    subtitle = "Sync your device contacts",
-                    onClick = onContactSync
-                )
             }
 
             item {

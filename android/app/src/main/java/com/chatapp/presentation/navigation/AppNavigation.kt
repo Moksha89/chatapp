@@ -21,34 +21,13 @@ import com.chatapp.presentation.chat.ChatSearchScreen
 import com.chatapp.presentation.qr.QrScannerScreen
 import com.chatapp.presentation.qr.QrViewModel
 import com.chatapp.presentation.settings.SettingsScreen
-import com.chatapp.presentation.settings.PrivacySettingsScreen
 import com.chatapp.presentation.settings.LinkedDevicesScreen
 import com.chatapp.presentation.contacts.NewChatScreen
 import com.chatapp.presentation.contacts.NewChatViewModel
 import com.chatapp.presentation.contacts.ContactUser
-import com.chatapp.presentation.contacts.AddFriendScreen
-import com.chatapp.presentation.group.CreateGroupScreen
-import com.chatapp.presentation.group.GroupInfoScreen
-import com.chatapp.presentation.business.BusinessProfileScreen
-import com.chatapp.presentation.business.ProductsScreen
-import com.chatapp.presentation.business.OrdersScreen
-import com.chatapp.presentation.business.LabelsScreen
-import com.chatapp.presentation.business.QuickRepliesScreen
-import com.chatapp.presentation.business.BroadcastsScreen
-import com.chatapp.presentation.business.AutoRepliesScreen
 import com.chatapp.presentation.calling.CallScreen
-import com.chatapp.presentation.backup.ChatBackupScreen
-import com.chatapp.presentation.contacts.ContactSyncScreen
-import com.chatapp.presentation.settings.NotificationsScreen
-import com.chatapp.presentation.settings.StorageDataScreen
-import com.chatapp.presentation.settings.HelpScreen
 import com.chatapp.presentation.profile.UserProfileScreen
-import com.chatapp.presentation.status.StatusScreen
-import com.chatapp.presentation.friends.FriendsScreen
 import com.chatapp.presentation.calls.CallHistoryScreen
-import com.chatapp.presentation.settings.TwoStepVerificationScreen
-import com.chatapp.presentation.settings.ThemeSettingsScreen
-import com.chatapp.presentation.admin.AdminPanelScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -60,19 +39,8 @@ sealed class Screen(val route: String) {
     }
     object QrScanner : Screen("qr_scanner")
     object Settings : Screen("settings")
-    object Privacy : Screen("privacy")
     object LinkedDevices : Screen("linked_devices")
     object NewChat : Screen("new_chat")
-    object CreateGroup : Screen("create_group/{type}") {
-        fun createRoute(type: String = "group") = "create_group/$type"
-    }
-    object BusinessProfile : Screen("business_profile")
-    object Products : Screen("products")
-    object Orders : Screen("orders")
-    object Labels : Screen("labels")
-    object QuickReplies : Screen("quick_replies")
-    object Broadcasts : Screen("broadcasts")
-    object AutoReplies : Screen("auto_replies")
     object ChatSearch : Screen("chat_search")
     object VoiceCall : Screen("voice_call/{chatId}?callerName={callerName}&targetUserId={targetUserId}") {
         fun createRoute(chatId: String, callerName: String, targetUserId: String = "") = "voice_call/$chatId?callerName=${Uri.encode(callerName)}&targetUserId=${Uri.encode(targetUserId)}"
@@ -83,21 +51,7 @@ sealed class Screen(val route: String) {
     object UserProfile : Screen("user_profile/{chatId}?name={name}") {
         fun createRoute(chatId: String, name: String = "User") = "user_profile/$chatId?name=${Uri.encode(name)}"
     }
-    object ChatBackup : Screen("chat_backup")
-    object ContactSync : Screen("contact_sync")
-    object Notifications : Screen("notifications")
-    object StorageData : Screen("storage_data")
-    object Help : Screen("help")
-    object GroupInfo : Screen("group_info/{chatId}?name={name}") {
-        fun createRoute(chatId: String, name: String = "Group") = "group_info/$chatId?name=${Uri.encode(name)}"
-    }
-    object AddFriend : Screen("add_friend")
-    object Status : Screen("status")
-    object Friends : Screen("friends")
     object CallHistory : Screen("call_history")
-    object TwoStepVerification : Screen("two_step_verification")
-    object ThemeSettings : Screen("theme_settings")
-    object AdminPanel : Screen("admin_panel")
 }
 
 @Composable
@@ -166,14 +120,11 @@ fun AppNavigation() {
                 onNewChat = {
                     navController.navigate(Screen.NewChat.route)
                 },
-                onCreateGroup = { type ->
-                    navController.navigate(Screen.CreateGroup.createRoute(type))
-                },
                 onSearch = {
                     navController.navigate(Screen.ChatSearch.route)
                 },
-                onAddFriend = {
-                    navController.navigate(Screen.AddFriend.route)
+                onCallHistory = {
+                    navController.navigate(Screen.CallHistory.route)
                 }
             )
         }
@@ -223,20 +174,7 @@ fun AppNavigation() {
             val chatListState by chatListViewModel.uiState.collectAsState()
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onBusinessProfile = { navController.navigate(Screen.BusinessProfile.route) },
                 onLinkedDevices = { navController.navigate(Screen.LinkedDevices.route) },
-                onPrivacy = { navController.navigate(Screen.Privacy.route) },
-                onLabels = { navController.navigate(Screen.Labels.route) },
-                onQuickReplies = { navController.navigate(Screen.QuickReplies.route) },
-                onProducts = { navController.navigate(Screen.Products.route) },
-                onAutoReplies = { navController.navigate(Screen.AutoReplies.route) },
-                onOrders = { navController.navigate(Screen.Orders.route) },
-                onBroadcasts = { navController.navigate(Screen.Broadcasts.route) },
-                onNotifications = { navController.navigate(Screen.Notifications.route) },
-                onStorageData = { navController.navigate(Screen.StorageData.route) },
-                onHelp = { navController.navigate(Screen.Help.route) },
-                onChatBackup = { navController.navigate(Screen.ChatBackup.route) },
-                onContactSync = { navController.navigate(Screen.ContactSync.route) },
                 userName = chatListState.currentUserName,
                 phoneNumber = chatListState.currentPhoneNumber,
                 onLogout = {
@@ -251,12 +189,6 @@ fun AppNavigation() {
             LinkedDevicesScreen(
                 onBack = { navController.popBackStack() },
                 onLinkNewDevice = { navController.navigate(Screen.QrScanner.route) }
-            )
-        }
-
-        composable(Screen.Privacy.route) {
-            PrivacySettingsScreen(
-                onBack = { navController.popBackStack() }
             )
         }
 
@@ -294,136 +226,11 @@ fun AppNavigation() {
             )
         }
 
-        // Add Friend screen
-        composable(Screen.AddFriend.route) {
-            val newChatViewModel: NewChatViewModel = hiltViewModel()
-            val newChatUiState by newChatViewModel.uiState.collectAsState()
-
-            LaunchedEffect(newChatUiState.createdChatId) {
-                newChatUiState.createdChatId?.let { chatId ->
-                    navController.navigate(Screen.Chat.createRoute(chatId)) {
-                        popUpTo(Screen.AddFriend.route) { inclusive = true }
-                    }
-                    newChatViewModel.clearCreatedChatId()
-                }
-            }
-
-            val contactUsers = newChatUiState.contacts.map { contact ->
-                ContactUser(
-                    id = contact.id,
-                    displayName = contact.displayName,
-                    phoneNumber = contact.phoneNumber
-                )
-            }
-
-            AddFriendScreen(
-                onBack = { navController.popBackStack() },
-                onUserSelected = { userId ->
-                    newChatViewModel.createChat(userId)
-                },
-                users = contactUsers,
-                isLoading = newChatUiState.isLoading,
-                onSearch = { query ->
-                    newChatViewModel.searchUsers(query)
-                }
-            )
-        }
-
-        // Create Group / Channel / Community
-        composable(
-            route = Screen.CreateGroup.route,
-            arguments = listOf(navArgument("type") { type = NavType.StringType; defaultValue = "group" })
-        ) { backStackEntry ->
-            val type = backStackEntry.arguments?.getString("type") ?: "group"
-            CreateGroupScreen(
-                onBack = { navController.popBackStack() },
-                onGroupCreated = { chatId ->
-                    navController.navigate(Screen.Chat.createRoute(chatId)) {
-                        popUpTo(Screen.ChatList.route)
-                    }
-                },
-                chatType = type
-            )
-        }
-
-        composable(Screen.BusinessProfile.route) {
-            BusinessProfileScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Products.route) {
-            ProductsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Orders.route) {
-            OrdersScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Labels.route) {
-            LabelsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.QuickReplies.route) {
-            QuickRepliesScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Broadcasts.route) {
-            BroadcastsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.AutoReplies.route) {
-            AutoRepliesScreen(onBack = { navController.popBackStack() })
-        }
-
         composable(Screen.ChatSearch.route) {
             ChatSearchScreen(
                 onBack = { navController.popBackStack() },
                 onChatClick = { chatId ->
                     navController.navigate(Screen.Chat.createRoute(chatId, "Chat"))
-                }
-            )
-        }
-
-        composable(Screen.ChatBackup.route) {
-            ChatBackupScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Notifications.route) {
-            NotificationsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.StorageData.route) {
-            StorageDataScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Help.route) {
-            HelpScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(
-            route = Screen.GroupInfo.route,
-            arguments = listOf(
-                navArgument("chatId") { type = NavType.StringType },
-                navArgument("name") { type = NavType.StringType; defaultValue = "Group" }
-            )
-        ) { backStackEntry ->
-            val groupChatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
-            val gName = backStackEntry.arguments?.getString("name") ?: "Group"
-            GroupInfoScreen(
-                chatId = groupChatId,
-                groupName = gName,
-                onBack = { navController.popBackStack() },
-                onAddMembers = { },
-                onChatClick = { id ->
-                    navController.navigate(Screen.Chat.createRoute(id))
-                }
-            )
-        }
-
-        composable(Screen.ContactSync.route) {
-            ContactSyncScreen(
-                onBack = { navController.popBackStack() },
-                onContactClick = { contactId ->
-                    navController.navigate(Screen.Chat.createRoute(contactId))
                 }
             )
         }
@@ -450,28 +257,8 @@ fun AppNavigation() {
             )
         }
 
-        composable(Screen.Status.route) {
-            StatusScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.Friends.route) {
-            FriendsScreen(onBack = { navController.popBackStack() })
-        }
-
         composable(Screen.CallHistory.route) {
             CallHistoryScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.TwoStepVerification.route) {
-            TwoStepVerificationScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.ThemeSettings.route) {
-            ThemeSettingsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Screen.AdminPanel.route) {
-            AdminPanelScreen(onBack = { navController.popBackStack() })
         }
 
         composable(
