@@ -60,3 +60,18 @@ data class QrPairingResponse(
     @SerializedName("success") val success: Boolean,
     @SerializedName("message") val message: String
 )
+
+data class CreateQrSessionRequest(
+    @SerializedName("deviceId") val deviceId: String,
+    @SerializedName("deviceName") val deviceName: String
+)
+
+data class CreateQrSessionResponse(
+    @SerializedName("pairingCode") val pairingCode: String,
+    @SerializedName("expiresAt") val expiresAt: String
+)
+
+data class QrPairingStatusResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("paired") val paired: Boolean = false
+)

@@ -43,6 +43,12 @@ import com.chatapp.presentation.settings.NotificationsScreen
 import com.chatapp.presentation.settings.StorageDataScreen
 import com.chatapp.presentation.settings.HelpScreen
 import com.chatapp.presentation.profile.UserProfileScreen
+import com.chatapp.presentation.status.StatusScreen
+import com.chatapp.presentation.friends.FriendsScreen
+import com.chatapp.presentation.calls.CallHistoryScreen
+import com.chatapp.presentation.settings.TwoStepVerificationScreen
+import com.chatapp.presentation.settings.ThemeSettingsScreen
+import com.chatapp.presentation.admin.AdminPanelScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -86,6 +92,12 @@ sealed class Screen(val route: String) {
         fun createRoute(chatId: String, name: String = "Group") = "group_info/$chatId?name=${Uri.encode(name)}"
     }
     object AddFriend : Screen("add_friend")
+    object Status : Screen("status")
+    object Friends : Screen("friends")
+    object CallHistory : Screen("call_history")
+    object TwoStepVerification : Screen("two_step_verification")
+    object ThemeSettings : Screen("theme_settings")
+    object AdminPanel : Screen("admin_panel")
 }
 
 @Composable
@@ -436,6 +448,30 @@ fun AppNavigation() {
                     navController.navigate(Screen.VideoCall.createRoute(profileChatId, profileName))
                 }
             )
+        }
+
+        composable(Screen.Status.route) {
+            StatusScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Friends.route) {
+            FriendsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.CallHistory.route) {
+            CallHistoryScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.TwoStepVerification.route) {
+            TwoStepVerificationScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.ThemeSettings.route) {
+            ThemeSettingsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AdminPanel.route) {
+            AdminPanelScreen(onBack = { navController.popBackStack() })
         }
 
         composable(
