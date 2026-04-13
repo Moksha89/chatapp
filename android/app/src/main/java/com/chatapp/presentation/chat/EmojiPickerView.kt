@@ -1,10 +1,13 @@
 package com.chatapp.presentation.chat
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,9 +15,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.request.ImageRequest
+import com.chatapp.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
 
 @Composable
 fun EmojiPickerView(
@@ -171,81 +186,226 @@ fun EnhancedEmojiPickerView(
                     }
                 }
                 1 -> {
-                    // GIF picker (popular GIF reactions)
-                    val gifEmojis = listOf(
-                        "\uD83D\uDE02" to "Laughing",
-                        "\uD83D\uDC4D" to "Thumbs Up",
-                        "\uD83D\uDE0D" to "Heart Eyes",
-                        "\uD83D\uDE22" to "Crying",
-                        "\uD83D\uDE31" to "Shocked",
-                        "\uD83D\uDE4C" to "Celebration",
-                        "\uD83D\uDE44" to "Eye Roll",
-                        "\uD83D\uDD25" to "Fire",
-                        "\uD83D\uDC4F" to "Clapping",
-                        "\uD83E\uDD14" to "Thinking",
-                        "\uD83D\uDE4F" to "Thank You",
-                        "\uD83D\uDE18" to "Kiss",
-                        "\u2764\uFE0F" to "Love",
-                        "\uD83D\uDE2D" to "Sobbing",
-                        "\uD83D\uDE33" to "Flushed",
-                        "\uD83D\uDE0E" to "Cool"
-                    )
-                    Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                        Text("Popular GIF Reactions", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(4),
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(4.dp)
-                        ) {
-                            items(gifEmojis) { (emoji, label) ->
-                                Surface(
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.padding(4.dp).clickable { onGifSelected(emoji) }
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(8.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(emoji, fontSize = 32.sp)
-                                        Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    // GIF picker with Giphy API
+                    GiphyGifPicker(onGifSelected = onGifSelected)
                 }
                 2 -> {
-                    // Sticker packs
-                    val stickerPacks = listOf(
-                        "Greetings" to listOf("\uD83D\uDC4B", "\uD83D\uDE4B", "\uD83E\uDD1D", "\u270C\uFE0F", "\uD83D\uDC4D", "\uD83D\uDC4C"),
-                        "Love" to listOf("\u2764\uFE0F", "\uD83D\uDC95", "\uD83D\uDC9E", "\uD83D\uDC98", "\uD83D\uDE0D", "\uD83E\uDD70"),
-                        "Happy" to listOf("\uD83D\uDE00", "\uD83D\uDE04", "\uD83D\uDE06", "\uD83D\uDE02", "\uD83E\uDD29", "\uD83E\uDD73"),
-                        "Animals" to listOf("\uD83D\uDC36", "\uD83D\uDC31", "\uD83D\uDC3B", "\uD83D\uDC3C", "\uD83E\uDD81", "\uD83E\uDD8A"),
-                        "Food" to listOf("\uD83C\uDF55", "\uD83C\uDF54", "\uD83C\uDF5F", "\uD83C\uDF69", "\uD83C\uDF70", "\uD83C\uDF66")
-                    )
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(6),
-                        modifier = Modifier.fillMaxSize().padding(8.dp),
-                        contentPadding = PaddingValues(4.dp)
+                    // Sticker picker with Giphy Stickers API
+                    GiphyStickerPicker(onStickerSelected = onStickerSelected)
+                }
+            }
+        }
+    }
+}
+
+/** Fetch GIFs from Giphy API */
+private suspend fun fetchGiphyGifs(query: String = ""): List<Pair<String, String>> {
+    return withContext(Dispatchers.IO) {
+        try {
+            val apiKey = BuildConfig.GIPHY_API_KEY
+            val endpoint = if (query.isBlank()) {
+                "https://api.giphy.com/v1/gifs/trending?api_key=$apiKey&limit=24&rating=g"
+            } else {
+                "https://api.giphy.com/v1/gifs/search?api_key=$apiKey&q=${java.net.URLEncoder.encode(query, "UTF-8")}&limit=24&rating=g"
+            }
+            val json = URL(endpoint).readText()
+            val root = JSONObject(json)
+            val data = root.getJSONArray("data")
+            val results = mutableListOf<Pair<String, String>>()
+            for (i in 0 until data.length()) {
+                val gif = data.getJSONObject(i)
+                val images = gif.getJSONObject("images")
+                // Use fixed_width for preview, original for sending
+                val previewUrl = images.getJSONObject("fixed_width").optString("url", "")
+                val originalUrl = images.getJSONObject("original").optString("url", "")
+                if (previewUrl.isNotEmpty() && originalUrl.isNotEmpty()) {
+                    results.add(previewUrl to originalUrl)
+                }
+            }
+            results
+        } catch (e: Exception) {
+            Log.e("GiphyPicker", "Failed to fetch GIFs", e)
+            emptyList()
+        }
+    }
+}
+
+/** Fetch Stickers from Giphy Stickers API */
+private suspend fun fetchGiphyStickers(query: String = ""): List<Pair<String, String>> {
+    return withContext(Dispatchers.IO) {
+        try {
+            val apiKey = BuildConfig.GIPHY_API_KEY
+            val endpoint = if (query.isBlank()) {
+                "https://api.giphy.com/v1/stickers/trending?api_key=$apiKey&limit=24&rating=g"
+            } else {
+                "https://api.giphy.com/v1/stickers/search?api_key=$apiKey&q=${java.net.URLEncoder.encode(query, "UTF-8")}&limit=24&rating=g"
+            }
+            val json = URL(endpoint).readText()
+            val root = JSONObject(json)
+            val data = root.getJSONArray("data")
+            val results = mutableListOf<Pair<String, String>>()
+            for (i in 0 until data.length()) {
+                val sticker = data.getJSONObject(i)
+                val images = sticker.getJSONObject("images")
+                val previewUrl = images.getJSONObject("fixed_width").optString("url", "")
+                val originalUrl = images.getJSONObject("original").optString("url", "")
+                if (previewUrl.isNotEmpty() && originalUrl.isNotEmpty()) {
+                    results.add(previewUrl to originalUrl)
+                }
+            }
+            results
+        } catch (e: Exception) {
+            Log.e("GiphyPicker", "Failed to fetch stickers", e)
+            emptyList()
+        }
+    }
+}
+
+@Composable
+fun GiphyGifPicker(onGifSelected: (String) -> Unit) {
+    var searchQuery by remember { mutableStateOf("") }
+    var gifs by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val gifImageLoader = remember {
+        ImageLoader.Builder(context)
+            .components { add(GifDecoder.Factory()) }
+            .build()
+    }
+
+    LaunchedEffect(searchQuery) {
+        isLoading = true
+        gifs = fetchGiphyGifs(searchQuery)
+        isLoading = false
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+        // Search bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search GIFs...", fontSize = 13.sp) },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(fontSize = 13.sp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { /* search triggers via LaunchedEffect */ }),
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+            }
+        } else if (gifs.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No GIFs found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(2.dp)
+            ) {
+                items(gifs) { (previewUrl, originalUrl) ->
+                    Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .padding(2.dp)
+                            .aspectRatio(1f)
+                            .clickable { onGifSelected(originalUrl) }
                     ) {
-                        stickerPacks.forEach { (packName, stickers) ->
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(6) }) {
-                                Text(packName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 4.dp))
-                            }
-                            items(stickers) { sticker ->
-                                Surface(
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.padding(4.dp).clickable { onStickerSelected(sticker) }
-                                ) {
-                                    Text(
-                                        sticker, fontSize = 32.sp, textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(8.dp)
-                                    )
-                                }
-                            }
-                        }
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(previewUrl)
+                                .crossfade(true)
+                                .build(),
+                            imageLoader = gifImageLoader,
+                            contentDescription = "GIF",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GiphyStickerPicker(onStickerSelected: (String) -> Unit) {
+    var searchQuery by remember { mutableStateOf("") }
+    var stickers by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val gifImageLoader = remember {
+        ImageLoader.Builder(context)
+            .components { add(GifDecoder.Factory()) }
+            .build()
+    }
+
+    LaunchedEffect(searchQuery) {
+        isLoading = true
+        stickers = fetchGiphyStickers(searchQuery)
+        isLoading = false
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+        // Search bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search stickers...", fontSize = 13.sp) },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(fontSize = 13.sp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { /* search triggers via LaunchedEffect */ }),
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+            }
+        } else if (stickers.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No stickers found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(2.dp)
+            ) {
+                items(stickers) { (previewUrl, originalUrl) ->
+                    Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .padding(2.dp)
+                            .aspectRatio(1f)
+                            .clickable { onStickerSelected(originalUrl) }
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(previewUrl)
+                                .crossfade(true)
+                                .build(),
+                            imageLoader = gifImageLoader,
+                            contentDescription = "Sticker",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize().padding(4.dp)
+                        )
                     }
                 }
             }

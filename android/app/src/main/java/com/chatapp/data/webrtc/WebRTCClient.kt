@@ -15,19 +15,34 @@ class WebRTCClient @Inject constructor(
         private const val TAG = "WebRTCClient"
 
         private val ICE_SERVERS: List<PeerConnection.IceServer> by lazy {
+            val turnUrl = BuildConfig.TURN_SERVER_URL
+            val turnUser = BuildConfig.TURN_USERNAME
+            val turnPass = BuildConfig.TURN_PASSWORD
+
             buildList {
+                // Google STUN servers
                 add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
                 add(PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer())
-                add(PeerConnection.IceServer.builder("stun:stun2.l.google.com:19302").createIceServer())
-                val turnUrl = BuildConfig.TURN_SERVER_URL
-                val turnUser = BuildConfig.TURN_USERNAME
-                val turnPass = BuildConfig.TURN_PASSWORD
+
+                // TURN server from BuildConfig (set via env vars at build time)
                 if (turnUrl.isNotEmpty() && turnUser.isNotEmpty() && turnPass.isNotEmpty()) {
+                    // Extract host for multi-protocol support
+                    val turnHost = turnUrl.replace("turn:", "").replace("turns:", "")
+                    add(PeerConnection.IceServer.builder("stun:$turnHost")
+                        .createIceServer())
+                    add(PeerConnection.IceServer.builder("turn:$turnHost")
+                        .setUsername(turnUser)
+                        .setPassword(turnPass)
+                        .createIceServer())
+                    add(PeerConnection.IceServer.builder("turn:$turnHost?transport=tcp")
+                        .setUsername(turnUser)
+                        .setPassword(turnPass)
+                        .createIceServer())
                     add(PeerConnection.IceServer.builder(turnUrl)
                         .setUsername(turnUser)
                         .setPassword(turnPass)
                         .createIceServer())
-                    add(PeerConnection.IceServer.builder("$turnUrl?transport=tcp")
+                    add(PeerConnection.IceServer.builder("turns:$turnHost?transport=tcp")
                         .setUsername(turnUser)
                         .setPassword(turnPass)
                         .createIceServer())

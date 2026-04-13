@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import android.content.Context
 import android.net.Uri
 import com.chatapp.data.api.ApiService
+import com.chatapp.data.service.NotificationHandler
 import com.chatapp.data.socket.SocketEvent
 import com.chatapp.data.socket.SocketManager
 import com.chatapp.domain.model.Message
@@ -41,7 +42,8 @@ data class ChatUiState(
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val socketManager: SocketManager,
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val notificationHandler: NotificationHandler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -84,18 +86,34 @@ class ChatViewModel @Inject constructor(
                 if (event.chatId == currentChatId) {
                     try {
                         val data = event.messageJson
+                        val messageId = data.optString("id", "")
+                        val senderId = data.optString("senderId", "")
+                        val currentUserId = _uiState.value.currentUserId
+
+                        // Skip messages sent by the current user — these are handled via optimistic updates + message:sent
+                        if (senderId == currentUserId) return
+
+                        val resolvedId = if (messageId.isNotEmpty()) messageId else UUID.randomUUID().toString()
+                        val content = data.optString("content", "")
+
                         val message = Message(
-                            id = data.optString("id", UUID.randomUUID().toString()),
+                            id = resolvedId,
                             chatId = event.chatId,
-                            senderId = data.optString("senderId", ""),
-                            content = data.optString("content", ""),
+                            senderId = senderId,
+                            content = content,
                             type = MessageType.TEXT,
                             status = MessageStatus.DELIVERED,
                             createdAt = System.currentTimeMillis(),
                             replyToMessageId = if (data.has("replyToMessageId")) data.optString("replyToMessageId") else null
                         )
                         _uiState.update { state ->
-                            if (state.messages.none { it.id == message.id }) {
+                            // Deduplicate by ID and also by content+sender for edge cases
+                            val isDuplicate = state.messages.any { it.id == message.id } ||
+                                (messageId.isEmpty() && state.messages.any {
+                                    it.senderId == senderId && it.content == content &&
+                                    kotlin.math.abs(it.createdAt - message.createdAt) < 3000
+                                })
+                            if (!isDuplicate) {
                                 state.copy(messages = (state.messages + message).sortedBy { it.createdAt })
                             } else state
                         }
@@ -155,6 +173,9 @@ class ChatViewModel @Inject constructor(
         currentChatId = chatId
         otherUserId = otherUserIdParam
         _uiState.update { it.copy(isLoading = true, currentUserId = userId) }
+        // Tell NotificationHandler which chat is active so it doesn't show notifications for it
+        notificationHandler.activeChatId = chatId
+        notificationHandler.currentUserId = userId
         connectSocket()
 
         // Resolve chat name from API (handles direct chats where name might be "Chat")
@@ -449,5 +470,7 @@ class ChatViewModel @Inject constructor(
         if (currentChatId.isNotEmpty()) {
             socketManager.sendTypingStop(currentChatId)
         }
+        // Clear active chat so notifications resume for all chats
+        notificationHandler.activeChatId = null
     }
 }

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chatapp.data.api.ApiService
 import com.chatapp.data.repository.AuthRepositoryImpl
+import com.chatapp.data.socket.SocketEvent
+import com.chatapp.data.socket.SocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,7 +58,8 @@ data class ChatListUiState(
 @HiltViewModel
 class ChatListViewModel @Inject constructor(
     private val apiService: ApiService,
-    private val authRepository: AuthRepositoryImpl
+    private val authRepository: AuthRepositoryImpl,
+    private val socketManager: SocketManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatListUiState())
@@ -64,6 +67,27 @@ class ChatListViewModel @Inject constructor(
 
     init {
         loadCurrentUser()
+        loadChats()
+        // Listen for real-time updates to refresh chat list
+        viewModelScope.launch {
+            socketManager.events.collect { event ->
+                when (event) {
+                    is SocketEvent.NewMessage -> {
+                        // Refresh chat list when a new message arrives
+                        loadChats()
+                    }
+                    is SocketEvent.MessageRead -> {
+                        // Refresh to update unread counts
+                        loadChats()
+                    }
+                    else -> { }
+                }
+            }
+        }
+    }
+
+    /** Call this when returning from a chat screen to refresh unread counts */
+    fun refreshChats() {
         loadChats()
     }
 

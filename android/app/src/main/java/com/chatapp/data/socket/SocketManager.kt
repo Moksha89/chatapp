@@ -60,7 +60,28 @@ class SocketManager @Inject constructor(
     private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
     val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers.asStateFlow()
 
+    // Track processed message IDs to prevent duplicates at the socket level
+    private val processedMessageIds = LinkedHashSet<String>()
+    private val MAX_PROCESSED_IDS = 200
+
+    fun trackMessageId(id: String): Boolean {
+        if (processedMessageIds.contains(id)) return false
+        processedMessageIds.add(id)
+        if (processedMessageIds.size > MAX_PROCESSED_IDS) {
+            val iterator = processedMessageIds.iterator()
+            iterator.next()
+            iterator.remove()
+        }
+        return true
+    }
+
     fun connect() {
+        // Prevent multiple socket instances — disconnect existing one first
+        if (socket != null) {
+            Log.d(tag, "Disconnecting existing socket before reconnecting")
+            disconnect()
+        }
+
         val prefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
         val token = prefs.getString("access_token", null) ?: return
 
@@ -132,6 +153,12 @@ class SocketManager @Inject constructor(
                     // Backend sends { message: {...}, chatId: "..." }
                     // Extract the nested message object if present
                     val messageJson = if (data.has("message")) data.optJSONObject("message") ?: data else data
+                    // Deduplicate at socket level — skip if we already processed this message ID
+                    val msgId = messageJson.optString("id", "")
+                    if (msgId.isNotEmpty() && !trackMessageId(msgId)) {
+                        Log.d(tag, "Skipping duplicate message:new for id=$msgId")
+                        return@on
+                    }
                     _events.tryEmit(SocketEvent.NewMessage(chatId, messageJson))
                 }
             }
@@ -147,8 +174,22 @@ class SocketManager @Inject constructor(
             on("message:read") { args ->
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
-                    val messageId = data.optString("messageId", "")
-                    _events.tryEmit(SocketEvent.MessageRead(messageId))
+                    // Backend sends messageIds (array), not messageId (singular)
+                    val messageIdsArray = data.optJSONArray("messageIds")
+                    if (messageIdsArray != null) {
+                        for (i in 0 until messageIdsArray.length()) {
+                            val mid = messageIdsArray.optString(i, "")
+                            if (mid.isNotEmpty()) {
+                                _events.tryEmit(SocketEvent.MessageRead(mid))
+                            }
+                        }
+                    } else {
+                        // Fallback for singular messageId
+                        val messageId = data.optString("messageId", "")
+                        if (messageId.isNotEmpty()) {
+                            _events.tryEmit(SocketEvent.MessageRead(messageId))
+                        }
+                    }
                 }
             }
 

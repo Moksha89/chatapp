@@ -20,9 +20,12 @@ android {
 
         buildConfigField("String", "API_BASE_URL", "\"https://abhi.so\"")
         buildConfigField("String", "SOCKET_URL", "\"https://abhi.so\"")
-        buildConfigField("String", "TURN_SERVER_URL", "\"turn:208.110.87.24:3478\"")
-        buildConfigField("String", "TURN_USERNAME", System.getenv("TURN_USERNAME")?.let { "\"$it\"" } ?: "\"chatapp\"")
-        buildConfigField("String", "TURN_PASSWORD", System.getenv("TURN_PASSWORD")?.let { "\"$it\"" } ?: "\"\"")
+        buildConfigField("String", "TURN_SERVER_URL", System.getenv("TURN_SERVER_URL")?.let { "\"$it\"" } ?: "\"turn:a.relay.metered.ca:443\"")
+        buildConfigField("String", "TURN_USERNAME", System.getenv("TURN_USERNAME")?.let { "\"$it\"" } ?: "\"openrelayproject\"")
+        buildConfigField("String", "TURN_PASSWORD", System.getenv("TURN_PASSWORD")?.let { "\"$it\"" } ?: "\"openrelayproject\"")
+        buildConfigField("String", "GIPHY_API_KEY", System.getenv("GIPHY_API_KEY")?.let { "\"$it\"" } ?: "\"\"")
+        // TURN credentials: set TURN_USERNAME and TURN_PASSWORD env vars before building
+        // GIPHY: set GIPHY_API_KEY env var before building
 
     }
 
@@ -103,6 +106,7 @@ dependencies {
     implementation("io.getstream:stream-webrtc-android:1.1.1")
 
         implementation("io.coil-kt:coil-compose:2.5.0")
+        implementation("io.coil-kt:coil-gif:2.5.0")
 
         implementation("com.journeyapps:zxing-android-embedded:4.3.0")
         implementation("com.google.zxing:core:3.5.2")
