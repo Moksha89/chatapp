@@ -102,7 +102,7 @@ fun CallHistoryScreen(
                                 }
                             }
                         )
-                        HorizontalDivider()
+                        Divider()
                     }
                 }
             }

@@ -7,7 +7,7 @@ import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.security.spec.NamedParameterSpec
-import java.security.spec.PKCS8EncodedSpec
+import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Cipher
 import javax.crypto.KeyAgreement

@@ -7,6 +7,7 @@ import android.provider.ContactsContract
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.chatapp.data.api.ApiService
+import com.chatapp.data.api.dto.SyncContactEntry
 import com.chatapp.data.api.dto.SyncContactsRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -129,8 +130,8 @@ class ContactSyncViewModel @Inject constructor(
                 }
                 
                 // Step 2: Send phone numbers to server for matching
-                val phoneNumbers = deviceContacts.map { it.phoneNumber }
-                val syncRequest = SyncContactsRequest(phoneNumbers = phoneNumbers)
+                val contactEntries = deviceContacts.map { SyncContactEntry(phoneNumber = it.phoneNumber, displayName = it.displayName) }
+                val syncRequest = SyncContactsRequest(contacts = contactEntries)
                 val serverContacts = apiService.syncContacts(syncRequest)
                 
                 // Step 3: Merge device contacts with server response

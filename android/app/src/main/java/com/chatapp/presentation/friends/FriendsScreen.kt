@@ -90,7 +90,7 @@ fun FriendsScreen(
                                 }
                             )
                         }
-                        item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+                        item { Divider(modifier = Modifier.padding(vertical = 8.dp)) }
                     }
 
                     if (uiState.suggestions.isNotEmpty()) {
@@ -122,7 +122,7 @@ fun FriendsScreen(
                                 }
                             )
                         }
-                        item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+                        item { Divider(modifier = Modifier.padding(vertical = 8.dp)) }
                     }
 
                     item {
