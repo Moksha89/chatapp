@@ -34,6 +34,10 @@ sealed class SocketEvent {
     data class MessageReaction(val messageId: String, val reactions: Map<String, List<String>>) : SocketEvent()
     data class MessageEdited(val messageId: String, val content: String) : SocketEvent()
     data class MessageDeleted(val messageId: String) : SocketEvent()
+    data class FriendRequest(val friendshipId: String, val requesterId: String) : SocketEvent()
+    data class FriendAccepted(val friendshipId: String, val acceptedBy: String) : SocketEvent()
+    data class ChatUpdated(val chatId: String) : SocketEvent()
+    data class MessageSent(val tempId: String, val messageId: String, val timestamp: String) : SocketEvent()
 }
 
 @Singleton
@@ -319,6 +323,38 @@ class SocketManager @Inject constructor(
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
                     _events.tryEmit(SocketEvent.MessageDeleted(data.optString("messageId", "")))
+                }
+            }
+
+            on("friend:request") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as JSONObject
+                    _events.tryEmit(SocketEvent.FriendRequest(
+                        friendshipId = data.optString("friendshipId", ""),
+                        requesterId = data.optString("requesterId", "")
+                    ))
+                }
+            }
+
+            on("friend:accepted") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as JSONObject
+                    _events.tryEmit(SocketEvent.FriendAccepted(
+                        friendshipId = data.optString("friendshipId", ""),
+                        acceptedBy = data.optString("acceptedBy", "")
+                    ))
+                }
+            }
+
+            // When the sender's own message is confirmed saved by the server
+            on("message:sent") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as JSONObject
+                    _events.tryEmit(SocketEvent.MessageSent(
+                        tempId = data.optString("tempId", ""),
+                        messageId = data.optString("messageId", ""),
+                        timestamp = data.optString("timestamp", "")
+                    ))
                 }
             }
         }

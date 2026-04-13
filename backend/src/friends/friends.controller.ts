@@ -3,13 +3,17 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { FriendsService } from './friends.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserData } from '../common/decorators';
+import { WebsocketService } from '../websocket/websocket.service';
 
 @ApiTags('Friends')
 @Controller('friends')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class FriendsController {
-  constructor(private readonly friendsService: FriendsService) {}
+  constructor(
+    private readonly friendsService: FriendsService,
+    private readonly websocketService: WebsocketService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get friends list' })
@@ -25,7 +29,14 @@ export class FriendsController {
     @CurrentUser() user: CurrentUserData,
     @Body() body: { userId: string },
   ) {
-    return this.friendsService.sendFriendRequest(user.id, body.userId);
+    const result = await this.friendsService.sendFriendRequest(user.id, body.userId);
+    // Notify the recipient in real-time via WebSocket
+    this.websocketService.emitToUser(body.userId, 'friend:request', {
+      friendshipId: result.id,
+      requesterId: user.id,
+      status: 'pending',
+    });
+    return result;
   }
 
   @Get('requests/pending')
@@ -49,7 +60,13 @@ export class FriendsController {
     @CurrentUser() user: CurrentUserData,
     @Param('id') friendshipId: string,
   ) {
-    return this.friendsService.acceptFriendRequest(user.id, friendshipId);
+    const result = await this.friendsService.acceptFriendRequest(user.id, friendshipId);
+    // Notify the requester that their request was accepted
+    this.websocketService.emitToUser(result.requesterId, 'friend:accepted', {
+      friendshipId: result.id,
+      acceptedBy: user.id,
+    });
+    return result;
   }
 
   @Post(':id/decline')

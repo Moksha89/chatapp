@@ -131,6 +131,16 @@ class ChatViewModel @Inject constructor(
                     })
                 }
             }
+            is SocketEvent.MessageSent -> {
+                // Server confirmed the message was saved — update optimistic message with real ID
+                _uiState.update { state ->
+                    state.copy(messages = state.messages.map { msg ->
+                        if (msg.id == event.tempId || msg.tempId == event.tempId) {
+                            msg.copy(id = event.messageId, status = MessageStatus.SENT)
+                        } else msg
+                    })
+                }
+            }
             else -> { }
         }
     }
@@ -206,8 +216,6 @@ class ChatViewModel @Inject constructor(
         if (content.isBlank() || currentChatId.isEmpty()) return
         val tempId = UUID.randomUUID().toString()
         val userId = _uiState.value.currentUserId
-        // Send via socket for real-time delivery
-        socketManager.sendMessage(currentChatId, content, "text", tempId, replyToMessageId)
         // Add optimistic message immediately with correct senderId for proper alignment
         val optimisticMessage = Message(
             id = tempId,
@@ -223,21 +231,18 @@ class ChatViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(messages = (state.messages + optimisticMessage).sortedBy { it.createdAt })
         }
-        // Also send via HTTP for persistence
+        // Send ONLY via WebSocket (not HTTP) to avoid duplicate messages.
+        // The WebSocket handler on the backend persists the message and delivers
+        // it to other participants in real-time.
+        socketManager.sendMessage(currentChatId, content, "text", tempId, replyToMessageId)
+        // Update optimistic message status to SENT after a short delay
         viewModelScope.launch {
-            chatRepository.sendMessage(currentChatId, content, tempId, replyToMessageId)
-                .onSuccess { message ->
-                    // Ensure the server response also has correct senderId
-                    val fixedMessage = if (message.senderId.isEmpty()) message.copy(senderId = userId) else message
-                    _uiState.update { state ->
-                        state.copy(messages = state.messages.map { msg ->
-                            if (msg.id == tempId || msg.id == fixedMessage.id) fixedMessage.copy(status = MessageStatus.SENT) else msg
-                        }.sortedBy { it.createdAt })
-                    }
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(error = error.message ?: "Failed to send message") }
-                }
+            kotlinx.coroutines.delay(500)
+            _uiState.update { state ->
+                state.copy(messages = state.messages.map { msg ->
+                    if (msg.id == tempId && msg.status == MessageStatus.SENDING) msg.copy(status = MessageStatus.SENT) else msg
+                })
+            }
         }
     }
 
@@ -265,7 +270,7 @@ class ChatViewModel @Inject constructor(
                         mediaType.startsWith("audio") -> "audio"
                         else -> "file"
                     }
-                    sendMessage(url, null)
+                    // Send ONLY via WebSocket to avoid duplicate messages
                     socketManager.sendMessage(currentChatId, url, messageType, UUID.randomUUID().toString(), null)
                     _uiState.update { it.copy(uploadProgress = 1f) }
                 } else {
