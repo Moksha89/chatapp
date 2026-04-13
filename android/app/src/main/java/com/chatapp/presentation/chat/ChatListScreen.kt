@@ -5,9 +5,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,8 +43,8 @@ fun ChatListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("All", "Groups", "Channels", "Labels")
+    var selectedFilter by remember { mutableStateOf("all") }
+    val filters = listOf("all", "unread", "groups", "channels", "communities", "labels", "calls")
 
     // + menu state
     var showPlusMenu by remember { mutableStateOf(false) }
@@ -197,34 +199,35 @@ fun ChatListScreen(
                         }
                     }
                 )
-                // Tab Row
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.background(MaterialTheme.colorScheme.primary),
-                    indicator = @Composable { tabPositions ->
-                        TabRowDefaults.Indicator(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
+                // Filter pills (matching web UI)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            selectedContentColor = MaterialTheme.colorScheme.onPrimary,
-                            unselectedContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                            text = {
-                                Text(
-                                    text = title,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (selectedTab == index) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                                )
-                            }
-                        )
+                    filters.forEach { filter ->
+                        val isSelected = selectedFilter == filter
+                        val displayText = when (filter) {
+                            "calls" -> "\uD83D\uDCDE Calls"
+                            "labels" -> "Labels"
+                            else -> filter.replaceFirstChar { it.uppercase() }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.clickable { selectedFilter = filter }
+                        ) {
+                            Text(
+                                text = displayText,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -281,12 +284,15 @@ fun ChatListScreen(
             }
         }
     ) { paddingValues ->
-        // Filter chats based on selected tab
-        val filteredChats = when (selectedTab) {
-            0 -> uiState.chats.filter { !it.isArchived } // All (non-archived)
-            1 -> uiState.chats.filter { it.type == "group" || it.type == "community" }
-            2 -> uiState.chats.filter { it.type == "channel" }
-            3 -> uiState.chats // Labels tab shows all with label info
+        // Filter chats based on selected filter (matching web UI)
+        val filteredChats = when (selectedFilter) {
+            "all" -> uiState.chats.filter { !it.isArchived }
+            "unread" -> uiState.chats.filter { it.unreadCount > 0 && !it.isArchived }
+            "groups" -> uiState.chats.filter { it.type == "group" || it.type == "community" }
+            "channels" -> uiState.chats.filter { it.type == "channel" }
+            "communities" -> uiState.chats.filter { it.type == "community" }
+            "labels" -> uiState.chats // Labels tab shows all with label info
+            "calls" -> emptyList() // Calls are handled by bottom nav
             else -> uiState.chats
         }
 
@@ -303,7 +309,7 @@ fun ChatListScreen(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
                 )
-            } else if (selectedTab == 3) {
+            } else if (selectedFilter == "labels") {
                 // Labels tab
                 LabelsTabContent(
                     labels = uiState.labels,
@@ -318,9 +324,12 @@ fun ChatListScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        imageVector = when (selectedTab) {
-                            1 -> Icons.Default.Group
-                            2 -> Icons.Default.Campaign
+                        imageVector = when (selectedFilter) {
+                            "groups" -> Icons.Default.Group
+                            "channels" -> Icons.Default.Campaign
+                            "communities" -> Icons.Default.People
+                            "unread" -> Icons.Default.MarkunreadMailbox
+                            "calls" -> Icons.Default.Call
                             else -> Icons.Default.Message
                         },
                         contentDescription = null,
@@ -329,18 +338,24 @@ fun ChatListScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = when (selectedTab) {
-                            1 -> "No groups yet"
-                            2 -> "No channels yet"
+                        text = when (selectedFilter) {
+                            "groups" -> "No groups yet"
+                            "channels" -> "No channels yet"
+                            "communities" -> "No communities yet"
+                            "unread" -> "No unread messages"
+                            "calls" -> "No call history"
                             else -> "No chats yet"
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = when (selectedTab) {
-                            1 -> "Create a group to chat with multiple people"
-                            2 -> "Create a channel to broadcast messages"
+                        text = when (selectedFilter) {
+                            "groups" -> "Create a group to chat with multiple people"
+                            "channels" -> "Create a channel to broadcast messages"
+                            "communities" -> "Join or create a community"
+                            "unread" -> "You're all caught up!"
+                            "calls" -> "Your call history will appear here"
                             else -> "Start a new conversation"
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -352,7 +367,7 @@ fun ChatListScreen(
                 val archivedCount = uiState.chats.count { it.isArchived }
 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    if (archivedCount > 0 && selectedTab == 0) {
+                    if (archivedCount > 0 && selectedFilter == "all") {
                         item {
                             Row(
                                 modifier = Modifier
