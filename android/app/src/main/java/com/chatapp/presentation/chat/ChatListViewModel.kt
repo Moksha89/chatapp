@@ -68,6 +68,11 @@ class ChatListViewModel @Inject constructor(
     init {
         loadCurrentUser()
         loadChats()
+        // Ensure WebSocket is connected so real-time events flow
+        // (handles the case where user just logged in and Application.onCreate already ran)
+        if (!socketManager.isConnected.value) {
+            socketManager.connect()
+        }
         // Listen for real-time updates to refresh chat list
         viewModelScope.launch {
             socketManager.events.collect { event ->

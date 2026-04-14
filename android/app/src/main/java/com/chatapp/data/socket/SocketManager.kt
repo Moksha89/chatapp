@@ -83,7 +83,11 @@ class SocketManager @Inject constructor(
         }
 
         val prefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        val token = prefs.getString("access_token", null) ?: return
+        val token = prefs.getString("access_token", null)
+        if (token == null) {
+            Log.d(tag, "No auth token found, skipping socket connection")
+            return
+        }
 
         try {
             val options = IO.Options().apply {
@@ -95,9 +99,11 @@ class SocketManager @Inject constructor(
             }
             // Backend WebSocket gateway uses namespace "/chat"
             val socketUrl = BuildConfig.SOCKET_URL.trimEnd('/') + "/chat"
+            Log.d(tag, "Connecting to socket: $socketUrl")
             socket = IO.socket(socketUrl, options)
             setupListeners()
             socket?.connect()
+            Log.d(tag, "Socket.connect() called")
         } catch (e: Exception) {
             Log.e(tag, "Socket connection error", e)
         }
@@ -135,15 +141,20 @@ class SocketManager @Inject constructor(
     private fun setupListeners() {
         socket?.apply {
             on(Socket.EVENT_CONNECT) {
-                Log.d(tag, "Socket connected")
+                Log.d(tag, "Socket connected successfully")
                 _isConnected.value = true
                 emit("presence:online", JSONObject())
                 startHeartbeat()
             }
 
-            on(Socket.EVENT_DISCONNECT) {
-                Log.d(tag, "Socket disconnected")
+            on(Socket.EVENT_DISCONNECT) { args ->
+                Log.d(tag, "Socket disconnected: ${args.firstOrNull()}")
                 _isConnected.value = false
+            }
+
+            on(Socket.EVENT_CONNECT_ERROR) { args ->
+                val error = args.firstOrNull()
+                Log.e(tag, "Socket connect_error: $error")
             }
 
             on("message:new") { args ->
