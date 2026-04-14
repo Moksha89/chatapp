@@ -30,6 +30,7 @@ data class ChatUiState(
     val hasMoreMessages: Boolean = true,
     val error: String? = null,
     val currentUserId: String = "",
+    val otherUserId: String = "",
     val isOnline: Boolean = false,
     val isTyping: Boolean = false,
     val resolvedChatName: String? = null,
@@ -172,7 +173,7 @@ class ChatViewModel @Inject constructor(
     fun loadMessages(chatId: String, userId: String, otherUserIdParam: String = "") {
         currentChatId = chatId
         otherUserId = otherUserIdParam
-        _uiState.update { it.copy(isLoading = true, currentUserId = userId) }
+        _uiState.update { it.copy(isLoading = true, currentUserId = userId, otherUserId = otherUserIdParam) }
         // Tell NotificationHandler which chat is active so it doesn't show notifications for it
         notificationHandler.activeChatId = chatId
         notificationHandler.currentUserId = userId
@@ -198,6 +199,7 @@ class ChatViewModel @Inject constructor(
                             .firstOrNull()?.userId
                         if (otherId != null) {
                             otherUserId = otherId
+                            _uiState.update { it.copy(otherUserId = otherId) }
                         }
                     }
                 }

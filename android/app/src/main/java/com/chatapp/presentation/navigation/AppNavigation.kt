@@ -169,12 +169,15 @@ fun AppNavigation() {
                 chatId = chatId,
                 chatName = chatName,
                 currentUserId = chatListState.currentUserId,
-                onBack = { navController.popBackStack() },
-                onCall = { id ->
-                    navController.navigate(Screen.VoiceCall.createRoute(id, chatName))
+                onBack = {
+                    chatListViewModel.refreshChats()
+                    navController.popBackStack()
                 },
-                onVideoCall = { id ->
-                    navController.navigate(Screen.VideoCall.createRoute(id, chatName))
+                onCall = { targetUserId ->
+                    navController.navigate(Screen.VoiceCall.createRoute(chatId, chatName, targetUserId))
+                },
+                onVideoCall = { targetUserId ->
+                    navController.navigate(Screen.VideoCall.createRoute(chatId, chatName, targetUserId))
                 },
                 onProfileClick = { id ->
                     navController.navigate(Screen.UserProfile.createRoute(id, chatName))

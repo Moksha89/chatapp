@@ -330,14 +330,14 @@ fun ChatScreen(
                     actionIconContentColor = Color.White
                 ),
                 actions = {
-                    IconButton(onClick = { onVideoCall(chatId) }) {
+                    IconButton(onClick = { onVideoCall(uiState.otherUserId.ifEmpty { chatId }) }) {
                         Icon(
                             Icons.Default.Videocam,
                             contentDescription = "Video Call",
                             tint = Color.White
                         )
                     }
-                    IconButton(onClick = { onCall(chatId) }) {
+                    IconButton(onClick = { onCall(uiState.otherUserId.ifEmpty { chatId }) }) {
                         Icon(
                             Icons.Default.Call,
                             contentDescription = "Voice Call",
