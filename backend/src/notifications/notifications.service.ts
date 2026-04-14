@@ -72,44 +72,68 @@ export class NotificationsService implements OnModuleInit {
     if (tokens.length === 0) return;
 
     try {
-      const message: admin.messaging.MulticastMessage = {
-        tokens,
-        notification: {
-          title,
-          body,
-        },
-        data: data || {},
-        webpush: {
-          notification: {
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
-            tag: data?.chatId || 'default',
-          },
-        },
-        android: {
-          notification: {
-            icon: '@mipmap/ic_launcher',
-            channelId: 'messages',
-          },
-        },
-      };
+      // Separate tokens by platform for different message strategies
+      const tokenEntities = await this.fcmTokenRepository.find({ where: { userId } });
+      const androidTokens = tokenEntities.filter(t => t.platform === 'android').map(t => t.token);
+      const webTokens = tokenEntities.filter(t => t.platform !== 'android').map(t => t.token);
 
-      const response = await this.firebaseApp.messaging().sendEachForMulticast(message);
-      
+      const responses: { success: boolean }[] = [];
+      const allTokens = [...androidTokens, ...webTokens];
+
+      // Android: Use data-only messages so the app handles notification display
+      // This ensures notifications work even when app is killed/background
+      if (androidTokens.length > 0) {
+        const androidMessage: admin.messaging.MulticastMessage = {
+          tokens: androidTokens,
+          data: {
+            ...(data || {}),
+            title,
+            body,
+            senderName: title,
+            content: body,
+          },
+          android: {
+            priority: 'high',
+          },
+        };
+        const androidResp = await this.firebaseApp.messaging().sendEachForMulticast(androidMessage);
+        responses.push(...androidResp.responses);
+      }
+
+      // Web: Use notification + data messages (web needs notification payload)
+      if (webTokens.length > 0) {
+        const webMessage: admin.messaging.MulticastMessage = {
+          tokens: webTokens,
+          notification: {
+            title,
+            body,
+          },
+          data: data || {},
+          webpush: {
+            notification: {
+              icon: '/icon-192.png',
+              badge: '/icon-192.png',
+              tag: data?.chatId || 'default',
+            },
+          },
+        };
+        const webResp = await this.firebaseApp.messaging().sendEachForMulticast(webMessage);
+        responses.push(...webResp.responses);
+      }
+
       // Clean up invalid tokens from database
-      if (response.failureCount > 0) {
-        const invalidTokens: string[] = [];
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            invalidTokens.push(tokens[idx]);
-          }
-        });
-        if (invalidTokens.length > 0) {
-          for (const invalidToken of invalidTokens) {
-            await this.fcmTokenRepository.delete({ userId, token: invalidToken });
-          }
+      const failedTokens: string[] = [];
+      responses.forEach((resp, idx) => {
+        if (!resp.success && allTokens[idx]) {
+          failedTokens.push(allTokens[idx]);
+        }
+      });
+      if (failedTokens.length > 0) {
+        for (const invalidToken of failedTokens) {
+          await this.fcmTokenRepository.delete({ userId, token: invalidToken });
         }
       }
+      console.log(`Push notification sent to ${userId}: ${responses.filter(r => r.success).length}/${responses.length} succeeded`);
     } catch (error) {
       console.error('Failed to send push notification:', error);
     }
@@ -136,6 +160,8 @@ export class NotificationsService implements OnModuleInit {
     await this.sendPushNotification(recipientUserId, senderName, body, {
       chatId,
       type: 'message',
+      senderName,
+      content: body,
     });
   }
 

@@ -1,5 +1,8 @@
 package com.chatapp.presentation.contacts
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -129,9 +133,11 @@ fun ContactRow(
     showInvite: Boolean = false,
     onClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(enabled = contact.isRegistered, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -155,7 +161,15 @@ fun ContactRow(
             Text(contact.phoneNumber, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
         }
         if (showInvite) {
-            TextButton(onClick = {}) {
+            TextButton(onClick = {
+                val smsUri = Uri.parse("smsto:${contact.phoneNumber}")
+                val smsIntent = Intent(Intent.ACTION_SENDTO, smsUri).apply {
+                    putExtra("sms_body", "Hey! I'm using Abhi Chat for messaging. Download it and let's connect! https://abhi.so")
+                }
+                context.startActivity(smsIntent)
+            }) {
+                Icon(Icons.Default.Sms, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text("Invite", color = MaterialTheme.colorScheme.primary)
             }
         }

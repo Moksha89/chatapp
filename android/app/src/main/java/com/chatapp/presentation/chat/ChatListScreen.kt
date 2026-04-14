@@ -1,10 +1,15 @@
 package com.chatapp.presentation.chat
 
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,10 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -157,10 +165,13 @@ fun ChatListScreen(
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(sortedChats) { chat ->
-                        ChatListItemView(
+                    items(sortedChats, key = { it.id }) { chat ->
+                        ChatListItemWithActions(
                             chat = chat,
-                            onClick = { onChatClick(chat.id) }
+                            onClick = { onChatClick(chat.id) },
+                            onArchive = { viewModel.archiveChat(chat.id) },
+                            onPin = { viewModel.togglePinChat(chat.id) },
+                            onMute = { viewModel.toggleMuteChat(chat.id) }
                         )
                         Divider(modifier = Modifier.padding(start = 72.dp))
                     }
@@ -170,15 +181,132 @@ fun ChatListScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ChatListItemWithActions(
+    chat: ChatSummary,
+    onClick: () -> Unit,
+    onArchive: () -> Unit = {},
+    onPin: () -> Unit = {},
+    onMute: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
+
+    Box {
+        ChatListItemView(
+            chat = chat,
+            onClick = onClick,
+            onLongClick = { showMenu = true }
+        )
+
+        // Pin indicator
+        if (chat.isPinned) {
+            Icon(
+                Icons.Default.PushPin,
+                contentDescription = "Pinned",
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp)
+                    .size(14.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            )
+        }
+
+        // Muted indicator
+        if (chat.isMuted) {
+            Icon(
+                Icons.Default.VolumeOff,
+                contentDescription = "Muted",
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 8.dp, end = 8.dp)
+                    .size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
+    }
+
+    // Long-press context menu dialog
+    if (showMenu) {
+        Dialog(onDismissRequest = { showMenu = false }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    // Pin/Unpin
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onPin()
+                                showMenu = false
+                                Toast.makeText(context, if (chat.isPinned) "Unpinned" else "Pinned", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(if (chat.isPinned) "Unpin chat" else "Pin chat")
+                    }
+                    // Mute/Unmute
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onMute()
+                                showMenu = false
+                                Toast.makeText(context, if (chat.isMuted) "Unmuted" else "Muted", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            if (chat.isMuted) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(if (chat.isMuted) "Unmute" else "Mute notifications")
+                    }
+                    // Archive
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onArchive()
+                                showMenu = false
+                                Toast.makeText(context, "Chat archived", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Archive chat")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatListItemView(
     chat: ChatSummary,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

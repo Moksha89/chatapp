@@ -1,8 +1,7 @@
 package com.chatapp.presentation.chat
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -51,6 +50,7 @@ import com.chatapp.presentation.media.MediaPickerHelper
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay as kDelay
 
 val QUICK_REACTIONS = listOf("👍", "❤️", "😂", "😮", "😢", "🙏")
 
@@ -307,15 +307,15 @@ fun ChatScreen(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                text = when {
-                                    effectiveTyping -> "typing..."
-                                    effectiveOnline -> "online"
-                                    else -> "offline"
-                                },
-                                fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
+                            if (effectiveTyping) {
+                                TypingIndicator()
+                            } else {
+                                Text(
+                                    text = if (effectiveOnline) "online" else "offline",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 },
@@ -354,6 +354,31 @@ fun ChatScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            // E2E encryption indicator (WhatsApp-style)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(10.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Messages are end-to-end encrypted. Tap to learn more.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
             // Connection status banner (offline/reconnecting)
             AnimatedVisibility(
                 visible = !uiState.isSocketConnected,
@@ -1428,6 +1453,47 @@ fun DeleteMessageDialog(
                     Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun TypingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "typing")
+    val dot1 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes { durationMillis = 1200; 1f at 200; 0f at 400 },
+            repeatMode = RepeatMode.Restart
+        ), label = "dot1"
+    )
+    val dot2 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes { durationMillis = 1200; 0f at 200; 1f at 400; 0f at 600 },
+            repeatMode = RepeatMode.Restart
+        ), label = "dot2"
+    )
+    val dot3 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes { durationMillis = 1200; 0f at 400; 1f at 600; 0f at 800 },
+            repeatMode = RepeatMode.Restart
+        ), label = "dot3"
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Text("typing", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
+        listOf(dot1, dot2, dot3).forEach { anim ->
+            Box(
+                modifier = Modifier
+                    .size(4.dp)
+                    .offset(y = (-2 * anim).dp)
+                    .background(Color.White.copy(alpha = 0.5f + 0.5f * anim), CircleShape)
+            )
         }
     }
 }

@@ -254,6 +254,10 @@ class ChatListViewModel @Inject constructor(
         }
     }
 
+    fun archiveChat(chatId: String) = toggleArchive(chatId)
+    fun togglePinChat(chatId: String) = togglePin(chatId)
+    fun toggleMuteChat(chatId: String) = toggleMute(chatId)
+
     fun deleteChat(chatId: String) {
         _uiState.update { state ->
             state.copy(chats = state.chats.filter { it.id != chatId })
