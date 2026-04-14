@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("kotlin-kapt")
     id("dagger.hilt.android.plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -105,8 +106,12 @@ dependencies {
     // WebRTC for voice/video calling
     implementation("io.getstream:stream-webrtc-android:1.1.1")
 
-        implementation("io.coil-kt:coil-compose:2.5.0")
-        implementation("io.coil-kt:coil-gif:2.5.0")
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-messaging")
+
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-gif:2.5.0")
 
         implementation("com.journeyapps:zxing-android-embedded:4.3.0")
         implementation("com.google.zxing:core:3.5.2")
