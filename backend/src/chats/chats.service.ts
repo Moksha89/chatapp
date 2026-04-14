@@ -269,7 +269,18 @@ export class ChatsService {
 
     let beforeDate: Date | undefined;
     if (before) {
-      beforeDate = new Date(before);
+      // "before" can be either a message ID (UUID) or an ISO date string.
+      // Try parsing as a date first; if invalid, look up the message's createdAt.
+      const parsed = new Date(before);
+      if (!isNaN(parsed.getTime())) {
+        beforeDate = parsed;
+      } else {
+        // Assume it's a message ID — look up the message to get its createdAt
+        const refMessage = await this.databaseService.findMessageById(before);
+        if (refMessage) {
+          beforeDate = refMessage.createdAt;
+        }
+      }
     }
 
     const messages = await this.databaseService.findMessagesByChatId(chatId, limit, beforeDate);
