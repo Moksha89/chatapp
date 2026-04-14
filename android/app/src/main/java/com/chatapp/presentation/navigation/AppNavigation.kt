@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.chatapp.data.auth.AuthEvent
 import com.chatapp.data.auth.AuthEventBus
+import com.chatapp.presentation.auth.AuthViewModel
 import com.chatapp.presentation.auth.LoginScreen
 import com.chatapp.presentation.onboarding.SplashScreen
 import com.chatapp.presentation.onboarding.OnboardingScreen
@@ -88,10 +89,20 @@ fun AppNavigation() {
         startDestination = Screen.Splash.route
     ) {
         composable(Screen.Splash.route) {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authState by authViewModel.uiState.collectAsState()
+
             SplashScreen(
                 onSplashFinished = {
-                    navController.navigate(Screen.Onboarding.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    if (authState.isLoggedIn) {
+                        // User already logged in — skip onboarding and login
+                        navController.navigate(Screen.ChatList.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Screen.Onboarding.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
                     }
                 }
             )
