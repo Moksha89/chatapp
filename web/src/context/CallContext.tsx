@@ -483,6 +483,46 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleanup, startQualityMonitor, attemptReconnect]);
 
+  const createFallbackStream = useCallback((callType: CallType): MediaStream => {
+    console.warn('[Call] No media devices — using silent fallback stream for WebRTC negotiation');
+    const tracks: MediaStreamTrack[] = [];
+
+    // Silent audio track via AudioContext oscillator (gain = 0)
+    try {
+      const ctx = new AudioContext();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0; // silent
+      oscillator.connect(gain);
+      const dest = ctx.createMediaStreamDestination();
+      gain.connect(dest);
+      oscillator.start();
+      dest.stream.getAudioTracks().forEach(t => tracks.push(t));
+    } catch (e) {
+      console.warn('[Call] Could not create fallback audio track:', e);
+    }
+
+    // Black video track via canvas (only for video calls)
+    if (callType === 'video') {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx2d = canvas.getContext('2d');
+        if (ctx2d) {
+          ctx2d.fillStyle = '#000';
+          ctx2d.fillRect(0, 0, 640, 480);
+        }
+        const canvasStream = canvas.captureStream(15);
+        canvasStream.getVideoTracks().forEach(t => tracks.push(t));
+      } catch (e) {
+        console.warn('[Call] Could not create fallback video track:', e);
+      }
+    }
+
+    return new MediaStream(tracks);
+  }, []);
+
   const getMediaStream = useCallback(async (callType: CallType) => {
     try {
       const constraints: MediaStreamConstraints = {
@@ -498,10 +538,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setLocalStream(stream);
       return stream;
     } catch (error) {
-      console.error('Failed to get media stream:', error);
-      throw new Error('Failed to access camera/microphone');
+      console.warn('[Call] getUserMedia failed, falling back to silent stream:', error);
+      const fallback = createFallbackStream(callType);
+      localStreamRef.current = fallback;
+      setLocalStream(fallback);
+      return fallback;
     }
-  }, [isNoiseCancellation]);
+  }, [isNoiseCancellation, createFallbackStream]);
 
   const initiateCall = useCallback(async (targetUserId: string, targetUserName: string, callType: CallType, chatId?: string) => {
     console.log('[Call] initiateCall called:', { targetUserId, targetUserName, callType, chatId });
@@ -516,31 +559,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         isOutgoing: true,
       });
 
-      let stream: MediaStream;
-      try {
-        stream = await getMediaStream(callType);
-      } catch (mediaError) {
-        console.error('[Call] Media permission denied:', mediaError);
-        // Keep the call dialog visible briefly to show the error
-        setTimeout(() => {
-          addToHistory({
-            peerId: targetUserId,
-            peerName: targetUserName,
-            callType,
-            direction: 'outgoing',
-            status: 'no-answer',
-            duration: 0,
-          });
-          cleanup();
-        }, 500);
-        // Use non-blocking notification instead of alert()
-        const msg = `Cannot access ${callType === 'video' ? 'camera/microphone' : 'microphone'}. Please allow access in your browser settings.`;
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('Permission Required', { body: msg });
-        }
-        console.warn('[Call]', msg);
-        return;
-      }
+      const stream = await getMediaStream(callType);
 
       // Set outgoing call timeout (45 seconds)
       callTimeoutRef.current = setTimeout(() => {
