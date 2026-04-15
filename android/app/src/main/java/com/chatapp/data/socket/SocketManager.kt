@@ -57,6 +57,14 @@ class SocketManager @Inject constructor(
     private val _onlineUsers = MutableStateFlow<Set<String>>(emptySet())
     val onlineUsers: StateFlow<Set<String>> = _onlineUsers.asStateFlow()
 
+    // Global incoming call state — observed by AppNavigation to auto-navigate to CallScreen
+    private val _incomingCall = MutableStateFlow<SocketEvent.IncomingCall?>(null)
+    val incomingCall: StateFlow<SocketEvent.IncomingCall?> = _incomingCall.asStateFlow()
+
+    fun clearIncomingCall() {
+        _incomingCall.value = null
+    }
+
     private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
     val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers.asStateFlow()
 
@@ -292,14 +300,16 @@ class SocketManager @Inject constructor(
                     val data = args[0] as JSONObject
                     val offerObj = data.optJSONObject("offer")
                     val offerSdp = offerObj?.optString("sdp")
-                    _events.tryEmit(SocketEvent.IncomingCall(
+                    val incomingCallEvent = SocketEvent.IncomingCall(
                         callId = data.optString("callId", ""),
                         callerId = data.optString("callerId", ""),
                         callerName = data.optString("callerName", ""),
                         callType = data.optString("callType", "voice"),
                         chatId = data.optString("chatId", ""),
                         offer = offerSdp
-                    ))
+                    )
+                    _incomingCall.value = incomingCallEvent
+                    _events.tryEmit(incomingCallEvent)
                 }
             }
 

@@ -57,12 +57,27 @@ class CallViewModel @Inject constructor(
     private val iceCandidateQueue = mutableListOf<Pair<String, IceCandidate>>()
 
     init {
+        // Check if there's a pending incoming call from global navigation
+        // (SocketManager stores it when the event arrives before CallScreen is open)
+        consumePendingIncomingCall()
         observeSocketEvents()
         setupWebRTCListener()
         // Register callback to receive callId from server acknowledgement
         socketManager.setCallIdCallback { callId ->
             onCallIdReceived(callId)
         }
+    }
+
+    /**
+     * When AppNavigation detects an incoming call and navigates to CallScreen,
+     * the SharedFlow event may already have been consumed. This method reads
+     * the pending incoming call from SocketManager's StateFlow and processes it.
+     */
+    private fun consumePendingIncomingCall() {
+        val pending = socketManager.incomingCall.value ?: return
+        Log.d(TAG, "Consuming pending incoming call from ${pending.callerName}")
+        socketManager.clearIncomingCall()
+        handleIncomingCall(pending)
     }
 
     private fun setupWebRTCListener() {

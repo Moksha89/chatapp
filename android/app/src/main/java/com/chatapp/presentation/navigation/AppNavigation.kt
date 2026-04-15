@@ -29,6 +29,7 @@ import com.chatapp.presentation.contacts.NewChatScreen
 import com.chatapp.presentation.contacts.NewChatViewModel
 import com.chatapp.presentation.contacts.ContactUser
 import com.chatapp.presentation.calling.CallScreen
+import com.chatapp.presentation.calling.IncomingCallViewModel
 import com.chatapp.presentation.profile.UserProfileScreen
 import com.chatapp.presentation.calls.CallHistoryScreen
 import com.chatapp.presentation.settings.NotificationsScreen
@@ -50,11 +51,11 @@ sealed class Screen(val route: String) {
     object LinkedDevices : Screen("linked_devices")
     object NewChat : Screen("new_chat")
     object ChatSearch : Screen("chat_search")
-    object VoiceCall : Screen("voice_call/{chatId}?callerName={callerName}&targetUserId={targetUserId}") {
-        fun createRoute(chatId: String, callerName: String, targetUserId: String = "") = "voice_call/$chatId?callerName=${Uri.encode(callerName)}&targetUserId=${Uri.encode(targetUserId)}"
+    object VoiceCall : Screen("voice_call/{chatId}?callerName={callerName}&targetUserId={targetUserId}&isIncoming={isIncoming}") {
+        fun createRoute(chatId: String, callerName: String, targetUserId: String = "", isIncoming: Boolean = false) = "voice_call/$chatId?callerName=${Uri.encode(callerName)}&targetUserId=${Uri.encode(targetUserId)}&isIncoming=$isIncoming"
     }
-    object VideoCall : Screen("video_call/{chatId}?callerName={callerName}&targetUserId={targetUserId}") {
-        fun createRoute(chatId: String, callerName: String, targetUserId: String = "") = "video_call/$chatId?callerName=${Uri.encode(callerName)}&targetUserId=${Uri.encode(targetUserId)}"
+    object VideoCall : Screen("video_call/{chatId}?callerName={callerName}&targetUserId={targetUserId}&isIncoming={isIncoming}") {
+        fun createRoute(chatId: String, callerName: String, targetUserId: String = "", isIncoming: Boolean = false) = "video_call/$chatId?callerName=${Uri.encode(callerName)}&targetUserId=${Uri.encode(targetUserId)}&isIncoming=$isIncoming"
     }
     object UserProfile : Screen("user_profile/{chatId}?name={name}") {
         fun createRoute(chatId: String, name: String = "User") = "user_profile/$chatId?name=${Uri.encode(name)}"
@@ -70,6 +71,8 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val incomingCallViewModel: IncomingCallViewModel = hiltViewModel()
+    val incomingCall by incomingCallViewModel.incomingCall.collectAsState()
 
     // Observe auth events — redirect to login when session expires
     LaunchedEffect(Unit) {
@@ -81,6 +84,33 @@ fun AppNavigation() {
                     }
                 }
             }
+        }
+    }
+
+    // Global incoming call handler — navigates to CallScreen when an incoming call arrives
+    LaunchedEffect(incomingCall) {
+        incomingCall?.let { call ->
+            val currentRoute = navController.currentBackStackEntry?.destination?.route
+            // Don't navigate if already on a call screen
+            if (currentRoute?.startsWith("voice_call") == true || currentRoute?.startsWith("video_call") == true) {
+                return@LaunchedEffect
+            }
+            val route = if (call.callType == "video") {
+                Screen.VideoCall.createRoute(
+                    chatId = call.chatId.ifEmpty { "incoming" },
+                    callerName = call.callerName,
+                    targetUserId = call.callerId,
+                    isIncoming = true
+                )
+            } else {
+                Screen.VoiceCall.createRoute(
+                    chatId = call.chatId.ifEmpty { "incoming" },
+                    callerName = call.callerName,
+                    targetUserId = call.callerId,
+                    isIncoming = true
+                )
+            }
+            navController.navigate(route)
         }
     }
 
@@ -330,18 +360,22 @@ fun AppNavigation() {
             arguments = listOf(
                 navArgument("chatId") { type = NavType.StringType },
                 navArgument("callerName") { type = NavType.StringType; defaultValue = "Unknown" },
-                navArgument("targetUserId") { type = NavType.StringType; defaultValue = "" }
+                navArgument("targetUserId") { type = NavType.StringType; defaultValue = "" },
+                navArgument("isIncoming") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
             val callerName = backStackEntry.arguments?.getString("callerName") ?: "Unknown"
             val targetUserId = backStackEntry.arguments?.getString("targetUserId") ?: ""
+            val isIncoming = backStackEntry.arguments?.getBoolean("isIncoming") ?: false
             CallScreen(
                 callerName = callerName,
                 callType = "voice",
                 targetUserId = targetUserId,
                 chatId = chatId,
-                onEndCall = { navController.popBackStack() }
+                isIncoming = isIncoming,
+                onEndCall = { navController.popBackStack() },
+                onAcceptCall = {}
             )
         }
 
@@ -350,18 +384,22 @@ fun AppNavigation() {
             arguments = listOf(
                 navArgument("chatId") { type = NavType.StringType },
                 navArgument("callerName") { type = NavType.StringType; defaultValue = "Unknown" },
-                navArgument("targetUserId") { type = NavType.StringType; defaultValue = "" }
+                navArgument("targetUserId") { type = NavType.StringType; defaultValue = "" },
+                navArgument("isIncoming") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
             val callerName = backStackEntry.arguments?.getString("callerName") ?: "Unknown"
             val targetUserId = backStackEntry.arguments?.getString("targetUserId") ?: ""
+            val isIncoming = backStackEntry.arguments?.getBoolean("isIncoming") ?: false
             CallScreen(
                 callerName = callerName,
                 callType = "video",
                 targetUserId = targetUserId,
                 chatId = chatId,
-                onEndCall = { navController.popBackStack() }
+                isIncoming = isIncoming,
+                onEndCall = { navController.popBackStack() },
+                onAcceptCall = {}
             )
         }
     }

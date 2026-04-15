@@ -417,6 +417,7 @@ export class WebsocketGateway
         callerName: caller?.displayName || 'Unknown',
         callerPhoto: caller?.profilePhoto || null,
         callType: data.callType,
+        chatId: data.chatId || call.chatId || '',
         offer: data.offer,
       });
 
