@@ -19,8 +19,16 @@ import org.webrtc.SessionDescription
 import javax.inject.Inject
 
 enum class CallState {
-    IDLE, CALLING, INCOMING, CONNECTED, ENDED, RECONNECTING
+    IDLE, CALLING, INCOMING, CONNECTED, ENDED, RECONNECTING, HELD
 }
+
+data class WaitingCallInfo(
+    val callId: String,
+    val callerId: String,
+    val callerName: String,
+    val callType: String,
+    val chatId: String
+)
 
 data class CallUiState(
     val callState: CallState = CallState.IDLE,
@@ -34,7 +42,16 @@ data class CallUiState(
     val isVideoEnabled: Boolean = true,
     val callDuration: Int = 0,
     val hasNetwork: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    // P1-6: Call waiting
+    val waitingCall: WaitingCallInfo? = null,
+    val isOnHold: Boolean = false,
+    // P3-16: Call quality metrics
+    val connectionQuality: String = "unknown",
+    val audioBitrate: Int = 0,
+    val videoBitrate: Int = 0,
+    val packetLoss: Float = 0f,
+    val roundTripTime: Float = 0f
 )
 
 @HiltViewModel
@@ -244,6 +261,60 @@ class CallViewModel @Inject constructor(
         webRTCClient.switchCamera()
     }
 
+    /**
+     * P2-11: Hold/resume current call — pauses/resumes audio and video tracks
+     */
+    fun toggleHold() {
+        val currentState = _uiState.value
+        if (currentState.isOnHold) {
+            // Resume: re-enable tracks
+            webRTCClient.setTracksEnabled(true)
+            _uiState.update { it.copy(isOnHold = false, callState = CallState.CONNECTED) }
+            Log.d(TAG, "Call resumed")
+        } else {
+            // Hold: disable tracks
+            webRTCClient.setTracksEnabled(false)
+            _uiState.update { it.copy(isOnHold = true, callState = CallState.HELD) }
+            Log.d(TAG, "Call placed on hold")
+        }
+    }
+
+    /**
+     * P1-6: Accept waiting call — ends current call and accepts the waiting one
+     */
+    fun acceptWaitingCall() {
+        val waiting = _uiState.value.waitingCall ?: return
+        // End current call
+        endCall()
+        // The incoming call event will be handled through normal socket flow
+        Log.d(TAG, "Switched to waiting call from ${waiting.callerName}")
+    }
+
+    /**
+     * P1-6: Reject the waiting call
+     */
+    fun rejectWaitingCall() {
+        val waiting = _uiState.value.waitingCall ?: return
+        socketManager.rejectCall(waiting.callId, waiting.callerId)
+        _uiState.update { it.copy(waitingCall = null) }
+        Log.d(TAG, "Rejected waiting call from ${waiting.callerName}")
+    }
+
+    /**
+     * P3-15: Reject call with a quick reply message
+     */
+    fun rejectWithMessage(quickReply: String) {
+        val state = _uiState.value
+        Log.d(TAG, "Rejecting call with message: $quickReply")
+        socketManager.rejectCall(state.callId, state.peerId)
+        // Send the quick reply as a chat message
+        socketManager.sendMessage(
+            chatId = "", // Will be resolved by backend
+            content = quickReply
+        )
+        cleanup()
+    }
+
     private fun startCallTimeout(targetUserId: String, targetUserName: String, callType: String) {
         cancelCallTimeout()
         callTimeoutJob = viewModelScope.launch {
@@ -292,8 +363,19 @@ class CallViewModel @Inject constructor(
         Log.d(TAG, "Incoming call from ${event.callerName}")
 
         if (_uiState.value.callState != CallState.IDLE) {
-            // Busy — reject
-            socketManager.rejectCall(event.callId, event.callerId)
+            // P1-6: Call waiting — don't reject, queue the incoming call
+            _uiState.update {
+                it.copy(
+                    waitingCall = WaitingCallInfo(
+                        callId = event.callId,
+                        callerId = event.callerId,
+                        callerName = event.callerName,
+                        callType = event.callType,
+                        chatId = event.chatId
+                    )
+                )
+            }
+            Log.d(TAG, "Call waiting: ${event.callerName} is calling while busy")
             return
         }
 

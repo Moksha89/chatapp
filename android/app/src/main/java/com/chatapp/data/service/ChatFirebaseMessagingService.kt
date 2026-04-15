@@ -38,6 +38,7 @@ class ChatFirebaseMessagingService : FirebaseMessagingService() {
         when (type) {
             "message" -> handleMessageNotification(message)
             "call" -> handleCallNotification(message)
+            "missed_call" -> handleMissedCallNotification(message)
             else -> {
                 // If there's a notification payload, the system will handle display
                 // when the app is in background. For foreground, show it manually.
@@ -72,11 +73,30 @@ class ChatFirebaseMessagingService : FirebaseMessagingService() {
     private fun handleCallNotification(message: RemoteMessage) {
         val callerName = message.data["callerName"] ?: message.notification?.title ?: "Unknown"
         val callType = message.data["callType"] ?: "voice"
+        val callId = message.data["callId"] ?: ""
+        val callerId = message.data["callerId"] ?: ""
+        val chatId = message.data["chatId"] ?: ""
 
         val notificationService = PushNotificationService(this)
         notificationService.showCallNotification(
             callerName = callerName,
-            isVideo = callType == "video"
+            isVideo = callType == "video",
+            callId = callId,
+            callerId = callerId,
+            chatId = chatId
+        )
+    }
+
+    private fun handleMissedCallNotification(message: RemoteMessage) {
+        val callerName = message.data["callerName"] ?: "Unknown"
+        val callType = message.data["callType"] ?: "voice"
+        val chatId = message.data["chatId"] ?: ""
+
+        val notificationService = PushNotificationService(this)
+        notificationService.showMissedCallNotification(
+            callerName = callerName,
+            isVideo = callType == "video",
+            chatId = chatId
         )
     }
 

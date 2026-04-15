@@ -364,6 +364,18 @@ export class WebsocketGateway
             callId: call.id,
             reason: 'timeout',
           });
+          // Send missed call push notification to the receiver
+          const caller = await this.usersService.findById(call.initiatorId);
+          const receiverId = call.receiverId;
+          if (receiverId) {
+            this.notificationsService.sendMissedCallNotification(
+              receiverId,
+              caller?.displayName || 'Unknown',
+              call.callType as 'audio' | 'video',
+              call.id,
+              call.chatId || '',
+            ).catch(err => this.logger.warn(`Missed call notification failed: ${err}`));
+          }
           this.logger.log(`Stale call cleaned up: ${call.id}`);
         } catch {
           // Call may already be ended
@@ -420,6 +432,16 @@ export class WebsocketGateway
         chatId: data.chatId || call.chatId || '',
         offer: data.offer,
       });
+
+      // Send FCM push notification for incoming call (reaches user even when app is closed)
+      this.notificationsService.sendCallNotification(
+        data.targetUserId,
+        caller?.displayName || 'Unknown',
+        data.callType,
+        call.id,
+        client.userId,
+        data.chatId || call.chatId || '',
+      ).catch(err => this.logger.warn(`Call push notification failed: ${err.message}`));
 
       this.logger.log(`Call initiated: ${call.id} from ${client.userId} to ${data.targetUserId}`);
       return { success: true, callId: call.id };

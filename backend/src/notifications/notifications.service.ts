@@ -169,12 +169,93 @@ export class NotificationsService implements OnModuleInit {
     recipientUserId: string,
     callerName: string,
     callType: 'audio' | 'video',
+    callId: string = '',
+    callerId: string = '',
+    chatId: string = '',
+  ): Promise<void> {
+    if (!this.firebaseApp) return;
+
+    const tokens = await this.getTokensForUser(recipientUserId);
+    if (tokens.length === 0) return;
+
+    try {
+      const tokenEntities = await this.fcmTokenRepository.find({ where: { userId: recipientUserId } });
+      const androidTokens = tokenEntities.filter(t => t.platform === 'android').map(t => t.token);
+      const webTokens = tokenEntities.filter(t => t.platform !== 'android').map(t => t.token);
+
+      // Android: high-priority data-only message for full-screen call notification
+      if (androidTokens.length > 0) {
+        const androidMessage: admin.messaging.MulticastMessage = {
+          tokens: androidTokens,
+          data: {
+            type: 'call',
+            callType,
+            callId,
+            callerId,
+            callerName,
+            chatId,
+            timestamp: Date.now().toString(),
+          },
+          android: {
+            priority: 'high',
+            ttl: 30000, // 30 second TTL for call notifications
+          },
+        };
+        await this.firebaseApp.messaging().sendEachForMulticast(androidMessage);
+      }
+
+      // Web: notification + data for browser push
+      if (webTokens.length > 0) {
+        const webMessage: admin.messaging.MulticastMessage = {
+          tokens: webTokens,
+          notification: {
+            title: callerName,
+            body: `Incoming ${callType} call...`,
+          },
+          data: {
+            type: 'call',
+            callType,
+            callId,
+            callerId,
+            callerName,
+            chatId,
+          },
+          webpush: {
+            notification: {
+              icon: '/icon-192.png',
+              badge: '/icon-192.png',
+              tag: `call-${callId}`,
+              requireInteraction: true,
+            },
+          },
+        };
+        await this.firebaseApp.messaging().sendEachForMulticast(webMessage);
+      }
+
+      console.log(`Call push notification sent to ${recipientUserId} for ${callType} call from ${callerName}`);
+    } catch (error) {
+      console.error('Failed to send call push notification:', error);
+    }
+  }
+
+  async sendMissedCallNotification(
+    recipientUserId: string,
+    callerName: string,
+    callType: 'audio' | 'video',
+    callId: string = '',
+    chatId: string = '',
   ): Promise<void> {
     await this.sendPushNotification(
       recipientUserId,
-      `${callerName}`,
-      `Incoming ${callType} call...`,
-      { type: 'call', callType },
+      'Missed Call',
+      `Missed ${callType} call from ${callerName}`,
+      {
+        type: 'missed_call',
+        callType,
+        callId,
+        callerName,
+        chatId,
+      },
     );
   }
 }

@@ -319,6 +319,60 @@ class WebRTCClient @Inject constructor(
         return !enabled
     }
 
+    /**
+     * P2-11: Enable/disable all tracks (hold/resume)
+     */
+    fun setTracksEnabled(enabled: Boolean) {
+        localAudioTrack?.setEnabled(enabled)
+        localVideoTrack?.setEnabled(enabled)
+        Log.d(TAG, "All tracks ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    /**
+     * P2-9: Set max bitrate for adaptive quality
+     */
+    fun setMaxBitrate(maxBitrateKbps: Int) {
+        peerConnection?.senders?.forEach { sender ->
+            val params = sender.parameters
+            if (params.encodings.isNotEmpty()) {
+                params.encodings[0].maxBitrateBps = maxBitrateKbps * 1000
+                sender.parameters = params
+            }
+        }
+        Log.d(TAG, "Max bitrate set to ${maxBitrateKbps}kbps")
+    }
+
+    /**
+     * P3-16: Get call statistics for metrics UI
+     */
+    fun getStats(callback: (Map<String, Any>) -> Unit) {
+        peerConnection?.getStats { report ->
+            val stats = mutableMapOf<String, Any>()
+            report.statsMap.values.forEach { rtcStats ->
+                if (rtcStats.type == "inbound-rtp") {
+                    val members = rtcStats.members
+                    val kind = members["kind"] as? String ?: ""
+                    if (kind == "audio") {
+                        stats["audioPacketsLost"] = members["packetsLost"] ?: 0
+                        stats["audioPacketsReceived"] = members["packetsReceived"] ?: 0
+                        stats["audioBytesReceived"] = members["bytesReceived"] ?: 0L
+                    } else if (kind == "video") {
+                        stats["videoPacketsLost"] = members["packetsLost"] ?: 0
+                        stats["videoPacketsReceived"] = members["packetsReceived"] ?: 0
+                        stats["videoBytesReceived"] = members["bytesReceived"] ?: 0L
+                        stats["frameWidth"] = members["frameWidth"] ?: 0
+                        stats["frameHeight"] = members["frameHeight"] ?: 0
+                        stats["framesPerSecond"] = members["framesPerSecond"] ?: 0.0
+                    }
+                }
+                if (rtcStats.type == "candidate-pair" && (rtcStats.members["state"] as? String) == "succeeded") {
+                    stats["roundTripTime"] = rtcStats.members["currentRoundTripTime"] ?: 0.0
+                }
+            }
+            callback(stats)
+        }
+    }
+
     fun switchCamera() {
         videoCapturer?.switchCamera(object : CameraVideoCapturer.CameraSwitchHandler {
             override fun onCameraSwitchDone(isFront: Boolean) {

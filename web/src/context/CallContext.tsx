@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { socketService } from '../services/socket';
 
-export type CallState = 'idle' | 'calling' | 'incoming' | 'connected' | 'ended' | 'reconnecting';
+export type CallState = 'idle' | 'calling' | 'incoming' | 'connected' | 'ended' | 'reconnecting' | 'held';
 export type CallType = 'audio' | 'video';
 
 export interface CallHistoryEntry {
@@ -45,6 +45,7 @@ interface CallContextType {
   isMuted: boolean;
   isVideoOff: boolean;
   isSpeakerOn: boolean;
+  isOnHold: boolean;
   callDuration: number;
   isScreenSharing: boolean;
   isRecording: boolean;
@@ -53,14 +54,17 @@ interface CallContextType {
   callHistory: CallHistoryEntry[];
   groupParticipants: GroupCallParticipant[];
   isMinimized: boolean;
+  securityCode: string;
   initiateCall: (targetUserId: string, targetUserName: string, callType: CallType, chatId?: string) => Promise<void>;
   initiateGroupCall: (participantIds: string[], participantNames: string[], callType: CallType) => Promise<void>;
   answerCall: () => Promise<void>;
   rejectCall: () => void;
+  rejectWithMessage: (message: string) => void;
   endCall: () => void;
   toggleMute: () => void;
   toggleVideo: () => void;
   toggleSpeaker: () => void;
+  toggleHold: () => void;
   switchCamera: () => Promise<void>;
   toggleScreenShare: () => Promise<void>;
   toggleRecording: () => void;
@@ -100,6 +104,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   });
   const [groupParticipants, setGroupParticipants] = useState<GroupCallParticipant[]>([]);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isOnHold, setIsOnHold] = useState(false);
+  const [securityCode, setSecurityCode] = useState('');
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const qualityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -239,6 +245,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setConnectionQuality('unknown');
     setGroupParticipants([]);
     setIsMinimized(false);
+    setIsOnHold(false);
+    setSecurityCode('');
     reconnectAttemptsRef.current = 0;
     originalVideoTrackRef.current = null;
     if (callTimerRef.current) {
@@ -308,6 +316,73 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // P2-9: Adaptive bitrate — adjust video bitrate based on connection quality
+  const startAdaptiveBitrate = useCallback(() => {
+    const adjustBitrate = async () => {
+      if (!peerConnectionRef.current) return;
+      try {
+        const stats = await peerConnectionRef.current.getStats();
+        let packetLoss = 0;
+        let totalPackets = 0;
+        stats.forEach(report => {
+          if (report.type === 'inbound-rtp' && report.kind === 'video') {
+            packetLoss = report.packetsLost || 0;
+            totalPackets = (report.packetsReceived || 0) + packetLoss;
+          }
+        });
+        const lossRate = totalPackets > 0 ? packetLoss / totalPackets : 0;
+        const senders = peerConnectionRef.current.getSenders();
+        const videoSender = senders.find(s => s.track?.kind === 'video');
+        if (videoSender) {
+          const params = videoSender.getParameters();
+          if (params.encodings && params.encodings.length > 0) {
+            if (lossRate > 0.1) {
+              params.encodings[0].maxBitrate = 250000; // 250kbps for poor
+            } else if (lossRate > 0.05) {
+              params.encodings[0].maxBitrate = 500000; // 500kbps for fair
+            } else if (lossRate > 0.02) {
+              params.encodings[0].maxBitrate = 1000000; // 1Mbps for good
+            } else {
+              params.encodings[0].maxBitrate = 2500000; // 2.5Mbps for excellent
+            }
+            await videoSender.setParameters(params);
+          }
+        }
+      } catch { /* stats not available */ }
+    };
+    // Run every 5 seconds
+    const interval = setInterval(adjustBitrate, 5000);
+    // Store in quality timer (will be cleaned up with it)
+    const prevTimer = qualityTimerRef.current;
+    return () => {
+      clearInterval(interval);
+      if (prevTimer) clearInterval(prevTimer);
+    };
+  }, []);
+
+  // P3-13: Generate E2E security code from DTLS fingerprints
+  const generateSecurityCode = useCallback((pc: RTCPeerConnection) => {
+    try {
+      const localDesc = pc.localDescription?.sdp || '';
+      const remoteDesc = pc.remoteDescription?.sdp || '';
+      const localFingerprint = localDesc.match(/a=fingerprint:sha-256\s+(.+)/)?.[1] || '';
+      const remoteFingerprint = remoteDesc.match(/a=fingerprint:sha-256\s+(.+)/)?.[1] || '';
+      if (localFingerprint && remoteFingerprint) {
+        // Combine fingerprints and hash to create a short security code
+        const combined = [localFingerprint, remoteFingerprint].sort().join(':');
+        let hash = 0;
+        for (let i = 0; i < combined.length; i++) {
+          const char = combined.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash; // Convert to 32bit integer
+        }
+        const code = Math.abs(hash).toString().padStart(8, '0').slice(0, 8);
+        const formatted = `${code.slice(0, 4)} ${code.slice(4, 8)}`;
+        setSecurityCode(formatted);
+      }
+    } catch { /* fingerprint extraction failed */ }
+  }, []);
+
   const attemptReconnect = useCallback(async () => {
     if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
       cleanup();
@@ -364,6 +439,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         setCallState('connected');
         reconnectAttemptsRef.current = 0;
         startQualityMonitor();
+        // P2-9: Start adaptive bitrate monitoring
+        startAdaptiveBitrate();
+        // P3-13: Generate E2E security code from DTLS fingerprints
+        generateSecurityCode(pc);
         if (callTimerRef.current) clearInterval(callTimerRef.current);
         callTimerRef.current = setInterval(() => {
           setCallDuration(prev => prev + 1);
@@ -859,6 +938,47 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     });
   }, [localStream]);
 
+  // P2-11: Call hold/resume — pause/resume all tracks
+  const toggleHold = useCallback(() => {
+    if (!localStreamRef.current) return;
+    const newHold = !isOnHold;
+    localStreamRef.current.getTracks().forEach(track => {
+      track.enabled = !newHold;
+    });
+    setIsOnHold(newHold);
+    if (newHold) {
+      setCallState('held');
+    } else {
+      setCallState('connected');
+    }
+  }, [isOnHold]);
+
+  // P3-15: Reject call with quick reply message
+  const rejectWithMessage = useCallback((message: string) => {
+    if (callInfo) {
+      socketService.emit('call:reject', {
+        callId: callInfo.callId,
+        targetUserId: callInfo.peerId,
+        reason: message,
+      });
+      // Send the quick reply as a chat message
+      socketService.emit('message:send', {
+        chatId: '', // Will be resolved by backend
+        content: message,
+        targetUserId: callInfo.peerId,
+      });
+      addToHistory({
+        peerId: callInfo.peerId,
+        peerName: callInfo.peerName,
+        callType: callInfo.callType,
+        direction: 'incoming',
+        status: 'rejected',
+        duration: 0,
+      });
+    }
+    cleanup();
+  }, [callInfo, cleanup, addToHistory]);
+
   const addParticipant = useCallback((userId: string, userName: string) => {
     if (!callInfo || !localStream) return;
     setGroupParticipants(prev => [...prev, {
@@ -1083,6 +1203,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         isMuted,
         isVideoOff,
         isSpeakerOn,
+        isOnHold,
         callDuration,
         isScreenSharing,
         isRecording,
@@ -1091,14 +1212,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         callHistory,
         groupParticipants,
         isMinimized,
+        securityCode,
         initiateCall,
         initiateGroupCall,
         answerCall,
         rejectCall,
+        rejectWithMessage,
         endCall,
         toggleMute,
         toggleVideo,
         toggleSpeaker,
+        toggleHold,
         switchCamera,
         toggleScreenShare,
         toggleRecording,

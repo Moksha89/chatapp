@@ -439,10 +439,12 @@ fun CallScreen(
                             CallState.CONNECTED -> formatDuration(callDuration)
                             CallState.RECONNECTING -> "Reconnecting..."
                             CallState.ENDED -> "Call ended"
+                            CallState.HELD -> "On Hold"
                         },
                         color = when (callStateEnum) {
                             CallState.RECONNECTING -> Color(0xFFFF9800)
                             CallState.ENDED -> errorColor
+                            CallState.HELD -> Color(0xFFFF9800)
                             else -> Color.White.copy(alpha = 0.7f)
                         },
                         fontSize = 16.sp
@@ -478,9 +480,47 @@ fun CallScreen(
                 }
             }
 
+            // P1-6: Call waiting banner
+            if (uiState.waitingCall != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    color = Color(0xFF1B5E20).copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${uiState.waitingCall?.callerName} is calling...",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Waiting call",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp
+                            )
+                        }
+                        IconButton(onClick = { callViewModel.acceptWaitingCall() }) {
+                            Icon(Icons.Default.Call, contentDescription = "Accept", tint = Color(0xFF43A047))
+                        }
+                        IconButton(onClick = { callViewModel.rejectWaitingCall() }) {
+                            Icon(Icons.Default.CallEnd, contentDescription = "Reject", tint = Color(0xFFE53935))
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             // Bottom controls
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Control buttons
+                // Control buttons - row 1
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -505,7 +545,42 @@ fun CallScreen(
                         }
                     )
 
-                    if (callType == "video") {
+                    // P2-10: Bluetooth audio routing
+                    CallControlButton(
+                        icon = Icons.Default.Bluetooth,
+                        label = "Bluetooth",
+                        isActive = false,
+                        onClick = {
+                            try {
+                                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                                audioManager.isBluetoothScoOn = !audioManager.isBluetoothScoOn
+                                if (audioManager.isBluetoothScoOn) {
+                                    audioManager.startBluetoothSco()
+                                } else {
+                                    audioManager.stopBluetoothSco()
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    )
+
+                    // P2-11: Call hold/resume
+                    if (isConnected || uiState.isOnHold) {
+                        CallControlButton(
+                            icon = if (uiState.isOnHold) Icons.Default.PlayArrow else Icons.Default.Pause,
+                            label = if (uiState.isOnHold) "Resume" else "Hold",
+                            isActive = uiState.isOnHold,
+                            onClick = { callViewModel.toggleHold() }
+                        )
+                    }
+                }
+
+                // Control buttons - row 2 (video controls)
+                if (callType == "video") {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
                         CallControlButton(
                             icon = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
                             label = "Camera",
@@ -516,7 +591,6 @@ fun CallScreen(
                             }
                         )
 
-                        // C6: Camera flip with actual toggle and callback
                         CallControlButton(
                             icon = Icons.Default.FlipCameraAndroid,
                             label = if (isFrontCamera) "Back" else "Front",
@@ -532,13 +606,29 @@ fun CallScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // End call button (incoming calls handled by IncomingCallScreen)
+                // End call button
                 FloatingActionButton(
                     onClick = { callViewModel.endCall() },
                     containerColor = errorColor,
                     modifier = Modifier.size(64.dp)
                 ) {
                     Icon(Icons.Default.CallEnd, contentDescription = "End Call", tint = Color.White, modifier = Modifier.size(32.dp))
+                }
+
+                // P3-16: Call quality indicator
+                if (isConnected) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Quality: ${uiState.connectionQuality}",
+                        color = when (uiState.connectionQuality) {
+                            "excellent" -> Color(0xFF43A047)
+                            "good" -> Color(0xFF7CB342)
+                            "fair" -> Color(0xFFFF9800)
+                            "poor" -> Color(0xFFE53935)
+                            else -> Color.White.copy(alpha = 0.5f)
+                        },
+                        fontSize = 11.sp
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
