@@ -4,7 +4,8 @@ import type { ConnectionQuality } from '../context/CallContext';
 import {
   Phone, PhoneOff, Mic, MicOff, Video, VideoOff, X, Volume2, VolumeX,
   SwitchCamera, Monitor, MonitorOff, Circle, Shield, Minimize2, Maximize2,
-  Users, Wifi, WifiOff, AudioLines,
+  Users, Wifi, WifiOff, AudioLines, Pause, Play, UserPlus, MessageSquare,
+  PhoneIncoming,
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -38,6 +39,7 @@ export function CallDialog() {
     isMuted,
     isVideoOff,
     isSpeakerOn,
+    isOnHold,
     callDuration,
     isScreenSharing,
     isRecording,
@@ -45,23 +47,39 @@ export function CallDialog() {
     connectionQuality,
     groupParticipants,
     isMinimized,
+    securityCode,
+    waitingCall,
     answerCall,
     rejectCall,
+    rejectWithMessage,
     endCall,
     toggleMute,
     toggleVideo,
     toggleSpeaker,
+    toggleHold,
     switchCamera,
     toggleScreenShare,
     toggleRecording,
     toggleNoiseCancellation,
     setIsMinimized,
+    addParticipant,
+    acceptWaitingCall,
+    rejectWaitingCall,
   } = useCall();
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [showControls, setShowControls] = useState(true);
+  const [showSecurityCode, setShowSecurityCode] = useState(false);
+  const [showQuickReply, setShowQuickReply] = useState(false);
   const ringtoneRef = useRef<{ ctx: AudioContext; interval: ReturnType<typeof setInterval> } | null>(null);
+
+  const QUICK_REPLIES = [
+    "Can't talk now. What's up?",
+    "I'll call you back.",
+    "I'll call you later.",
+    "Can't talk now. Call me later?",
+  ];
 
   // Ringtone audio for incoming calls (Web)
   useEffect(() => {
@@ -252,9 +270,13 @@ export function CallDialog() {
               </span>
             )}
             {callState === 'connected' && (
-              <span className="flex items-center gap-1 bg-green-500/20 text-green-400 text-[10px] px-2 py-1 rounded-full" title="WebRTC SRTP encrypted">
-                <Shield className="w-3 h-3" /> Encrypted
-              </span>
+              <button
+                onClick={() => setShowSecurityCode(!showSecurityCode)}
+                className="flex items-center gap-1 bg-green-500/20 text-green-400 text-[10px] px-2 py-1 rounded-full hover:bg-green-500/30 transition-colors cursor-pointer"
+                title={securityCode ? `Security code: ${securityCode} — Tap to ${showSecurityCode ? 'hide' : 'verify'}` : 'WebRTC SRTP encrypted'}
+              >
+                <Shield className="w-3 h-3" /> {showSecurityCode && securityCode ? securityCode : 'Encrypted'}
+              </button>
             )}
             {callState !== 'incoming' && (
               <>
@@ -404,6 +426,7 @@ export function CallDialog() {
                   {callState === 'incoming' && 'Incoming voice call'}
                   {callState === 'connected' && formatDuration(callDuration)}
                   {callState === 'reconnecting' && 'Reconnecting...'}
+                  {callState === 'held' && `On Hold — ${formatDuration(callDuration)}`}
                 </p>
                 {callState === 'connected' && (
                   <div className="mt-4">
@@ -419,31 +442,92 @@ export function CallDialog() {
         <div className={`p-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           {/* Incoming call controls */}
           {callState === 'incoming' && (
-            <div className="flex items-center justify-center gap-8">
-              <div className="text-center">
-                <Button
-                  onClick={rejectCall}
-                  className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30 transition-transform hover:scale-105"
-                >
-                  <PhoneOff className="w-7 h-7 text-white" />
-                </Button>
-                <p className="text-gray-400 text-sm mt-2">Decline</p>
-              </div>
-              <div className="text-center">
-                <Button
-                  onClick={answerCall}
-                  className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 transition-transform hover:scale-105 animate-bounce"
-                >
-                  <Phone className="w-7 h-7 text-white" />
-                </Button>
-                <p className="text-gray-400 text-sm mt-2">Accept</p>
+            <div className="space-y-3">
+              {/* Quick reply options */}
+              {showQuickReply && (
+                <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+                  {QUICK_REPLIES.map((msg) => (
+                    <button
+                      key={msg}
+                      onClick={() => { rejectWithMessage(msg); setShowQuickReply(false); }}
+                      className="px-3 py-1.5 rounded-full bg-white/10 text-white text-xs hover:bg-white/20 transition-colors"
+                    >
+                      {msg}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center justify-center gap-8">
+                <div className="text-center">
+                  <Button
+                    onClick={rejectCall}
+                    className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30 transition-transform hover:scale-105"
+                  >
+                    <PhoneOff className="w-7 h-7 text-white" />
+                  </Button>
+                  <p className="text-gray-400 text-sm mt-2">Decline</p>
+                </div>
+                <div className="text-center">
+                  <Button
+                    onClick={() => setShowQuickReply(!showQuickReply)}
+                    className="w-14 h-14 rounded-full bg-gray-700/80 text-white hover:bg-gray-600 transition-all"
+                    title="Reply with message"
+                  >
+                    <MessageSquare className="w-6 h-6" />
+                  </Button>
+                  <p className="text-gray-400 text-sm mt-2">Reply</p>
+                </div>
+                <div className="text-center">
+                  <Button
+                    onClick={answerCall}
+                    className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 transition-transform hover:scale-105 animate-bounce"
+                  >
+                    <Phone className="w-7 h-7 text-white" />
+                  </Button>
+                  <p className="text-gray-400 text-sm mt-2">Accept</p>
+                </div>
               </div>
             </div>
           )}
 
           {/* Active call controls — two rows */}
-          {(callState === 'calling' || callState === 'connected' || callState === 'reconnecting') && (
+          {(callState === 'calling' || callState === 'connected' || callState === 'reconnecting' || callState === 'held') && (
             <div className="space-y-3">
+              {/* Call waiting banner */}
+              {waitingCall && (
+                <div className="flex items-center justify-between bg-yellow-500/20 text-yellow-300 rounded-xl px-4 py-2 mx-auto max-w-md">
+                  <div className="flex items-center gap-2">
+                    <PhoneIncoming className="w-4 h-4 animate-pulse" />
+                    <span className="text-sm font-medium">{waitingCall.callerName}</span>
+                    <span className="text-xs opacity-70">{waitingCall.callType} call</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={rejectWaitingCall}
+                      className="p-1.5 rounded-full bg-red-500/30 hover:bg-red-500/50 transition-colors"
+                      title="Reject waiting call"
+                    >
+                      <PhoneOff className="w-3.5 h-3.5 text-red-300" />
+                    </button>
+                    <button
+                      onClick={acceptWaitingCall}
+                      className="p-1.5 rounded-full bg-green-500/30 hover:bg-green-500/50 transition-colors"
+                      title="Accept waiting call (ends current)"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-green-300" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* On-hold banner */}
+              {callState === 'held' && (
+                <div className="flex items-center justify-center gap-2 text-yellow-400 text-sm animate-pulse">
+                  <Pause className="w-4 h-4" />
+                  <span>Call on hold</span>
+                </div>
+              )}
+
               {/* Secondary controls row */}
               <div className="flex items-center justify-center gap-3">
                 <button
@@ -478,6 +562,22 @@ export function CallDialog() {
                     {isScreenSharing ? 'Stop Share' : 'Share Screen'}
                   </button>
                 )}
+                {callState === 'connected' && (
+                  <button
+                    onClick={() => {
+                      const name = prompt('Enter participant name to add:');
+                      if (name) {
+                        const id = `user-${Date.now()}`;
+                        addParticipant(id, name);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors bg-white/5 text-gray-400 hover:bg-white/10"
+                    title="Add participant to call"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    Add
+                  </button>
+                )}
               </div>
 
               {/* Primary controls row */}
@@ -509,6 +609,22 @@ export function CallDialog() {
                   </Button>
                   <p className="text-gray-400 text-xs mt-1.5">{isSpeakerOn ? 'Speaker' : 'Earpiece'}</p>
                 </div>
+
+                {(callState === 'connected' || callState === 'held') && (
+                  <div className="text-center">
+                    <Button
+                      onClick={toggleHold}
+                      className={`w-14 h-14 rounded-full transition-all ${
+                        isOnHold 
+                          ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                          : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                      }`}
+                    >
+                      {isOnHold ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
+                    </Button>
+                    <p className="text-gray-400 text-xs mt-1.5">{isOnHold ? 'Resume' : 'Hold'}</p>
+                  </div>
+                )}
 
                 {isVideoCall && (
                   <>

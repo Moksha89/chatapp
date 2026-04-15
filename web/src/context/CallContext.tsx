@@ -37,6 +37,16 @@ interface CallInfo {
   isGroupCall?: boolean;
 }
 
+export interface WaitingCallInfo {
+  callId: string;
+  callerId: string;
+  callerName: string;
+  callType: CallType;
+  offer: RTCSessionDescriptionInit;
+  isGroupCall?: boolean;
+  timestamp: number;
+}
+
 interface CallContextType {
   callState: CallState;
   callInfo: CallInfo | null;
@@ -55,6 +65,7 @@ interface CallContextType {
   groupParticipants: GroupCallParticipant[];
   isMinimized: boolean;
   securityCode: string;
+  waitingCall: WaitingCallInfo | null;
   initiateCall: (targetUserId: string, targetUserName: string, callType: CallType, chatId?: string) => Promise<void>;
   initiateGroupCall: (participantIds: string[], participantNames: string[], callType: CallType) => Promise<void>;
   answerCall: () => Promise<void>;
@@ -72,6 +83,8 @@ interface CallContextType {
   setIsMinimized: (v: boolean) => void;
   addParticipant: (userId: string, userName: string) => void;
   clearCallHistory: () => void;
+  acceptWaitingCall: () => void;
+  rejectWaitingCall: () => void;
 }
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
@@ -106,6 +119,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [isOnHold, setIsOnHold] = useState(false);
   const [securityCode, setSecurityCode] = useState('');
+  const [waitingCall, setWaitingCall] = useState<WaitingCallInfo | null>(null);
+  const waitingCallRef = useRef<WaitingCallInfo | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const qualityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -138,6 +153,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   callStateRef.current = callState;
   callInfoRef.current = callInfo;
   callDurationRef.current = callDuration;
+  waitingCallRef.current = waitingCall;
 
   // Save call history to localStorage (keep up to 500 entries)
   useEffect(() => {
@@ -979,6 +995,49 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     cleanup();
   }, [callInfo, cleanup, addToHistory]);
 
+  // Call waiting: accept the queued waiting call (ends current call first)
+  const acceptWaitingCall = useCallback(() => {
+    const waiting = waitingCallRef.current;
+    if (!waiting) return;
+    // End current call
+    endCall();
+    // Set up the waiting call as incoming
+    setTimeout(() => {
+      pendingOfferRef.current = waiting.offer;
+      callIdRef.current = waiting.callId;
+      setCallInfo({
+        callId: waiting.callId,
+        peerId: waiting.callerId,
+        peerName: waiting.callerName,
+        callType: waiting.callType,
+        isOutgoing: false,
+        isGroupCall: waiting.isGroupCall,
+      });
+      setCallState('incoming');
+      setWaitingCall(null);
+    }, 500);
+  }, [endCall]);
+
+  // Call waiting: reject the queued waiting call
+  const rejectWaitingCall = useCallback(() => {
+    const waiting = waitingCallRef.current;
+    if (!waiting) return;
+    socketService.emit('call:reject', {
+      callId: waiting.callId,
+      targetUserId: waiting.callerId,
+      reason: 'User is busy',
+    });
+    addToHistory({
+      peerId: waiting.callerId,
+      peerName: waiting.callerName,
+      callType: waiting.callType,
+      direction: 'incoming',
+      status: 'rejected',
+      duration: 0,
+    });
+    setWaitingCall(null);
+  }, [addToHistory]);
+
   const addParticipant = useCallback((userId: string, userName: string) => {
     if (!callInfo || !localStream) return;
     setGroupParticipants(prev => [...prev, {
@@ -1012,20 +1071,36 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       console.log('Incoming call:', data);
       // Use ref to get current callState (not stale closure value)
       if (callStateRef.current !== 'idle') {
-        socketService.emit('call:reject', {
+        // Call waiting: queue the incoming call instead of auto-rejecting
+        setWaitingCall({
           callId: data.callId,
-          targetUserId: data.callerId,
-          reason: 'User is busy',
-        });
-        addToHistory({
-          peerId: data.callerId,
-          peerName: data.callerName,
+          callerId: data.callerId,
+          callerName: data.callerName,
           callType: data.callType,
-          direction: 'incoming',
-          status: 'missed',
-          duration: 0,
+          offer: data.offer,
           isGroupCall: data.isGroupCall,
+          timestamp: Date.now(),
         });
+        // Auto-dismiss waiting call after 30 seconds if not acted on
+        setTimeout(() => {
+          if (waitingCallRef.current?.callId === data.callId) {
+            socketService.emit('call:reject', {
+              callId: data.callId,
+              targetUserId: data.callerId,
+              reason: 'User is busy',
+            });
+            addToHistory({
+              peerId: data.callerId,
+              peerName: data.callerName,
+              callType: data.callType,
+              direction: 'incoming',
+              status: 'missed',
+              duration: 0,
+              isGroupCall: data.isGroupCall,
+            });
+            setWaitingCall(null);
+          }
+        }, 30000);
         return;
       }
 
@@ -1213,6 +1288,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         groupParticipants,
         isMinimized,
         securityCode,
+        waitingCall,
         initiateCall,
         initiateGroupCall,
         answerCall,
@@ -1230,6 +1306,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         setIsMinimized,
         addParticipant,
         clearCallHistory,
+        acceptWaitingCall,
+        rejectWaitingCall,
       }}
     >
       {children}
