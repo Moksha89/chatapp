@@ -1,4 +1,4 @@
-package com.chatapp.ui.screens
+package com.app.abhichat.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,12 +20,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.chatapp.data.api.ApiClient
-import com.chatapp.data.model.ChatItem
-import com.chatapp.data.model.CreateChatRequest
-import com.chatapp.data.model.User
-import com.chatapp.data.repository.AuthRepository
-import com.chatapp.service.SocketManager
+import com.app.abhichat.data.api.ApiClient
+import com.app.abhichat.data.model.ChatItem
+import com.app.abhichat.data.model.CreateChatRequest
+import com.app.abhichat.data.model.User
+import com.app.abhichat.data.repository.AuthRepository
+import com.app.abhichat.service.SocketManager
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.text.SimpleDateFormat

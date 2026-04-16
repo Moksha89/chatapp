@@ -1,4 +1,4 @@
-package com.chatapp.ui.screens
+package com.app.abhichat.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
@@ -18,8 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chatapp.data.api.ApiClient
-import com.chatapp.data.model.QrScanRequest
+import com.app.abhichat.data.api.ApiClient
+import com.app.abhichat.data.model.QrScanRequest
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.launch

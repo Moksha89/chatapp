@@ -1,7 +1,7 @@
-package com.chatapp.service
+package com.app.abhichat.service
 
-import com.chatapp.BuildConfig
-import com.chatapp.data.api.ApiClient
+import com.app.abhichat.BuildConfig
+import com.app.abhichat.data.api.ApiClient
 import io.socket.client.IO
 import io.socket.client.Socket
 import org.json.JSONObject

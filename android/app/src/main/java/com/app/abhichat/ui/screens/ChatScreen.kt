@@ -1,4 +1,4 @@
-package com.chatapp.ui.screens
+package com.app.abhichat.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,10 +19,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chatapp.data.api.ApiClient
-import com.chatapp.data.model.Message
-import com.chatapp.data.model.User
-import com.chatapp.service.SocketManager
+import com.app.abhichat.data.api.ApiClient
+import com.app.abhichat.data.model.Message
+import com.app.abhichat.data.model.User
+import com.app.abhichat.service.SocketManager
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.text.SimpleDateFormat

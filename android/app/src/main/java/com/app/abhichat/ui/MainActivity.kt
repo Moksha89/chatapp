@@ -1,4 +1,4 @@
-package com.chatapp.ui
+package com.app.abhichat.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -15,14 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.chatapp.data.api.ApiClient
-import com.chatapp.data.repository.AuthRepository
-import com.chatapp.service.SocketManager
-import com.chatapp.ui.screens.ChatListScreen
-import com.chatapp.ui.screens.ChatScreen
-import com.chatapp.ui.screens.LoginScreen
-import com.chatapp.ui.screens.QrScannerScreen
-import com.chatapp.ui.theme.ChatAppTheme
+import com.app.abhichat.data.api.ApiClient
+import com.app.abhichat.data.repository.AuthRepository
+import com.app.abhichat.service.SocketManager
+import com.app.abhichat.ui.screens.ChatListScreen
+import com.app.abhichat.ui.screens.ChatScreen
+import com.app.abhichat.ui.screens.LoginScreen
+import com.app.abhichat.ui.screens.QrScannerScreen
+import com.app.abhichat.ui.theme.ChatAppTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var authRepo: AuthRepository

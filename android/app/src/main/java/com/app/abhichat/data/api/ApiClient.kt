@@ -1,6 +1,6 @@
-package com.chatapp.data.api
+package com.app.abhichat.data.api
 
-import com.chatapp.BuildConfig
+import com.app.abhichat.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor

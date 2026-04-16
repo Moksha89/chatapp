@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.chatapp"
+    namespace = "com.app.abhichat"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.chatapp"
+        applicationId = "com.app.abhichat"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

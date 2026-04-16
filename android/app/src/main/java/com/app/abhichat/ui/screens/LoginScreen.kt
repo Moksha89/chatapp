@@ -1,4 +1,4 @@
-package com.chatapp.ui.screens
+package com.app.abhichat.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,10 +16,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chatapp.data.api.ApiClient
-import com.chatapp.data.model.SendOtpRequest
-import com.chatapp.data.model.VerifyOtpRequest
-import com.chatapp.data.repository.AuthRepository
+import com.app.abhichat.data.api.ApiClient
+import com.app.abhichat.data.model.SendOtpRequest
+import com.app.abhichat.data.model.VerifyOtpRequest
+import com.app.abhichat.data.repository.AuthRepository
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

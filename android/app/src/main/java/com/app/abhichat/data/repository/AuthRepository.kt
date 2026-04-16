@@ -1,4 +1,4 @@
-package com.chatapp.data.repository
+package com.app.abhichat.data.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -6,8 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.chatapp.data.api.ApiClient
-import com.chatapp.data.model.User
+import com.app.abhichat.data.api.ApiClient
+import com.app.abhichat.data.model.User
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID

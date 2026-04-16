@@ -1,4 +1,4 @@
-package com.chatapp
+package com.app.abhichat
 
 import android.app.Application
 import android.app.NotificationChannel

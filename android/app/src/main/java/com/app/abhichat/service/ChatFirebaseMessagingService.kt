@@ -1,12 +1,12 @@
-package com.chatapp.service
+package com.app.abhichat.service
 
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
-import com.chatapp.R
-import com.chatapp.ui.MainActivity
+import com.app.abhichat.R
+import com.app.abhichat.ui.MainActivity
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 

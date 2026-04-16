@@ -1,4 +1,4 @@
-package com.chatapp.data.model
+package com.app.abhichat.data.model
 
 import com.google.gson.annotations.SerializedName
 

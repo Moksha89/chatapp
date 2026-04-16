@@ -1,6 +1,6 @@
-package com.chatapp.data.api
+package com.app.abhichat.data.api
 
-import com.chatapp.data.model.*
+import com.app.abhichat.data.model.*
 import retrofit2.http.*
 
 interface ApiService {

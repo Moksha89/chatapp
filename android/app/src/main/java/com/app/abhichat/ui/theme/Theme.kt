@@ -1,4 +1,4 @@
-package com.chatapp.ui.theme
+package com.app.abhichat.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
