@@ -83,6 +83,11 @@ class CallViewModel @Inject constructor(
         socketManager.setCallIdCallback { callId ->
             onCallIdReceived(callId)
         }
+        // Register error callback — cleanup call if server rejects initiation
+        socketManager.setCallErrorCallback { errorMsg ->
+            Log.e(TAG, "Server rejected call: $errorMsg")
+            cleanup()
+        }
     }
 
     /**

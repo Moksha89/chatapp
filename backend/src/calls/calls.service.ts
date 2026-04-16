@@ -12,10 +12,28 @@ export class CallsService {
     initiatorId: string,
     data: { receiverId?: string; chatId?: string; callType: 'audio' | 'video'; callMode?: 'direct' | 'group' },
   ): Promise<Call & { participants: CallParticipant[] }> {
-    // Check if initiator already has an active call
+    // Auto-cleanup stale active calls for the user instead of blocking new calls.
+    // Previous calls may be left in 'ringing'/'active' status if they weren't properly ended
+    // (e.g., app crash, network disconnect, missed cleanup). Force-end them so the user can call again.
     const activeCall = await this.databaseService.getActiveCallForUser(initiatorId);
     if (activeCall) {
-      throw new BadRequestException('You already have an active call');
+      const now = new Date();
+      const participants = await this.databaseService.findCallParticipantsByCallId(activeCall.id);
+      for (const p of participants) {
+        if (p.status === 'joined' || p.status === 'invited') {
+          await this.databaseService.updateCallParticipant(p.id, {
+            status: p.status === 'invited' ? 'missed' : 'left',
+            leftAt: now,
+          });
+        }
+      }
+      await this.databaseService.updateCall(activeCall.id, {
+        status: 'ended',
+        endedAt: now,
+        duration: activeCall.startedAt
+          ? Math.floor((now.getTime() - new Date(activeCall.startedAt).getTime()) / 1000)
+          : 0,
+      });
     }
 
     const callMode = data.callMode || 'direct';

@@ -463,7 +463,9 @@ class SocketManager @Inject constructor(
                         Log.d(tag, "Call initiated, callId: $callId")
                         _callIdCallback?.invoke(callId)
                     } else {
-                        Log.e(tag, "Call initiate failed: ${response.optString("error", "unknown")}")
+                        val errorMsg = response.optString("error", "unknown")
+                        Log.e(tag, "Call initiate failed: $errorMsg")
+                        _callErrorCallback?.invoke(errorMsg)
                     }
                 } catch (e: Exception) {
                     Log.e(tag, "Error parsing call:initiate response", e)
@@ -473,9 +475,14 @@ class SocketManager @Inject constructor(
     }
 
     private var _callIdCallback: ((String) -> Unit)? = null
+    private var _callErrorCallback: ((String) -> Unit)? = null
 
     fun setCallIdCallback(callback: ((String) -> Unit)?) {
         _callIdCallback = callback
+    }
+
+    fun setCallErrorCallback(callback: ((String) -> Unit)?) {
+        _callErrorCallback = callback
     }
 
     fun answerCall(callId: String, targetUserId: String, answer: org.webrtc.SessionDescription? = null) {
