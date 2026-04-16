@@ -134,7 +134,7 @@ fun ChatScreen(
                             )
                             Text(
                                 if (otherUser?.isOnline == true) "online"
-                                else if (otherUser?.lastSeen != null) "last seen recently"
+                                else if (otherUser?.lastSeen != null) "last seen ${formatLastSeen(otherUser!!.lastSeen!!)}"
                                 else "offline",
                                 fontSize = 12.sp,
                                 color = if (otherUser?.isOnline == true) Color(0xFF81C784) else Color.White.copy(alpha = 0.7f)
@@ -322,6 +322,26 @@ private fun MessageBubble(message: Message, isMe: Boolean) {
                 )
             }
         }
+    }
+}
+
+private fun formatLastSeen(dateStr: String): String {
+    return try {
+        val formats = listOf(
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+        )
+        formats.forEach { it.timeZone = TimeZone.getTimeZone("UTC") }
+
+        var date: Date? = null
+        for (fmt in formats) {
+            try { date = fmt.parse(dateStr); break } catch (_: Exception) {}
+        }
+        if (date == null) return "recently"
+
+        SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(date)
+    } catch (_: Exception) {
+        "recently"
     }
 }
 

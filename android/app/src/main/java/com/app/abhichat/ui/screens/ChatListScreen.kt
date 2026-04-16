@@ -192,12 +192,40 @@ fun ChatListScreen(
                         }
                     }
 
-                    LazyColumn {
-                        items(filtered) { chat ->
-                            ChatListItem(
-                                chat = chat,
-                                onClick = { onChatClick(chat.id) }
+                    if (filtered.isEmpty() && searchQuery.isNotBlank()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 48.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.Chat,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = Color.LightGray
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                "No matching chats",
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Gray
+                            )
+                            Text(
+                                "Try a different search term",
+                                fontSize = 13.sp,
+                                color = Color.LightGray,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    } else {
+                        LazyColumn {
+                            items(filtered) { chat ->
+                                ChatListItem(
+                                    chat = chat,
+                                    onClick = { onChatClick(chat.id) }
+                                )
+                            }
                         }
                     }
                 }

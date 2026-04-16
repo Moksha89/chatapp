@@ -184,13 +184,13 @@ export default function ChatPage() {
     if (!isMine) return null
     switch (status) {
       case 'sending':
-        return <div className="w-3 h-3 border border-gray-400 rounded-full" />
+        return <div className="w-3 h-3 border border-blue-200 rounded-full" />
       case 'sent':
         return <Check className="w-3.5 h-3.5 text-blue-200" />
       case 'delivered':
         return <CheckCheck className="w-3.5 h-3.5 text-blue-200" />
       case 'read':
-        return <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+        return <CheckCheck className="w-3.5 h-3.5 text-blue-200" />
       default:
         return null
     }

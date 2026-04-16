@@ -135,7 +135,7 @@ export default function ChatListPage() {
       </div>
 
       {/* Search */}
-      <div className="px-4 py-2 bg-gray-50">
+      <div className="px-4 py-2 bg-white">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
