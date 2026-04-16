@@ -168,7 +168,7 @@ export default function LoginPage() {
           </div>
         ) : (
           <div className="text-center space-y-4">
-            <p className="text-sm text-gray-500">Scan this QR code from the ChatApp mobile app</p>
+            <p className="text-sm text-gray-500">Scan this QR code from the Abhi Chat mobile app</p>
             <div className="flex justify-center py-4">
               {qrToken ? (
                 <QRCodeSVG value={qrToken} size={200} />

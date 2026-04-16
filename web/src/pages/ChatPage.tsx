@@ -186,9 +186,9 @@ export default function ChatPage() {
       case 'sending':
         return <div className="w-3 h-3 border border-gray-400 rounded-full" />
       case 'sent':
-        return <Check className="w-3.5 h-3.5 text-gray-400" />
+        return <Check className="w-3.5 h-3.5 text-blue-200" />
       case 'delivered':
-        return <CheckCheck className="w-3.5 h-3.5 text-gray-400" />
+        return <CheckCheck className="w-3.5 h-3.5 text-blue-200" />
       case 'read':
         return <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
       default:
@@ -219,7 +219,7 @@ export default function ChatPage() {
             {otherUser?.displayName || otherUser?.phone || 'Chat'}
           </h2>
           <p className="text-xs text-blue-100">
-            {typing ? 'typing...' : otherUser?.isOnline ? 'online' : 'offline'}
+            {typing ? 'typing...' : otherUser?.isOnline ? 'online' : otherUser?.lastSeen ? `last seen ${new Date(otherUser.lastSeen).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'offline'}
           </p>
         </div>
         <button onClick={() => initiateCall('audio')} className="p-2 hover:bg-blue-700 rounded-full">

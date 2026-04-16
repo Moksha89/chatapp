@@ -133,9 +133,11 @@ fun ChatScreen(
                                 color = Color.White
                             )
                             Text(
-                                if (otherUser?.isOnline == true) "online" else "offline",
+                                if (otherUser?.isOnline == true) "online"
+                                else if (otherUser?.lastSeen != null) "last seen recently"
+                                else "offline",
                                 fontSize = 12.sp,
-                                color = if (otherUser?.isOnline == true) Color(0xFF81C784) else Color(0xFFB0BEC5)
+                                color = if (otherUser?.isOnline == true) Color(0xFF81C784) else Color.White.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -312,7 +314,7 @@ private fun MessageBubble(message: Message, isMe: Boolean) {
 
                 Text(
                     text = formatMessageTime(message.createdAt),
-                    color = if (isMe) Color(0xFFB0BEC5) else Color.Gray,
+                    color = if (isMe) Color.White.copy(alpha = 0.7f) else Color.Gray,
                     fontSize = 11.sp,
                     modifier = Modifier
                         .align(Alignment.End)
