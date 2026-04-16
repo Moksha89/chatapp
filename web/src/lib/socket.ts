@@ -14,7 +14,7 @@ export function connectSocket(): Socket {
 
   socket = io(`${url}/chat`, {
     auth: { token },
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 1000,
