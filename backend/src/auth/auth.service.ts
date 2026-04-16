@@ -66,12 +66,21 @@ export class AuthService {
     let isNewUser = false;
 
     if (!user) {
+      if (!displayName) {
+        // New user without displayName — return isNewUser flag so frontend can prompt for name
+        // Don't create the user yet; they'll call verifyOtp again with displayName
+        return { accessToken: '', user: { phone } as User, isNewUser: true };
+      }
       user = this.userRepo.create({
         phone,
-        displayName: displayName || phone,
+        displayName,
       });
       user = await this.userRepo.save(user);
-      isNewUser = true;
+      isNewUser = false; // User is now created with name, treat as normal login
+    } else if (displayName && user.displayName === phone) {
+      // Existing user updating their display name (from name step)
+      user.displayName = displayName;
+      user = await this.userRepo.save(user);
     }
 
     // Register device
