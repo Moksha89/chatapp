@@ -1,5 +1,5 @@
 # Keep Retrofit models
--keep class com.chatapp.data.model.** { *; }
+-keep class com.app.abhichat.data.model.** { *; }
 
 # Keep Gson serialization
 -keepattributes Signature
