@@ -22,15 +22,15 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"http://104.219.250.32:3000\"")
             buildConfigField("String", "SOCKET_URL", "\"http://104.219.250.32:3000\"")
             buildConfigField("String", "PEER_HOST", "\"104.219.250.32\"")
-            buildConfigField("int", "PEER_PORT", "3001")
+            buildConfigField("int", "PEER_PORT", "3000")
         }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("String", "API_BASE_URL", "\"http://104.219.250.32:3000\"")
-            buildConfigField("String", "SOCKET_URL", "\"http://104.219.250.32:3000\"")
-            buildConfigField("String", "PEER_HOST", "\"104.219.250.32\"")
-            buildConfigField("int", "PEER_PORT", "3001")
+            buildConfigField("String", "API_BASE_URL", "\"https://abhi.so\"")
+            buildConfigField("String", "SOCKET_URL", "\"https://abhi.so\"")
+            buildConfigField("String", "PEER_HOST", "\"abhi.so\"")
+            buildConfigField("int", "PEER_PORT", "443")
         }
     }
 
