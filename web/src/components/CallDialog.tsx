@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getSocket } from '../lib/socket'
 import { useAuth } from '../lib/auth'
 import { Phone, PhoneOff, Video, Mic, MicOff, VideoOff } from 'lucide-react'
-import Peer from 'peerjs'
+import Peer, { type MediaConnection } from 'peerjs'
 
 type CallState = 'idle' | 'outgoing' | 'incoming' | 'connected'
 
@@ -28,7 +28,7 @@ export default function CallDialog() {
   const remoteStreamRef = useRef<MediaStream | null>(null)
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval>>()
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
   const cleanup = useCallback(() => {
     if (callRef.current) {
@@ -134,8 +134,8 @@ export default function CallDialog() {
       }
     }
 
-    window.addEventListener('call:start', handleCallStart as EventListener)
-    return () => window.removeEventListener('call:start', handleCallStart as EventListener)
+    window.addEventListener('call:start', handleCallStart as unknown as EventListener)
+    return () => window.removeEventListener('call:start', handleCallStart as unknown as EventListener)
   }, [initPeer, cleanup])
 
   // Listen for incoming calls via socket

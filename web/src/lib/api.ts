@@ -37,7 +37,7 @@ export const api = {
   updateProfile: (data: { displayName?: string; about?: string }) =>
     request('/users/me', { method: 'PUT', body: JSON.stringify(data) }),
 
-  searchUsers: (phone: string) => request(`/users/search?phone=${phone}`),
+  searchUsers: (phone: string) => request(`/users/search?phone=${encodeURIComponent(phone)}`),
 
   getChats: () => request('/chats'),
 

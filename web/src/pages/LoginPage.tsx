@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [qrToken, setQrToken] = useState('')
-  const pollRef = useRef<ReturnType<typeof setInterval>>()
+  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
   // QR code polling
   useEffect(() => {

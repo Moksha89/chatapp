@@ -34,7 +34,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [typing, setTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
