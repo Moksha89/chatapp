@@ -221,7 +221,7 @@ export default function LoginPage() {
                   {loading ? 'Creating account...' : 'Continue'}
                 </button>
               </>
-            )
+            )}
           </div>
         ) : (
           <div className="text-center space-y-4">
