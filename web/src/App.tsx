@@ -23,11 +23,13 @@ function App() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       <CallDialog />
-      <Routes>
-        <Route path="/" element={<ChatListPage />} />
-        <Route path="/chat/:chatId" element={<ChatPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <div className="flex-1 min-h-0 flex flex-col">
+        <Routes>
+          <Route path="/" element={<ChatListPage />} />
+          <Route path="/chat/:chatId" element={<ChatPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
     </div>
   )
 }

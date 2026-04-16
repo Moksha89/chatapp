@@ -231,30 +231,32 @@ export default function ChatPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-gray-50">
-        {messages.map((msg) => {
-          const isMine = msg.senderId === user?.id
-          return (
-            <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
-                  isMine
-                    ? 'bg-blue-600 text-white rounded-br-md'
-                    : 'bg-white text-gray-900 rounded-bl-md shadow-sm'
-                }`}
-              >
-                <p className="break-words">{msg.content}</p>
-                <div className={`flex items-center gap-1 mt-0.5 ${isMine ? 'justify-end' : ''}`}>
-                  <span className={`text-[10px] ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
-                    {formatTime(msg.createdAt)}
-                  </span>
-                  {renderStatus(msg.status, isMine)}
+      <div className="flex-1 overflow-y-auto px-4 py-3 bg-gray-50 flex flex-col min-h-0">
+        <div className="mt-auto space-y-1">
+          {messages.map((msg) => {
+            const isMine = msg.senderId === user?.id
+            return (
+              <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
+                    isMine
+                      ? 'bg-blue-600 text-white rounded-br-md'
+                      : 'bg-white text-gray-900 rounded-bl-md shadow-sm'
+                  }`}
+                >
+                  <p className="break-words">{msg.content}</p>
+                  <div className={`flex items-center gap-1 mt-0.5 ${isMine ? 'justify-end' : ''}`}>
+                    <span className={`text-[10px] ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
+                      {formatTime(msg.createdAt)}
+                    </span>
+                    {renderStatus(msg.status, isMine)}
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
-        <div ref={messagesEndRef} />
+            )
+          })}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input */}

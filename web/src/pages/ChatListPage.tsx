@@ -157,8 +157,17 @@ export default function ChatListPage() {
         ) : filteredChats.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">No chats yet</p>
-            <p className="text-sm mt-1">Tap + to start a new conversation</p>
+            {search ? (
+              <>
+                <p className="font-medium">No matching chats</p>
+                <p className="text-sm mt-1">Try a different search term</p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium">No chats yet</p>
+                <p className="text-sm mt-1">Tap + to start a new conversation</p>
+              </>
+            )}
           </div>
         ) : (
           filteredChats.map((chat) => (
