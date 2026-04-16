@@ -46,8 +46,9 @@ export class AuthService {
   ): Promise<{ accessToken: string; user: User; isNewUser: boolean }> {
     const stored = this.otpStore.get(phone);
 
-    // Dev mode: accept 123456
-    if (otp !== '123456') {
+    // Dev OTP bypass: disabled when DISABLE_DEV_OTP=true (production-ready)
+    const isDevBypass = process.env.DISABLE_DEV_OTP !== 'true' && otp === '123456';
+    if (!isDevBypass) {
       if (!stored || stored.otp !== otp || Date.now() > stored.expiresAt) {
         throw new UnauthorizedException('Invalid or expired OTP');
       }

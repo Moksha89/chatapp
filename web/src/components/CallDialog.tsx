@@ -54,8 +54,8 @@ export default function CallDialog() {
   const initPeer = useCallback((): Promise<Peer> => {
     return new Promise((resolve, reject) => {
       const peerId = `web-${user!.id}-${Date.now()}`
-      const peerHost = window.location.hostname
-      const peerPort = window.location.port ? parseInt(window.location.port) : (window.location.protocol === 'https:' ? 443 : 80)
+      const peerHost = import.meta.env.VITE_PEER_HOST || window.location.hostname
+      const peerPort = import.meta.env.VITE_PEER_PORT ? parseInt(import.meta.env.VITE_PEER_PORT) : 3001
       
       const peer = new Peer(peerId, {
         host: peerHost,

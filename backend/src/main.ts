@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { ExpressPeerServer } from 'peer';
+import { PeerServer } from 'peer';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,17 +13,17 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  const server = app.getHttpServer();
   const port = process.env.PORT || 3000;
+  const peerPort = process.env.PEER_PORT || 3001;
 
   await app.listen(port);
 
-  // Start PeerJS server on the same HTTP server at /peer path
-  const peerServer = ExpressPeerServer(server, {
-    path: '/',
+  // Start PeerJS on a separate port to avoid WebSocket conflicts with Socket.IO
+  const peerServer = PeerServer({
+    port: Number(peerPort),
+    path: '/peer',
     allow_discovery: true,
   });
-  app.use('/peer', peerServer);
 
   peerServer.on('connection', (client) => {
     console.log(`[PeerJS] Client connected: ${client.getId()}`);
@@ -34,6 +34,6 @@ async function bootstrap() {
   });
 
   console.log(`Server running on port ${port}`);
-  console.log(`PeerJS server running at /peer`);
+  console.log(`PeerJS server running on port ${peerPort}/peer`);
 }
 bootstrap();

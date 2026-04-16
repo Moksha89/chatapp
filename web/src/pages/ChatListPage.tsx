@@ -32,6 +32,8 @@ export default function ChatListPage() {
   const [showNewChat, setShowNewChat] = useState(false)
   const [searchPhone, setSearchPhone] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const loadChats = useCallback(async () => {
@@ -66,10 +68,17 @@ export default function ChatListPage() {
 
   const handleSearch = async () => {
     if (!searchPhone.trim()) return
+    setSearching(true)
+    setHasSearched(false)
     try {
       const results = await api.searchUsers(searchPhone)
       setSearchResults(results.filter((u: any) => u.id !== user?.id))
-    } catch {}
+      setHasSearched(true)
+    } catch {
+      setHasSearched(true)
+    } finally {
+      setSearching(false)
+    }
   }
 
   const startChat = async (otherUserId: string) => {
@@ -230,12 +239,17 @@ export default function ChatListPage() {
                   </div>
                 </button>
               ))}
-              {searchResults.length === 0 && searchPhone && (
+              {searching && (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                </div>
+              )}
+              {!searching && hasSearched && searchResults.length === 0 && (
                 <p className="text-center text-gray-400 text-sm py-4">No users found</p>
               )}
             </div>
             <button
-              onClick={() => { setShowNewChat(false); setSearchResults([]); setSearchPhone('') }}
+              onClick={() => { setShowNewChat(false); setSearchResults([]); setSearchPhone(''); setHasSearched(false) }}
               className="w-full mt-4 py-2 text-gray-500 hover:text-gray-700 text-sm"
             >
               Cancel

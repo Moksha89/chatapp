@@ -24,11 +24,11 @@ import { QrSession } from './entities/qr-session.entity';
       password: process.env.DB_PASSWORD || 'chatapp_password',
       database: process.env.DB_NAME || 'chatapp',
       entities: [User, Chat, ChatParticipant, Message, Device, QrSession],
-      synchronize: true, // Auto-create tables (disable in production)
+      synchronize: process.env.NODE_ENV !== 'production', // Auto-create tables in dev only
     }),
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET || 'default-jwt-secret-change-me',
+      secret: process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'dev-jwt-secret'),
       signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '30d' },
     }),
     AuthModule,
