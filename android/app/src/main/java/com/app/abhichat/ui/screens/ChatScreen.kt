@@ -261,7 +261,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFECE5DD))
+                .background(Color(0xFFF0F4F8))
         ) {
             if (loading) {
                 CircularProgressIndicator(
@@ -299,7 +299,7 @@ private fun MessageBubble(message: Message, isMe: Boolean) {
                 bottomStart = if (isMe) 16.dp else 4.dp,
                 bottomEnd = if (isMe) 4.dp else 16.dp
             ),
-            color = if (isMe) Color(0xFF1565C0) else Color.White,
+            color = if (isMe) Color(0xFF2563EB) else Color.White,
             shadowElevation = 1.dp,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {

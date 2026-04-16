@@ -82,7 +82,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <MessageCircle className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">ChatApp</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Abhi Chat</h1>
           <p className="text-gray-500 mt-1">Sign in to start chatting</p>
         </div>
 

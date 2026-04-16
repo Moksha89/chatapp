@@ -76,7 +76,7 @@ fun ChatListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "ChatApp",
+                        "Abhi Chat",
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )

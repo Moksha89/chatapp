@@ -72,7 +72,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    "ChatApp",
+                    "Abhi Chat",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1C1E)
@@ -247,12 +247,6 @@ fun LoginScreen(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    "Dev OTP: 123456",
-                    fontSize = 12.sp,
-                    color = Color.LightGray
-                )
             }
         }
     }

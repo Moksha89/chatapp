@@ -116,7 +116,7 @@ export default function ChatListPage() {
       <div className="bg-blue-600 text-white px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <MessageCircle className="w-6 h-6" />
-          <h1 className="text-lg font-semibold">ChatApp</h1>
+          <h1 className="text-lg font-semibold">Abhi Chat</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
