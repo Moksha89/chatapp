@@ -89,8 +89,8 @@ dependencies {
         exclude(group = "org.json", module = "json")
     }
 
-    // WebRTC for calling
-    implementation("org.webrtc:google-webrtc:1.0.32006")
+    // WebRTC for calling (webrtc-sdk maintained fork, available on Maven Central)
+    implementation("io.github.webrtc-sdk:android:125.6422.06")
 
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:32.7.1"))

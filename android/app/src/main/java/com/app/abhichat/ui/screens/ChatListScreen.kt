@@ -312,7 +312,7 @@ private fun ChatListItem(chat: ChatItem, onClick: () -> Unit) {
         }
     }
 
-    HorizontalDivider(
+    Divider(
         modifier = Modifier.padding(start = 80.dp),
         color = Color(0xFFF0F0F0)
     )
