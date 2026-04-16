@@ -1,0 +1,60 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { BusinessModule } from './business/business.module';
+import { ContactsModule } from './contacts/contacts.module';
+import { ChatsModule } from './chats/chats.module';
+import { LabelsModule } from './labels/labels.module';
+import { QuickRepliesModule } from './quick-replies/quick-replies.module';
+import { DevicesModule } from './devices/devices.module';
+import { MediaModule } from './media/media.module';
+import { WebsocketModule } from './websocket/websocket.module';
+import { CryptoModule } from './crypto/crypto.module';
+import { DatabaseModule } from './database/database.module';
+import { StatusModule } from './status/status.module';
+import { BroadcastsModule } from './broadcasts/broadcasts.module';
+import { ProductsModule } from './products/products.module';
+import { AutoRepliesModule } from './auto-replies/auto-replies.module';
+import { HealthModule } from './health/health.module';
+import { VersionModule } from './version/version.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { AdminModule } from './admin/admin.module';
+import { CallsModule } from './calls/calls.module';
+import { FriendsModule } from './friends/friends.module';
+import { BackupModule } from './backup/backup.module';
+import { RedisModule } from './redis/redis.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    RedisModule,
+    DatabaseModule,
+    AuthModule,
+    UsersModule,
+    BusinessModule,
+    ContactsModule,
+    ChatsModule,
+    LabelsModule,
+    QuickRepliesModule,
+    DevicesModule,
+    MediaModule,
+    WebsocketModule,
+    CryptoModule,
+    StatusModule,
+    BroadcastsModule,
+    ProductsModule,
+    AutoRepliesModule,
+    HealthModule,
+    VersionModule,
+    NotificationsModule,
+    AdminModule,
+    CallsModule,
+    FriendsModule,
+    BackupModule,
+  ],
+})
+export class AppModule {}

@@ -1,0 +1,13 @@
+{
+  "name": "chatapp-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "npx playwright test --config=playwright.config.ts",
+    "test:ui": "npx playwright test --config=playwright.config.ts --ui",
+    "report": "npx playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

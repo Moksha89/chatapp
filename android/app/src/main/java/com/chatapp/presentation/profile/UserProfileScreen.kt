@@ -1,0 +1,424 @@
+package com.chatapp.presentation.profile
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UserProfileScreen(
+    chatId: String,
+    chatName: String,
+    onBack: () -> Unit,
+    onVoiceCall: () -> Unit = {},
+    onVideoCall: () -> Unit = {},
+    onSearch: () -> Unit = {},
+    onMute: () -> Unit = {},
+    onBlock: () -> Unit = {}
+) {
+    var isMuted by remember { mutableStateOf(false) }
+    var isBlocked by remember { mutableStateOf(false) }
+    var showBlockDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var blockActionDone by remember { mutableStateOf(false) }
+    var reportActionDone by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Block confirmation dialog
+    if (showBlockDialog) {
+        AlertDialog(
+            onDismissRequest = { showBlockDialog = false },
+            title = { Text(if (isBlocked) "Unblock $chatName?" else "Block $chatName?") },
+            text = { 
+                Text(
+                    if (isBlocked) "You will be able to receive messages from $chatName again."
+                    else "Blocked contacts can no longer send you messages or call you."
+                ) 
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    isBlocked = !isBlocked
+                    blockActionDone = true
+                    showBlockDialog = false
+                    onBlock()
+                }) {
+                    Text(if (isBlocked) "Unblock" else "Block", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Report confirmation dialog
+    if (showReportDialog) {
+        AlertDialog(
+            onDismissRequest = { showReportDialog = false },
+            title = { Text("Report $chatName?") },
+            text = { Text("This contact will be reported for inappropriate behavior. You can also block them.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    reportActionDone = true
+                    showReportDialog = false
+                }) {
+                    Text("Report", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReportDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Show snackbar for actions
+    LaunchedEffect(blockActionDone) {
+        if (blockActionDone) {
+            snackbarHostState.showSnackbar(if (isBlocked) "$chatName blocked" else "$chatName unblocked")
+            blockActionDone = false
+        }
+    }
+    LaunchedEffect(reportActionDone) {
+        if (reportActionDone) {
+            snackbarHostState.showSnackbar("$chatName reported")
+            reportActionDone = false
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Contact Info") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            // Profile header
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = chatName.firstOrNull()?.toString() ?: "?",
+                            color = Color.White,
+                            fontSize = 40.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = chatName,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Online",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Action buttons row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    ProfileActionButton(
+                        icon = Icons.Default.Call,
+                        label = "Audio",
+                        onClick = onVoiceCall
+                    )
+                    ProfileActionButton(
+                        icon = Icons.Default.Videocam,
+                        label = "Video",
+                        onClick = onVideoCall
+                    )
+                    ProfileActionButton(
+                        icon = Icons.Default.Search,
+                        label = "Search",
+                        onClick = onSearch
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // About section
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "About",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Hey there! I'm using Abhi Chat",
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Media, Links, Docs
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Media, Links and Docs",
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "0",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Notifications & Media visibility
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Mute Notifications",
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Switch(
+                            checked = isMuted,
+                            onCheckedChange = {
+                                isMuted = it
+                                onMute()
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Media Visibility",
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Default",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Encryption
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = "Encryption",
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Messages are end-to-end encrypted. Tap to verify.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Block / Report
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Block,
+                            contentDescription = null,
+                            tint = Color.Red,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        TextButton(onClick = { showBlockDialog = true }) {
+                            Text(
+                                text = if (isBlocked) "Unblock $chatName" else "Block $chatName",
+                                color = Color.Red,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.ThumbDown,
+                            contentDescription = null,
+                            tint = Color.Red,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        TextButton(onClick = { showReportDialog = true }) {
+                            Text(
+                                text = "Report $chatName",
+                                color = Color.Red,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun ProfileActionButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier
+                .size(48.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+        ) {
+            Icon(
+                icon,
+                contentDescription = label,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
