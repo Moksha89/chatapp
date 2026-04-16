@@ -6,8 +6,12 @@ import { PeerServer } from 'peer';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',')
+    : '*';
+
   app.enableCors({
-    origin: '*',
+    origin: allowedOrigins,
     credentials: true,
   });
 

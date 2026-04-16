@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth'
 import { Phone, PhoneOff, Video, Mic, MicOff, VideoOff } from 'lucide-react'
 import Peer, { type MediaConnection } from 'peerjs'
 
-type CallState = 'idle' | 'outgoing' | 'incoming' | 'connected'
+type CallState = 'idle' | 'outgoing' | 'incoming' | 'connected' | 'error'
 
 interface CallInfo {
   targetUserId: string
@@ -21,6 +21,7 @@ export default function CallDialog() {
   const [muted, setMuted] = useState(false)
   const [videoOff, setVideoOff] = useState(false)
   const [duration, setDuration] = useState(0)
+  const [errorMsg, setErrorMsg] = useState('')
 
   const peerRef = useRef<Peer | null>(null)
   const callRef = useRef<MediaConnection | null>(null)
@@ -49,6 +50,7 @@ export default function CallDialog() {
     setDuration(0)
     setMuted(false)
     setVideoOff(false)
+    setErrorMsg('')
   }, [])
 
   const initPeer = useCallback((): Promise<Peer> => {
@@ -83,6 +85,13 @@ export default function CallDialog() {
   }, [user])
 
   const getMedia = async (type: 'audio' | 'video') => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error(
+        window.location.protocol === 'http:'
+          ? 'Calls require HTTPS. Media access is blocked on insecure connections.'
+          : 'Your browser does not support media devices (camera/microphone).'
+      )
+    }
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
       video: type === 'video',
@@ -128,9 +137,10 @@ export default function CallDialog() {
           })
           mediaConn.on('close', cleanup)
         })
-      } catch (err) {
+      } catch (err: any) {
         console.error('Call init failed:', err)
-        cleanup()
+        setErrorMsg(err?.message || 'Failed to start call')
+        setCallState('error')
       }
     }
 
@@ -197,9 +207,10 @@ export default function CallDialog() {
       if (socket) {
         socket.emit('call:answer', { targetUserId: callInfo.targetUserId, peerId: peer.id })
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Accept call failed:', err)
-      cleanup()
+      setErrorMsg(err?.message || 'Failed to accept call')
+      setCallState('error')
     }
   }
 
@@ -247,8 +258,25 @@ export default function CallDialog() {
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
       <div className="bg-gray-900 rounded-2xl p-8 w-full max-w-sm mx-4 text-white text-center">
+        {/* Error state */}
+        {callState === 'error' && (
+          <div className="mb-6">
+            <div className="w-20 h-20 bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-3">
+              <PhoneOff className="w-8 h-8 text-red-400" />
+            </div>
+            <h3 className="text-xl font-semibold">Call Failed</h3>
+            <p className="text-gray-400 mt-2 text-sm">{errorMsg}</p>
+            <button
+              onClick={cleanup}
+              className="mt-4 px-6 py-2 bg-gray-700 rounded-full hover:bg-gray-600 text-sm"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
         {/* Video elements (hidden for audio calls) */}
-        {isVideo && callState === 'connected' && (
+        {callState !== 'error' && isVideo && callState === 'connected' && (
           <div className="relative mb-4 rounded-xl overflow-hidden bg-black aspect-video">
             <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
             <video
@@ -262,45 +290,49 @@ export default function CallDialog() {
         )}
 
         {/* Call info */}
-        <div className="mb-6">
-          <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-            {isVideo ? <Video className="w-8 h-8" /> : <Phone className="w-8 h-8" />}
+        {callState !== 'error' && (
+          <div className="mb-6">
+            <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+              {isVideo ? <Video className="w-8 h-8" /> : <Phone className="w-8 h-8" />}
+            </div>
+            <h3 className="text-xl font-semibold">{displayName}</h3>
+            <p className="text-gray-400 mt-1">
+              {callState === 'incoming' && `Incoming ${callInfo?.callType} call...`}
+              {callState === 'outgoing' && 'Calling...'}
+              {callState === 'connected' && formatDuration(duration)}
+            </p>
           </div>
-          <h3 className="text-xl font-semibold">{displayName}</h3>
-          <p className="text-gray-400 mt-1">
-            {callState === 'incoming' && `Incoming ${callInfo?.callType} call...`}
-            {callState === 'outgoing' && 'Calling...'}
-            {callState === 'connected' && formatDuration(duration)}
-          </p>
-        </div>
+        )}
 
         {/* Controls */}
-        <div className="flex items-center justify-center gap-6">
-          {callState === 'incoming' ? (
-            <>
-              <button onClick={rejectCall} className="p-4 bg-red-600 rounded-full hover:bg-red-700">
-                <PhoneOff className="w-6 h-6" />
-              </button>
-              <button onClick={acceptCall} className="p-4 bg-green-600 rounded-full hover:bg-green-700">
-                <Phone className="w-6 h-6" />
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={toggleMute} className={`p-3 rounded-full ${muted ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
-                {muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </button>
-              {isVideo && (
-                <button onClick={toggleVideo} className={`p-3 rounded-full ${videoOff ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
-                  {videoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+        {callState !== 'error' && (
+          <div className="flex items-center justify-center gap-6">
+            {callState === 'incoming' ? (
+              <>
+                <button onClick={rejectCall} className="p-4 bg-red-600 rounded-full hover:bg-red-700">
+                  <PhoneOff className="w-6 h-6" />
                 </button>
-              )}
-              <button onClick={endCall} className="p-4 bg-red-600 rounded-full hover:bg-red-700">
-                <PhoneOff className="w-6 h-6" />
-              </button>
-            </>
-          )}
-        </div>
+                <button onClick={acceptCall} className="p-4 bg-green-600 rounded-full hover:bg-green-700">
+                  <Phone className="w-6 h-6" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={toggleMute} className={`p-3 rounded-full ${muted ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                  {muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+                {isVideo && (
+                  <button onClick={toggleVideo} className={`p-3 rounded-full ${videoOff ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                    {videoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                  </button>
+                )}
+                <button onClick={endCall} className="p-4 bg-red-600 rounded-full hover:bg-red-700">
+                  <PhoneOff className="w-6 h-6" />
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

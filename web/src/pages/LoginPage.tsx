@@ -180,9 +180,11 @@ export default function LoginPage() {
           </div>
         )}
 
-        <p className="text-xs text-gray-400 text-center mt-6">
-          Dev OTP: 123456
-        </p>
+        {import.meta.env.DEV && (
+          <p className="text-xs text-gray-400 text-center mt-6">
+            Dev OTP: 123456
+          </p>
+        )}
       </div>
     </div>
   )
