@@ -19,6 +19,7 @@ export class AuthController {
       deviceId: string;
       fcmToken?: string;
       platform?: string;
+      displayName?: string;
     },
   ) {
     return this.authService.verifyOtp(
@@ -27,6 +28,7 @@ export class AuthController {
       body.deviceId,
       body.fcmToken,
       body.platform,
+      body.displayName,
     );
   }
 

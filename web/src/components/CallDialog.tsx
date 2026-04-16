@@ -30,6 +30,7 @@ export default function CallDialog() {
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined)
+  const callTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const cleanup = useCallback(() => {
     if (callRef.current) {
@@ -45,6 +46,7 @@ export default function CallDialog() {
       peerRef.current = null
     }
     clearInterval(timerRef.current)
+    clearTimeout(callTimeoutRef.current)
     setCallState('idle')
     setCallInfo(null)
     setDuration(0)
@@ -125,8 +127,22 @@ export default function CallDialog() {
           })
         }
 
+        // 45-second outgoing call timeout
+        callTimeoutRef.current = setTimeout(() => {
+          if (callRef.current) return // Already connected
+          const socket = getSocket()
+          if (socket) {
+            socket.emit('call:end', { targetUserId })
+          }
+          setErrorMsg('No answer')
+          setCallState('error')
+          // Auto-dismiss after 3 seconds
+          setTimeout(() => cleanup(), 3000)
+        }, 45000)
+
         // Wait for answer
         peer.on('call', (mediaConn) => {
+          clearTimeout(callTimeoutRef.current)
           callRef.current = mediaConn
           mediaConn.answer(stream)
           mediaConn.on('stream', (remoteStream) => {

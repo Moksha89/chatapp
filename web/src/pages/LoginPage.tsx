@@ -11,25 +11,34 @@ export default function LoginPage() {
   const [mode, setMode] = useState<LoginMode>('phone')
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
-  const [step, setStep] = useState<'phone' | 'otp'>('phone')
+  const [step, setStep] = useState<'phone' | 'otp' | 'name'>('phone')
+  const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [qrToken, setQrToken] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
-  // QR code polling
+  // QR code polling with race condition guard
   useEffect(() => {
     if (mode !== 'qr') return
+    let cancelled = false
     
     const generateQr = async () => {
+      if (cancelled) return
       try {
         const { token } = await api.generateQr()
+        if (cancelled) return
         setQrToken(token)
 
         // Poll for scan
         pollRef.current = setInterval(async () => {
+          if (cancelled) {
+            clearInterval(pollRef.current)
+            return
+          }
           try {
             const status = await api.checkQrStatus(token)
+            if (cancelled) return
             if (status.status === 'authenticated' && status.accessToken && status.user) {
               clearInterval(pollRef.current)
               login(status.accessToken, status.user)
@@ -37,15 +46,20 @@ export default function LoginPage() {
               clearInterval(pollRef.current)
               generateQr() // Regenerate
             }
-          } catch {}
+          } catch {
+            // Ignore polling errors silently
+          }
         }, 2000)
       } catch {
-        setError('Failed to generate QR code')
+        if (!cancelled) setError('Failed to generate QR code')
       }
     }
 
     generateQr()
-    return () => clearInterval(pollRef.current)
+    return () => {
+      cancelled = true
+      clearInterval(pollRef.current)
+    }
   }, [mode, login])
 
   const handleSendOtp = async () => {
@@ -67,9 +81,29 @@ export default function LoginPage() {
     try {
       const deviceId = `web-${Date.now()}`
       const result = await api.verifyOtp(phone, otp, deviceId)
+      if (result.isNewUser) {
+        // Store token temporarily, prompt for display name
+        setStep('name')
+        setLoading(false)
+        return
+      }
       login(result.accessToken, result.user)
     } catch (e: any) {
       setError(e.message || 'Invalid OTP')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSetName = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      const deviceId = `web-${Date.now()}`
+      const result = await api.verifyOtp(phone, otp, deviceId, displayName.trim() || undefined)
+      login(result.accessToken, result.user)
+    } catch (e: any) {
+      setError(e.message || 'Failed to create account')
     } finally {
       setLoading(false)
     }
@@ -135,7 +169,7 @@ export default function LoginPage() {
                   {loading ? 'Sending...' : 'Send OTP'}
                 </button>
               </>
-            ) : (
+            ) : step === 'otp' ? (
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Enter OTP</label>
@@ -164,7 +198,30 @@ export default function LoginPage() {
                   Change phone number
                 </button>
               </>
-            )}
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSetName()}
+                    autoFocus
+                  />
+                  <p className="text-xs text-gray-400 mt-1">This is how others will see you</p>
+                </div>
+                <button
+                  onClick={handleSetName}
+                  disabled={!displayName.trim() || loading}
+                  className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+                >
+                  {loading ? 'Creating account...' : 'Continue'}
+                </button>
+              </>
+            )
           </div>
         ) : (
           <div className="text-center space-y-4">

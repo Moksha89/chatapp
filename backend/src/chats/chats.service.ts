@@ -20,61 +20,67 @@ export class ChatsService {
   ) {}
 
   async getChatsForUser(userId: string) {
-    const participants = await this.participantRepo.find({
+    const myParticipants = await this.participantRepo.find({
       where: { userId },
     });
 
-    const chatIds = participants.map((p) => p.chatId);
+    const chatIds = myParticipants.map((p) => p.chatId);
     if (chatIds.length === 0) return [];
 
-    const chats: any[] = [];
-    for (const chatId of chatIds) {
-      const otherParticipant = await this.participantRepo.findOne({
-        where: { chatId, userId: In([userId]) },
-      });
+    // Batch fetch all participants for all chats at once (fixes N+1)
+    const allParticipants = await this.participantRepo.find({
+      where: { chatId: In(chatIds) },
+    });
 
-      // Get ALL participants of this chat to find the other user
-      const allParticipants = await this.participantRepo.find({
-        where: { chatId },
-      });
+    // Collect other user IDs
+    const otherUserIds = new Set<string>();
+    const chatParticipantMap = new Map<string, typeof allParticipants>();
+    for (const p of allParticipants) {
+      if (!chatParticipantMap.has(p.chatId)) chatParticipantMap.set(p.chatId, []);
+      chatParticipantMap.get(p.chatId)!.push(p);
+      if (p.userId !== userId) otherUserIds.add(p.userId);
+    }
 
-      const otherUserId = allParticipants.find((p) => p.userId !== userId)?.userId;
-      const otherUser = otherUserId
-        ? await this.userRepo.findOne({ where: { id: otherUserId } })
-        : null;
+    // Batch fetch all other users
+    const otherUsers = otherUserIds.size > 0
+      ? await this.userRepo.find({ where: { id: In([...otherUserIds]) } })
+      : [];
+    const userMap = new Map(otherUsers.map((u) => [u.id, u]));
 
-      // Get last message
-      const lastMessage = await this.messageRepo.findOne({
-        where: { chatId },
-        order: { createdAt: 'DESC' },
-      });
+    // Batch fetch last messages for all chats using a subquery approach
+    const lastMessages = await Promise.all(
+      chatIds.map((chatId) =>
+        this.messageRepo.findOne({ where: { chatId }, order: { createdAt: 'DESC' } }),
+      ),
+    );
+    const lastMessageMap = new Map(
+      chatIds.map((chatId, i) => [chatId, lastMessages[i]]),
+    );
 
-      // Count unread messages
-      const myParticipant = allParticipants.find((p) => p.userId === userId);
-      let unreadCount = 0;
-      if (myParticipant?.lastReadAt) {
-        unreadCount = await this.messageRepo.count({
-          where: {
-            chatId,
-            createdAt: LessThan(new Date()) as any,
-          },
-        });
-        // More accurate: count messages after lastReadAt that aren't from me
-        unreadCount = await this.messageRepo
+    // Batch fetch unread counts
+    const unreadCounts = await Promise.all(
+      chatIds.map((chatId) => {
+        const myP = chatParticipantMap.get(chatId)?.find((p) => p.userId === userId);
+        const qb = this.messageRepo
           .createQueryBuilder('msg')
           .where('msg.chatId = :chatId', { chatId })
-          .andWhere('msg.senderId != :userId', { userId })
-          .andWhere('msg.createdAt > :lastRead', { lastRead: myParticipant.lastReadAt })
-          .getCount();
-      } else {
-        unreadCount = await this.messageRepo
-          .createQueryBuilder('msg')
-          .where('msg.chatId = :chatId', { chatId })
-          .andWhere('msg.senderId != :userId', { userId })
-          .getCount();
-      }
+          .andWhere('msg.senderId != :userId', { userId });
+        if (myP?.lastReadAt) {
+          qb.andWhere('msg.createdAt > :lastRead', { lastRead: myP.lastReadAt });
+        }
+        return qb.getCount();
+      }),
+    );
+    const unreadMap = new Map(chatIds.map((chatId, i) => [chatId, unreadCounts[i]]));
 
-      chats.push({
+    // Assemble results
+    const chats = chatIds.map((chatId) => {
+      const participants = chatParticipantMap.get(chatId) || [];
+      const otherUserId = participants.find((p) => p.userId !== userId)?.userId;
+      const otherUser = otherUserId ? userMap.get(otherUserId) : null;
+      const lastMessage = lastMessageMap.get(chatId);
+
+      return {
         id: chatId,
         otherUser: otherUser
           ? {
@@ -97,14 +103,18 @@ export class ChatsService {
               status: lastMessage.status,
             }
           : null,
-        unreadCount,
-      });
-    }
+        unreadCount: unreadMap.get(chatId) || 0,
+      };
+    });
 
     // Sort by last message time
     chats.sort((a, b) => {
-      const aTime = a.lastMessage?.createdAt?.getTime() || 0;
-      const bTime = b.lastMessage?.createdAt?.getTime() || 0;
+      const aTime = a.lastMessage?.createdAt
+        ? new Date(a.lastMessage.createdAt).getTime()
+        : 0;
+      const bTime = b.lastMessage?.createdAt
+        ? new Date(b.lastMessage.createdAt).getTime()
+        : 0;
       return bTime - aTime;
     });
 

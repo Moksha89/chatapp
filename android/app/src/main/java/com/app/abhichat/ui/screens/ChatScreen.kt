@@ -73,8 +73,8 @@ fun ChatScreen(
         // Mark as read
         try { ApiClient.getService().markAsRead(chatId) } catch (_: Exception) {}
 
-        // Listen for new messages
-        SocketManager.on("message:new") { args ->
+        // Listen for new messages (scoped listener)
+        val listenerId = SocketManager.on("message:new") { args ->
             if (args.isNotEmpty()) {
                 try {
                     val data = args[0] as JSONObject
@@ -90,11 +90,8 @@ fun ChatScreen(
                 }
             }
         }
-    }
-
-    DisposableEffect(chatId) {
         onDispose {
-            SocketManager.off("message:new")
+            SocketManager.off("message:new", listenerId)
         }
     }
 
@@ -225,14 +222,6 @@ fun ChatScreen(
                             val text = messageText.trim()
                             if (text.isEmpty()) return@FloatingActionButton
 
-                            val data = JSONObject().apply {
-                                put("chatId", chatId)
-                                put("content", text)
-                                put("type", "text")
-                            }
-                            SocketManager.emit("message:send", data)
-                            messageText = ""
-
                             // Optimistically add message
                             val optimistic = Message(
                                 id = UUID.randomUUID().toString(),
@@ -243,6 +232,25 @@ fun ChatScreen(
                                 createdAt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).format(Date())
                             )
                             messages = messages + optimistic
+                            messageText = ""
+
+                            // Send via socket; fall back to HTTP if not connected
+                            if (SocketManager.isConnected()) {
+                                val data = JSONObject().apply {
+                                    put("chatId", chatId)
+                                    put("content", text)
+                                    put("type", "text")
+                                }
+                                SocketManager.emit("message:send", data)
+                            } else {
+                                scope.launch {
+                                    try {
+                                        ApiClient.getService().sendMessage(chatId, mapOf("content" to text, "type" to "text"))
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("Chat", "HTTP fallback send failed", e)
+                                    }
+                                }
+                            }
                         },
                         modifier = Modifier.size(48.dp),
                         containerColor = MaterialTheme.colorScheme.primary,

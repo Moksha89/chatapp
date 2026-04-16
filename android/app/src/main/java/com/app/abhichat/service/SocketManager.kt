@@ -9,7 +9,8 @@ import java.net.URI
 
 object SocketManager {
     private var socket: Socket? = null
-    private val listeners = mutableMapOf<String, MutableList<(Array<Any>) -> Unit>>()
+    private val listeners = mutableMapOf<String, MutableList<Pair<String, (Array<Any>) -> Unit>>>()
+    private var listenerId = 0
 
     fun connect() {
         if (socket?.connected() == true) return
@@ -40,7 +41,7 @@ object SocketManager {
 
         // Re-register stored listeners
         listeners.forEach { (event, callbacks) ->
-            callbacks.forEach { callback ->
+            callbacks.forEach { (_, callback) ->
                 socket?.on(event) { args -> callback(args) }
             }
         }
@@ -55,17 +56,40 @@ object SocketManager {
     }
 
     fun emit(event: String, data: JSONObject) {
+        if (socket?.connected() != true) {
+            android.util.Log.w("Socket", "emit($event) failed: not connected")
+            return
+        }
         socket?.emit(event, data)
     }
 
-    fun on(event: String, callback: (Array<Any>) -> Unit) {
-        listeners.getOrPut(event) { mutableListOf() }.add(callback)
+    /**
+     * Register a scoped listener. Returns a listener ID that can be used
+     * with [off] to remove only THIS specific listener without affecting others.
+     */
+    fun on(event: String, callback: (Array<Any>) -> Unit): String {
+        val id = "listener-${listenerId++}"
+        listeners.getOrPut(event) { mutableListOf() }.add(id to callback)
         socket?.on(event) { args -> callback(args) }
+        return id
     }
 
-    fun off(event: String) {
-        listeners.remove(event)
-        socket?.off(event)
+    /**
+     * Remove a specific listener by ID (scoped), or remove ALL listeners
+     * for an event if no ID is provided.
+     */
+    fun off(event: String, id: String? = null) {
+        if (id == null) {
+            listeners.remove(event)
+            socket?.off(event)
+        } else {
+            listeners[event]?.removeAll { it.first == id }
+            // Re-register remaining listeners (socket.io doesn't support removing individual)
+            socket?.off(event)
+            listeners[event]?.forEach { (_, cb) ->
+                socket?.on(event) { args -> cb(args) }
+            }
+        }
     }
 
     fun isConnected(): Boolean = socket?.connected() == true

@@ -41,4 +41,10 @@ interface ApiService {
 
     @POST("chats/{chatId}/read")
     suspend fun markAsRead(@Path("chatId") chatId: String)
+
+    @POST("chats/{chatId}/messages")
+    suspend fun sendMessage(
+        @Path("chatId") chatId: String,
+        @Body request: Map<String, String>
+    ): Message
 }

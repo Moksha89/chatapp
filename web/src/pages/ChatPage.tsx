@@ -75,7 +75,18 @@ export default function ChatPage() {
 
     const handleNewMessage = (msg: Message) => {
       if (msg.chatId === chatId) {
-        setMessages((prev) => [...prev, msg])
+        setMessages((prev) => {
+          // Deduplicate: skip if message ID already exists or matches a temp message
+          if (prev.some((m) => m.id === msg.id)) return prev
+          // Replace optimistic temp message if tempId matches
+          const tempIdx = prev.findIndex((m) => m.id.startsWith('temp-') && msg.senderId === user?.id)
+          if (tempIdx >= 0 && msg.senderId === user?.id) {
+            const updated = [...prev]
+            updated[tempIdx] = msg
+            return updated
+          }
+          return [...prev, msg]
+        })
         api.markRead(chatId).catch(() => {})
         socket.emit('message:read', { chatId })
       }
@@ -99,9 +110,14 @@ export default function ChatPage() {
       )
     }
 
-    const handleRead = (data: { chatId: string }) => {
+    const handleRead = (data: { chatId: string; readBy?: string }) => {
       if (data.chatId === chatId) {
-        setMessages((prev) => prev.map((m) => ({ ...m, status: 'read' })))
+        // Only mark MY sent messages as 'read' (not received messages)
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.senderId === user?.id ? { ...m, status: 'read' } : m
+          )
+        )
       }
     }
 

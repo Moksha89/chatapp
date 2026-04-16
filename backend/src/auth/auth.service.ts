@@ -33,7 +33,10 @@ export class AuthService {
       expiresAt: Date.now() + 5 * 60 * 1000, // 5 min
     });
 
-    console.log(`[Auth] OTP for ${phone}: ${otp}`);
+    // Only log OTP in non-production environments
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Auth] OTP for ${phone}: ${otp}`);
+    }
     return { message: 'OTP sent successfully' };
   }
 
@@ -43,11 +46,13 @@ export class AuthService {
     deviceId: string,
     fcmToken?: string,
     platform?: string,
+    displayName?: string,
   ): Promise<{ accessToken: string; user: User; isNewUser: boolean }> {
     const stored = this.otpStore.get(phone);
 
     // Dev OTP bypass: disabled when DISABLE_DEV_OTP=true (production-ready)
-    const isDevBypass = process.env.DISABLE_DEV_OTP !== 'true' && otp === '123456';
+    const devOtp = process.env.DEV_OTP || '123456';
+    const isDevBypass = process.env.DISABLE_DEV_OTP !== 'true' && otp === devOtp;
     if (!isDevBypass) {
       if (!stored || stored.otp !== otp || Date.now() > stored.expiresAt) {
         throw new UnauthorizedException('Invalid or expired OTP');
@@ -63,7 +68,7 @@ export class AuthService {
     if (!user) {
       user = this.userRepo.create({
         phone,
-        displayName: phone,
+        displayName: displayName || phone,
       });
       user = await this.userRepo.save(user);
       isNewUser = true;

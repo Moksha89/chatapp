@@ -22,10 +22,10 @@ export const api = {
   sendOtp: (phone: string) =>
     request('/auth/send-otp', { method: 'POST', body: JSON.stringify({ phone }) }),
 
-  verifyOtp: (phone: string, otp: string, deviceId: string) =>
+  verifyOtp: (phone: string, otp: string, deviceId: string, displayName?: string) =>
     request('/auth/verify-otp', {
       method: 'POST',
-      body: JSON.stringify({ phone, otp, deviceId, platform: 'web' }),
+      body: JSON.stringify({ phone, otp, deviceId, platform: 'web', displayName }),
     }),
 
   generateQr: () => request('/auth/qr/generate'),
