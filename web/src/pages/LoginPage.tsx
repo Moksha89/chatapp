@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../lib/auth'
 import { api } from '../lib/api'
 import { QRCodeSVG } from 'qrcode.react'
-import { MessageCircle, Smartphone, Globe } from 'lucide-react'
+import { MessageCircle, Smartphone, Globe, Download } from 'lucide-react'
 
 type LoginMode = 'qr' | 'phone'
 
@@ -242,6 +242,19 @@ export default function LoginPage() {
             Dev OTP: 123456
           </p>
         )}
+
+        {/* Download App */}
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <a
+            href="/uploads/abhi-chat.apk"
+            download="abhi-chat.apk"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition"
+          >
+            <Download className="w-5 h-5" />
+            Download Android App
+          </a>
+          <p className="text-xs text-gray-400 text-center mt-2">Get Abhi Chat on your phone</p>
+        </div>
       </div>
     </div>
   )

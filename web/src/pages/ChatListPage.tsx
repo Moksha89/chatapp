@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { api } from '../lib/api'
 import { getSocket } from '../lib/socket'
-import { MessageCircle, Search, LogOut, Plus, User } from 'lucide-react'
+import { MessageCircle, Search, LogOut, Plus, User, Download } from 'lucide-react'
 
 interface ChatItem {
   id: string
@@ -118,16 +118,26 @@ export default function ChatListPage() {
           <MessageCircle className="w-6 h-6" />
           <h1 className="text-lg font-semibold">Abhi Chat</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setShowNewChat(true)}
             className="p-2 hover:bg-blue-700 rounded-full transition"
+            title="New chat"
           >
             <Plus className="w-5 h-5" />
           </button>
+          <a
+            href="/uploads/abhi-chat.apk"
+            download="abhi-chat.apk"
+            className="p-2 hover:bg-blue-700 rounded-full transition"
+            title="Download Android App"
+          >
+            <Download className="w-5 h-5" />
+          </a>
           <button
             onClick={logout}
             className="p-2 hover:bg-blue-700 rounded-full transition"
+            title="Logout"
           >
             <LogOut className="w-5 h-5" />
           </button>
