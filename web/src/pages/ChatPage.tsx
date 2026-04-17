@@ -223,11 +223,11 @@ export default function ChatPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="bg-blue-600 text-white px-3 py-2.5 flex items-center gap-3 shrink-0">
-        <button onClick={() => navigate('/')} className="p-1 hover:bg-blue-700 rounded-full">
+      <div className="bg-blue-600 text-white px-3 py-2.5 flex items-center gap-3 shrink-0 shadow-md">
+        <button onClick={() => navigate('/')} className="p-1.5 hover:bg-blue-700 rounded-full transition">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="w-9 h-9 bg-blue-400 rounded-full flex items-center justify-center">
+        <div className="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center ring-2 ring-blue-300">
           <User className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
@@ -276,14 +276,14 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="bg-gray-100 px-3 py-2 flex items-center gap-2 shrink-0">
+      <div className="bg-gray-50 border-t border-gray-200 px-3 py-2 flex items-center gap-2 shrink-0">
         <input
           type="text"
           value={input}
           onChange={handleInputChange}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
           placeholder="Type a message..."
-          className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-full text-sm outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={sendMessage}

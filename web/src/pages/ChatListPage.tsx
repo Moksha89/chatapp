@@ -113,10 +113,12 @@ export default function ChatListPage() {
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Header */}
-      <div className="bg-blue-600 text-white px-4 py-3 flex items-center justify-between">
+      <div className="bg-blue-600 text-white px-4 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <MessageCircle className="w-6 h-6" />
-          <h1 className="text-lg font-semibold">Abhi Chat</h1>
+          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+            <MessageCircle className="w-5 h-5" />
+          </div>
+          <h1 className="text-lg font-bold tracking-tight">Abhi Chat</h1>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -145,7 +147,7 @@ export default function ChatListPage() {
       </div>
 
       {/* Search */}
-      <div className="px-4 py-2 bg-white">
+      <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -153,7 +155,7 @@ export default function ChatListPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search chats..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm"
           />
         </div>
       </div>
@@ -187,7 +189,7 @@ export default function ChatListPage() {
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition border-b border-gray-100"
             >
               <div className="relative">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
                   <User className="w-6 h-6 text-blue-600" />
                 </div>
                 {chat.otherUser?.isOnline && (
