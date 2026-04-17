@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  phone        String   @unique
+  displayName  String?
+  profilePhoto String?
+  about        String   @default("Hey there! I am using Abhi Chat")
+  lastSeen     DateTime @default(now())
+  isOnline     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  devices         Device[]
+  sentMessages    Message[]       @relation("SentMessages")
+  chatMembers     ChatMember[]
+  callsStarted    Call[]          @relation("CallStarter")
+  callParticipants CallParticipant[]
+  blockedUsers    BlockedUser[]   @relation("Blocker")
+  blockedBy       BlockedUser[]   @relation("Blocked")
+
+  @@map("users")
+}
+
+model Device {
+  id        String   @id @default(uuid())
+  userId    String
+  platform  String
+  fcmToken  String?
+  lastSeen  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("devices")
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  type      ChatType @default(DIRECT)
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  ChatMember[]
+  messages Message[]
+  calls    Call[]
+
+  @@map("chats")
+}
+
+enum ChatType {
+  DIRECT
+  GROUP
+}
+
+model ChatMember {
+  id       String         @id @default(uuid())
+  chatId   String
+  userId   String
+  role     ChatMemberRole @default(MEMBER)
+  joinedAt DateTime       @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@map("chat_members")
+}
+
+enum ChatMemberRole {
+  ADMIN
+  MEMBER
+}
+
+model Message {
+  id        String        @id @default(uuid())
+  chatId    String
+  senderId  String
+  type      MessageType   @default(TEXT)
+  text      String?
+  status    MessageStatus @default(SENT)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  chat        Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender      User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+
+  @@index([chatId, createdAt])
+  @@map("messages")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
+
+enum MessageStatus {
+  SENDING
+  SENT
+  DELIVERED
+  READ
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  messageId String
+  fileUrl   String
+  fileType  String
+  fileName  String?
+  size      Int?
+  duration  Int?
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+model Call {
+  id        String     @id @default(uuid())
+  chatId    String
+  startedBy String
+  type      CallType
+  status    CallStatus @default(RINGING)
+  startedAt DateTime   @default(now())
+  endedAt   DateTime?
+  duration  Int?
+
+  chat         Chat              @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  starter      User              @relation("CallStarter", fields: [startedBy], references: [id], onDelete: Cascade)
+  participants CallParticipant[]
+
+  @@map("calls")
+}
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  MISSED
+  DECLINED
+}
+
+model CallParticipant {
+  id       String                @id @default(uuid())
+  callId   String
+  userId   String
+  status   CallParticipantStatus @default(INVITED)
+  joinedAt DateTime?
+  leftAt   DateTime?
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([callId, userId])
+  @@map("call_participants")
+}
+
+enum CallParticipantStatus {
+  INVITED
+  JOINED
+  LEFT
+  DECLINED
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@map("blocked_users")
+}
