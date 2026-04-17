@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { api } from '../lib/api'
 import { getSocket } from '../lib/socket'
-import { MessageCircle, Search, LogOut, Plus, User, Download } from 'lucide-react'
+import { MessageCircle, Search, LogOut, Plus, User, Download, ChevronRight, Shield, Bell, Palette, HelpCircle, Info, X, Camera, Pencil } from 'lucide-react'
 
 interface ChatItem {
   id: string
@@ -35,6 +35,11 @@ export default function ChatListPage() {
   const [searching, setSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [showSettings, setShowSettings] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [editingAbout, setEditingAbout] = useState(false)
+  const [newName, setNewName] = useState(user?.displayName || '')
+  const [newAbout, setNewAbout] = useState(user?.about || '')
 
   const loadChats = useCallback(async () => {
     try {
@@ -110,14 +115,32 @@ export default function ChatListPage() {
            c.otherUser?.phone?.includes(search)
   })
 
+  const handleUpdateProfile = async (field: 'displayName' | 'about', value: string) => {
+    try {
+      await api.updateProfile({ [field]: value })
+      // Refresh profile by reloading the page state
+      window.location.reload()
+    } catch (e) {
+      console.error('Failed to update profile:', e)
+    }
+  }
+
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Header */}
       <div className="bg-blue-600 text-white px-4 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-            <MessageCircle className="w-5 h-5" />
-          </div>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition"
+            title="Profile & Settings"
+          >
+            {user?.profilePhoto ? (
+              <img src={user.profilePhoto} alt="" className="w-9 h-9 rounded-full object-cover" />
+            ) : (
+              <User className="w-5 h-5" />
+            )}
+          </button>
           <h1 className="text-lg font-bold tracking-tight">Abhi Chat</h1>
         </div>
         <div className="flex items-center gap-1">
@@ -222,6 +245,188 @@ export default function ChatListPage() {
           ))
         )}
       </div>
+
+      {/* Settings/Profile Sidebar */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-slide-in">
+            {/* Settings Header */}
+            <div className="bg-blue-600 text-white px-4 py-4 flex items-center gap-3">
+              <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-blue-700 rounded-full transition">
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-lg font-semibold">Settings</h2>
+            </div>
+
+            {/* Profile Section */}
+            <div className="px-6 py-6 border-b border-gray-100">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                    {user?.profilePhoto ? (
+                      <img src={user.profilePhoto} alt="" className="w-16 h-16 rounded-full object-cover" />
+                    ) : (
+                      <User className="w-8 h-8 text-white" />
+                    )}
+                  </div>
+                  <button className="absolute bottom-0 right-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white">
+                    <Camera className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+                <div className="flex-1 min-w-0">
+                  {editingName ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="flex-1 px-2 py-1 border-b-2 border-blue-600 outline-none text-sm font-medium"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newName.trim()) {
+                            handleUpdateProfile('displayName', newName.trim())
+                            setEditingName(false)
+                          }
+                          if (e.key === 'Escape') setEditingName(false)
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-900 truncate">{user?.displayName || 'Set your name'}</h3>
+                      <button onClick={() => { setNewName(user?.displayName || ''); setEditingName(true) }} className="text-gray-400 hover:text-blue-600">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-500 truncate">{user?.phone}</p>
+                </div>
+              </div>
+
+              {/* About */}
+              <div className="mt-4">
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">About</p>
+                {editingAbout ? (
+                  <input
+                    type="text"
+                    value={newAbout}
+                    onChange={(e) => setNewAbout(e.target.value)}
+                    className="w-full px-2 py-1 border-b-2 border-blue-600 outline-none text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleUpdateProfile('about', newAbout.trim())
+                        setEditingAbout(false)
+                      }
+                      if (e.key === 'Escape') setEditingAbout(false)
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-700">{user?.about || 'Hey there! I am using Abhi Chat'}</p>
+                    <button onClick={() => { setNewAbout(user?.about || ''); setEditingAbout(true) }} className="text-gray-400 hover:text-blue-600 shrink-0">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Settings Options */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="py-2">
+                <button className="w-full flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Bell className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-gray-900">Notifications</p>
+                    <p className="text-xs text-gray-500">Message, group & call tones</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <button className="w-full flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-gray-900">Privacy</p>
+                    <p className="text-xs text-gray-500">Last seen, profile photo, about</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <button className="w-full flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition">
+                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Palette className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-gray-900">Chat Themes</p>
+                    <p className="text-xs text-gray-500">Wallpaper, font size</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <button className="w-full flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition">
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <HelpCircle className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-gray-900">Help</p>
+                    <p className="text-xs text-gray-500">FAQ, contact us, privacy policy</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <a
+                  href="/uploads/abhi-chat.apk"
+                  download="abhi-chat.apk"
+                  className="w-full flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition"
+                >
+                  <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                    <Download className="w-4 h-4 text-teal-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-gray-900">Download Android App</p>
+                    <p className="text-xs text-gray-500">Get Abhi Chat on your phone</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </a>
+              </div>
+
+              <div className="border-t border-gray-100 py-2">
+                <button className="w-full flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition">
+                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Info className="w-4 h-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-gray-900">About Abhi Chat</p>
+                    <p className="text-xs text-gray-500">Version 1.0.0</p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Logout */}
+              <div className="border-t border-gray-100 py-2">
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-4 px-6 py-3 hover:bg-red-50 transition"
+                >
+                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                    <LogOut className="w-4 h-4 text-red-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-red-600">Logout</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+          {/* Overlay */}
+          <div className="flex-1 bg-black/40" onClick={() => setShowSettings(false)} />
+        </div>
+      )}
 
       {/* New chat modal */}
       {showNewChat && (
