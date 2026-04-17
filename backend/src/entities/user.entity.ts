@@ -14,7 +14,7 @@ export class User {
   @Column({ nullable: true })
   profilePhoto: string;
 
-  @Column({ default: 'Hey there! I am using ChatApp' })
+  @Column({ default: 'Hey there! I am using Abhi Chat' })
   about: string;
 
   @Column({ type: 'timestamp', nullable: true })
