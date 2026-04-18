@@ -105,6 +105,23 @@ export default function ChatRoom({ chatId, chat, currentUser, onBack, onStartCal
       }
     };
 
+    // Handle message:sent — replaces optimistic message with real server message
+    const handleMessageSent = (data: any) => {
+      const { tempId, message } = data;
+      if (!message || message.chatId !== chatId) return;
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id === tempId) {
+            // Replace optimistic message with real one
+            messageIdsRef.current.delete(tempId);
+            messageIdsRef.current.add(message.id);
+            return { ...message, status: message.status || 'SENT' };
+          }
+          return m;
+        })
+      );
+    };
+
     const handleMessageDelivered = (data: any) => {
       setMessages((prev) =>
         prev.map((m) => (m.id === data.messageId ? { ...m, status: 'DELIVERED' } : m))
@@ -122,6 +139,7 @@ export default function ChatRoom({ chatId, chat, currentUser, onBack, onStartCal
     };
 
     socketService.on('message:new', handleNewMessage);
+    socketService.on('message:sent', handleMessageSent);
     socketService.on('typing:start', handleTypingStart);
     socketService.on('typing:stop', handleTypingStop);
     socketService.on('user:online', handleUserOnline);
@@ -131,6 +149,7 @@ export default function ChatRoom({ chatId, chat, currentUser, onBack, onStartCal
 
     return () => {
       socketService.off('message:new', handleNewMessage);
+      socketService.off('message:sent', handleMessageSent);
       socketService.off('typing:start', handleTypingStart);
       socketService.off('typing:stop', handleTypingStop);
       socketService.off('user:online', handleUserOnline);
@@ -162,6 +181,7 @@ export default function ChatRoom({ chatId, chat, currentUser, onBack, onStartCal
       chatId,
       text: text.trim(),
       type: 'TEXT',
+      tempId,
     });
 
     setText('');
