@@ -27,9 +27,11 @@ import androidx.lifecycle.viewModelScope
 import com.app.abhichat.data.api.ApiService
 import com.app.abhichat.data.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -112,6 +114,22 @@ class LoginViewModel @Inject constructor(
             .putString("user_name", result.user.displayName ?: result.user.phone)
             .putString("user_phone", result.user.phone)
             .apply()
+
+        // Register FCM token with backend for push notifications
+        registerFcmToken()
+    }
+
+    private fun registerFcmToken() {
+        viewModelScope.launch {
+            try {
+                val fcmToken = FirebaseMessaging.getInstance().token.await()
+                prefs.edit().putString("fcm_token", fcmToken).apply()
+                apiService.registerDevice(RegisterDeviceRequest(fcmToken, "ANDROID"))
+            } catch (e: Exception) {
+                // Non-fatal: push notifications won't work but app still functions
+                e.printStackTrace()
+            }
+        }
     }
 }
 

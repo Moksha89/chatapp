@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma-service/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @WebSocketGateway({
   namespace: '/chat',
@@ -24,6 +25,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private jwt: JwtService,
     private prisma: PrismaService,
     private redis: RedisService,
+    private notifications: NotificationsService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -117,6 +119,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             data: { status: 'DELIVERED' },
           });
           client.emit('message:delivered', { messageId: message.id });
+        } else {
+          // User is offline — send FCM push notification
+          const sender = message.sender;
+          const senderName = sender?.displayName || 'Someone';
+          await this.notifications.sendMessageNotification(
+            member.userId,
+            senderName,
+            data.text || 'Sent a media message',
+            data.chatId,
+          );
         }
       }
     } catch (err) {
@@ -225,6 +237,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Generate a shared LiveKit room name for both participants
     const livekitRoom = `call-${data.chatId}-${Date.now()}`;
+
+    // Send FCM push for incoming call (in case target is offline/backgrounded)
+    const callerName = caller?.displayName || 'Someone';
+    await this.notifications.sendCallNotification(
+      data.targetUserId,
+      callerName,
+      data.type,
+      data.chatId,
+    );
 
     // Send incoming call to target with room name
     this.server.to(`user:${data.targetUserId}`).emit('call:incoming', {
