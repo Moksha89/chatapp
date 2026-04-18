@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PhoneOff, Mic, MicOff, Video, VideoOff, Volume2 } from 'lucide-react';
+import { PhoneOff, Mic, MicOff, Video, VideoOff, Volume2, Minimize2, Maximize2 } from 'lucide-react';
 import { Room, RoomEvent, Track, ConnectionState } from 'livekit-client';
 import socketService from '@/lib/socket';
 import api from '@/lib/api';
@@ -25,6 +25,7 @@ export default function CallDialog({ call, currentUser, onEnd }: CallDialogProps
   const [duration, setDuration] = useState(0);
   const [speakerOn, setSpeakerOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [minimized, setMinimized] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -201,8 +202,51 @@ export default function CallDialog({ call, currentUser, onEnd }: CallDialogProps
     return 'Call ended';
   };
 
+  // PiP minimized floating window
+  if (minimized) {
+    return (
+      <div className="fixed bottom-6 right-6 z-50 w-72 bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden cursor-pointer" onClick={() => setMinimized(false)}>
+        <audio ref={remoteAudioRef} autoPlay />
+        {/* Mini video preview for video calls */}
+        {call.type === 'VIDEO' && callState === 'connected' && (
+          <div className="relative h-36">
+            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            <video ref={localVideoRef} autoPlay playsInline muted className="absolute bottom-2 right-2 w-16 h-20 object-cover rounded-lg border border-white/30" />
+          </div>
+        )}
+        {/* Info bar */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
+              {(call.targetUserId || call.callerId || '?')[0]?.toUpperCase()}
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">{call.type === 'VIDEO' ? 'Video Call' : 'Voice Call'}</p>
+              <p className="text-green-400 text-xs">{statusText()}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={(e) => { e.stopPropagation(); setMinimized(false); }} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); handleEndCall(); }} className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors">
+              <PhoneOff className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-gray-900 to-gray-800 z-50 flex flex-col items-center justify-between py-16">
+      {/* Minimize button */}
+      {callState === 'connected' && (
+        <button onClick={() => setMinimized(true)} className="absolute top-4 left-4 z-30 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+          <Minimize2 className="w-5 h-5" />
+        </button>
+      )}
+
       {/* Video area */}
       {call.type === 'VIDEO' && callState === 'connected' && (
         <>

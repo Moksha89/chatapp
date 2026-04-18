@@ -1,9 +1,15 @@
 package com.app.abhichat.ui.call
 
+import android.app.Activity
 import android.app.Application
+import android.app.PictureInPictureParams
+import android.os.Build
+import android.util.Rational
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -21,6 +27,7 @@ import com.app.abhichat.BuildConfig
 import com.app.abhichat.data.model.LiveKitTokenRequest
 import com.app.abhichat.data.model.TokenResponse
 import com.app.abhichat.data.socket.SocketManager
+import com.app.abhichat.ui.MainActivity
 import io.livekit.android.LiveKit
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.events.collect
@@ -47,6 +54,7 @@ fun CallScreen(
     val application = context.applicationContext as Application
     val prefs = remember { context.getSharedPreferences("abhi_chat_prefs", 0) }
     val scope = rememberCoroutineScope()
+    val activity = context as? MainActivity
 
     var callState by remember { mutableStateOf(if (isOutgoing) "CALLING" else "CONNECTING") }
     var isMuted by remember { mutableStateOf(false) }
@@ -55,6 +63,20 @@ fun CallScreen(
     var duration by remember { mutableStateOf(0) }
     var roomName by remember { mutableStateOf(livekitRoom ?: "") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // PiP state from activity
+    val isInPipMode = activity?.isInPipMode?.value ?: false
+
+    // Notify activity about call state for PiP
+    LaunchedEffect(callState) {
+        activity?.isInCall?.value = callState != "ENDED"
+    }
+    DisposableEffect(Unit) {
+        activity?.isInCall?.value = true
+        onDispose {
+            activity?.isInCall?.value = false
+        }
+    }
 
     // LiveKit room instance
     val room = remember { LiveKit.create(application) }
@@ -219,6 +241,78 @@ fun CallScreen(
         }
     }
 
+    // PiP minimized view — show only avatar + name + duration + end button
+    if (isInPipMode) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF1A1A2E)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF246BFD), Color(0xFF6C5CE7))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        callerName.take(1).uppercase(),
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    callerName,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                if (callState == "CONNECTED") {
+                    Text(
+                        formatDuration(duration),
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                FloatingActionButton(
+                    onClick = {
+                        callState = "ENDED"
+                        room.disconnect()
+                        val payload = JSONObject().apply {
+                            put("targetUserId", targetUserId)
+                            put("chatId", chatId)
+                        }
+                        SocketManager.emit("call:end", payload)
+                    },
+                    containerColor = Color.Red,
+                    modifier = Modifier.size(40.dp),
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        Icons.Default.CallEnd,
+                        contentDescription = "End Call",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    // Full call screen UI
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -229,6 +323,30 @@ fun CallScreen(
             ),
         contentAlignment = Alignment.Center
     ) {
+        // Minimize button (top-left, only when connected)
+        if (callState == "CONNECTED" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            IconButton(
+                onClick = {
+                    activity?.let { act ->
+                        val params = PictureInPictureParams.Builder()
+                            .setAspectRatio(Rational(9, 16))
+                            .build()
+                        act.enterPictureInPictureMode(params)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 48.dp, start = 16.dp)
+            ) {
+                Icon(
+                    Icons.Default.PictureInPicture,
+                    contentDescription = "Minimize",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
