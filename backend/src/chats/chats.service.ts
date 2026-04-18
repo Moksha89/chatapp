@@ -19,11 +19,27 @@ export class ChatsService {
       orderBy: { chat: { updatedAt: 'desc' } },
     });
 
+    // BUG 3 FIX: Compute real unread counts per chat
+    const chatIds = memberships.map((m) => m.chatId);
+    const unreadCounts = await Promise.all(
+      chatIds.map(async (chatId) => {
+        const count = await this.prisma.message.count({
+          where: {
+            chatId,
+            senderId: { not: userId },
+            status: { not: 'READ' },
+          },
+        });
+        return { chatId, count };
+      }),
+    );
+    const unreadMap = new Map(unreadCounts.map((u) => [u.chatId, u.count]));
+
     return memberships.map((m) => {
       const chat = m.chat;
       const otherMembers = chat.members.filter((mem) => mem.userId !== userId);
       const lastMessage = chat.messages[0] || null;
-      const unreadCount = 0; // Will be computed via message status
+      const unreadCount = unreadMap.get(chat.id) || 0;
 
       return {
         id: chat.id,

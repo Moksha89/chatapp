@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ChatGateway } from './chat.gateway';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CallsModule } from '../calls/calls.module';
 
 @Module({
   imports: [
@@ -9,6 +10,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       secret: process.env.JWT_SECRET || 'default-secret-change-me',
     }),
     NotificationsModule,
+    CallsModule,
   ],
   providers: [ChatGateway],
   exports: [ChatGateway],

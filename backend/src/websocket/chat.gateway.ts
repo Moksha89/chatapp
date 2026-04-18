@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma-service/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CallsService } from '../calls/calls.service';
 
 @WebSocketGateway({
   namespace: '/chat',
@@ -21,11 +22,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
+  // BUG 1 FIX: Track call timeouts so we can cancel them when calls are answered
+  private callTimeouts = new Map<string, NodeJS.Timeout>();
+
   constructor(
     private jwt: JwtService,
     private prisma: PrismaService,
     private redis: RedisService,
     private notifications: NotificationsService,
+    private callsService: CallsService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -42,14 +47,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (client as any).userId = userId;
       client.join(`user:${userId}`);
 
-      await this.redis.setOnline(userId, client.id);
+      await this.redis.addSocket(userId, client.id);
       await this.prisma.user.update({
         where: { id: userId },
         data: { isOnline: true, lastSeen: new Date() },
       });
 
-      // Notify others this user is online
-      client.broadcast.emit('user:online', { userId });
+      // BUG 5 FIX: Only notify users who share a chat with this user (not all connected users)
+      const userChats = await this.prisma.chatMember.findMany({
+        where: { userId },
+        select: { chatId: true },
+      });
+      const chatIds = userChats.map((c) => c.chatId);
+      if (chatIds.length > 0) {
+        const chatMembers = await this.prisma.chatMember.findMany({
+          where: { chatId: { in: chatIds }, userId: { not: userId } },
+          select: { userId: true },
+        });
+        const uniqueUserIds = [...new Set(chatMembers.map((m) => m.userId))];
+        for (const uid of uniqueUserIds) {
+          this.server.to(`user:${uid}`).emit('user:online', { userId });
+        }
+      }
       console.log(`User ${userId} connected (socket: ${client.id})`);
     } catch (err) {
       console.error('Socket auth failed:', (err as Error).message);
@@ -61,14 +80,34 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = (client as any).userId;
     if (!userId) return;
 
-    await this.redis.setOffline(userId);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { isOnline: false, lastSeen: new Date() },
-    }).catch(() => {});
+    // BUG 4 FIX: Only mark offline if this was the user's last socket
+    await this.redis.removeSocket(userId, client.id);
+    const remainingSockets = await this.redis.getSocketCount(userId);
 
-    client.broadcast.emit('user:offline', { userId, lastSeen: new Date() });
-    console.log(`User ${userId} disconnected`);
+    if (remainingSockets === 0) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { isOnline: false, lastSeen: new Date() },
+      }).catch(() => {});
+
+      // BUG 5 FIX: Only notify users who share a chat
+      const userChats = await this.prisma.chatMember.findMany({
+        where: { userId },
+        select: { chatId: true },
+      });
+      const chatIds = userChats.map((c) => c.chatId);
+      if (chatIds.length > 0) {
+        const chatMembers = await this.prisma.chatMember.findMany({
+          where: { chatId: { in: chatIds }, userId: { not: userId } },
+          select: { userId: true },
+        });
+        const uniqueUserIds = [...new Set(chatMembers.map((m) => m.userId))];
+        for (const uid of uniqueUserIds) {
+          this.server.to(`user:${uid}`).emit('user:offline', { userId, lastSeen: new Date() });
+        }
+      }
+    }
+    console.log(`User ${userId} disconnected (remaining sockets: ${remainingSockets})`);
   }
 
   @SubscribeMessage('message:send')
@@ -218,7 +257,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleHeartbeat(@ConnectedSocket() client: Socket) {
     const userId = (client as any).userId;
     if (!userId) return;
-    await this.redis.setOnline(userId, client.id);
+    await this.redis.addSocket(userId, client.id);
   }
 
   // Call signaling via Socket.IO
@@ -238,6 +277,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Generate a shared LiveKit room name for both participants
     const livekitRoom = `call-${data.chatId}-${Date.now()}`;
 
+    // BUG 2 FIX: Create call record in database
+    let callRecord: any;
+    try {
+      callRecord = await this.callsService.initiateCall(userId, data.chatId, data.type);
+    } catch (err) {
+      console.error('Failed to create call record:', (err as Error).message);
+    }
+
     // Send FCM push for incoming call (in case target is offline/backgrounded)
     const callerName = caller?.displayName || 'Someone';
     await this.notifications.sendCallNotification(
@@ -255,6 +302,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       chatId: data.chatId,
       type: data.type,
       livekitRoom,
+      callId: callRecord?.id,
     });
 
     // Send room name back to caller so they know which room to join
@@ -262,51 +310,134 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       chatId: data.chatId,
       targetUserId: data.targetUserId,
       livekitRoom,
+      callId: callRecord?.id,
     });
 
-    // Auto-timeout: mark call as missed after 45s
-    setTimeout(async () => {
+    // BUG 1 FIX: Auto-timeout with cancellation support
+    const timeoutKey = callRecord?.id || `${data.chatId}-${userId}`;
+    const timeoutId = setTimeout(async () => {
+      this.callTimeouts.delete(timeoutKey);
       this.server.to(`user:${data.targetUserId}`).emit('call:timeout', {
         callerId: userId,
         chatId: data.chatId,
+        callId: callRecord?.id,
       });
+      // Also notify caller
+      client.emit('call:timeout', {
+        chatId: data.chatId,
+        targetUserId: data.targetUserId,
+        callId: callRecord?.id,
+      });
+      // Create missed call message in chat
+      if (callRecord) {
+        try {
+          await this.callsService.endCall(callRecord.id);
+          await this.prisma.message.create({
+            data: {
+              chatId: data.chatId,
+              senderId: userId,
+              type: 'TEXT',
+              text: `${data.type === 'VIDEO' ? 'Video' : 'Voice'} call - Missed`,
+              status: 'SENT',
+            },
+          });
+        } catch (e) {
+          console.error('Failed to end timed-out call:', (e as Error).message);
+        }
+      }
     }, 45000);
+    this.callTimeouts.set(timeoutKey, timeoutId);
   }
 
   @SubscribeMessage('call:answer')
   async handleCallAnswer(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { callerId: string; chatId: string; livekitRoom?: string },
+    @MessageBody() data: { callerId: string; chatId: string; livekitRoom?: string; callId?: string },
   ) {
     const userId = (client as any).userId;
+
+    // BUG 1 FIX: Cancel the timeout when call is answered
+    const timeoutKey = data.callId || `${data.chatId}-${data.callerId}`;
+    const existingTimeout = this.callTimeouts.get(timeoutKey);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      this.callTimeouts.delete(timeoutKey);
+    }
+
+    // BUG 2 FIX: Update call record to ACTIVE
+    if (data.callId) {
+      try {
+        await this.callsService.answerCall(data.callId, userId);
+      } catch (e) {
+        console.error('Failed to update call record:', (e as Error).message);
+      }
+    }
+
     this.server.to(`user:${data.callerId}`).emit('call:answered', {
       answererId: userId,
       chatId: data.chatId,
       livekitRoom: data.livekitRoom,
+      callId: data.callId,
     });
   }
 
   @SubscribeMessage('call:reject')
   async handleCallReject(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { callerId: string; chatId: string },
+    @MessageBody() data: { callerId: string; chatId: string; callId?: string },
   ) {
     const userId = (client as any).userId;
+
+    // Cancel timeout on rejection too
+    if (data.callId) {
+      const existingTimeout = this.callTimeouts.get(data.callId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        this.callTimeouts.delete(data.callId);
+      }
+      try {
+        await this.callsService.declineCall(data.callId, userId);
+      } catch (e) {
+        console.error('Failed to decline call record:', (e as Error).message);
+      }
+    }
+
     this.server.to(`user:${data.callerId}`).emit('call:rejected', {
       rejecterId: userId,
       chatId: data.chatId,
+      callId: data.callId,
     });
   }
 
   @SubscribeMessage('call:end')
   async handleCallEnd(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { targetUserId: string; chatId: string },
+    @MessageBody() data: { targetUserId: string; chatId: string; callId?: string },
   ) {
     const userId = (client as any).userId;
+
+    // BUG 1 FIX: Cancel any pending timeout for this call
+    if (data.callId) {
+      const existingTimeout = this.callTimeouts.get(data.callId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        this.callTimeouts.delete(data.callId);
+      }
+    }
+
+    // BUG 2 FIX: End call record in database
+    if (data.callId) {
+      try {
+        await this.callsService.endCall(data.callId);
+      } catch (e) {
+        console.error('Failed to end call record:', (e as Error).message);
+      }
+    }
+
     this.server.to(`user:${data.targetUserId}`).emit('call:ended', {
       enderId: userId,
       chatId: data.chatId,
+      callId: data.callId,
     });
   }
 

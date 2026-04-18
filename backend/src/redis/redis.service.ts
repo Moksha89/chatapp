@@ -17,17 +17,38 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   getClient(): Redis { return this.client; }
 
-  // Online presence
+  // Online presence — BUG 4 FIX: Use sets to track multiple sockets per user
+  async addSocket(userId: string, socketId: string): Promise<void> {
+    await this.client.sadd(`user_sockets:${userId}`, socketId);
+    await this.client.hset('online_users', userId, socketId); // Keep for backward compat
+  }
+
+  async removeSocket(userId: string, socketId: string): Promise<void> {
+    await this.client.srem(`user_sockets:${userId}`, socketId);
+    const remaining = await this.client.scard(`user_sockets:${userId}`);
+    if (remaining === 0) {
+      await this.client.hdel('online_users', userId);
+      await this.client.del(`user_sockets:${userId}`);
+    }
+  }
+
+  async getSocketCount(userId: string): Promise<number> {
+    return this.client.scard(`user_sockets:${userId}`);
+  }
+
+  // Legacy methods kept for backward compatibility
   async setOnline(userId: string, socketId: string): Promise<void> {
-    await this.client.hset('online_users', userId, socketId);
+    await this.addSocket(userId, socketId);
   }
 
   async setOffline(userId: string): Promise<void> {
     await this.client.hdel('online_users', userId);
+    await this.client.del(`user_sockets:${userId}`);
   }
 
   async isOnline(userId: string): Promise<boolean> {
-    return !!(await this.client.hget('online_users', userId));
+    const count = await this.client.scard(`user_sockets:${userId}`);
+    return count > 0;
   }
 
   async getSocketId(userId: string): Promise<string | null> {
