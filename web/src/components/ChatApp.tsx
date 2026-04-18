@@ -172,6 +172,12 @@ export default function ChatApp({ user, onLogout }: ChatAppProps) {
 
   const handleAnswerCall = () => {
     if (incomingCall) {
+      // Send answer with the shared LiveKit room name so caller knows to connect
+      socketService.emit('call:answer', {
+        callerId: incomingCall.callerId,
+        chatId: incomingCall.chatId,
+        livekitRoom: incomingCall.livekitRoom,
+      });
       setActiveCall({ ...incomingCall, isOutgoing: false });
       setIncomingCall(null);
     }

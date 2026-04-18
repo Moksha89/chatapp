@@ -53,10 +53,12 @@ class ChatViewModel @Inject constructor(
     val isOnline = _isOnline.asStateFlow()
 
     private var currentChatId = ""
+    private var otherUserId = ""
     private val seenMessageIds = mutableSetOf<String>()
 
-    fun loadMessages(chatId: String) {
+    fun loadMessages(chatId: String, otherUser: String = "") {
         currentChatId = chatId
+        otherUserId = otherUser
         viewModelScope.launch {
             _loading.value = true
             try {
@@ -79,17 +81,22 @@ class ChatViewModel @Inject constructor(
         SocketManager.on("message:new") { args ->
             if (args.isNotEmpty()) {
                 try {
-                    val data = args[0] as JSONObject
+                    val raw = args[0] as JSONObject
+                    // Backend wraps message in { message: {...} }
+                    val data = if (raw.has("message")) raw.getJSONObject("message") else raw
                     val msgChatId = data.optString("chatId")
                     if (msgChatId == chatId) {
                         val msgId = data.optString("id")
                         if (!seenMessageIds.contains(msgId)) {
                             seenMessageIds.add(msgId)
+                            // Backend uses "text" field; fall back to "content" for compat
+                            val msgText = data.optString("text", data.optString("content", ""))
                             val msg = Message(
                                 id = msgId,
                                 chatId = msgChatId,
                                 senderId = data.optString("senderId"),
-                                content = data.optString("content", ""),
+                                content = msgText,
+                                text = msgText,
                                 type = data.optString("type", "TEXT"),
                                 status = data.optString("status", "SENT"),
                                 createdAt = data.optString("createdAt", "")
@@ -127,12 +134,29 @@ class ChatViewModel @Inject constructor(
             }
         }
 
+        // Fix #4: Filter online/offline by the other user's ID
         SocketManager.on("user:online") { args ->
-            _isOnline.value = true
+            if (args.isNotEmpty()) {
+                try {
+                    val data = args[0] as JSONObject
+                    val onlineUserId = data.optString("userId")
+                    if (onlineUserId == otherUserId) {
+                        _isOnline.value = true
+                    }
+                } catch (_: Exception) {}
+            }
         }
 
         SocketManager.on("user:offline") { args ->
-            _isOnline.value = false
+            if (args.isNotEmpty()) {
+                try {
+                    val data = args[0] as JSONObject
+                    val offlineUserId = data.optString("userId")
+                    if (offlineUserId == otherUserId) {
+                        _isOnline.value = false
+                    }
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -156,10 +180,10 @@ class ChatViewModel @Inject constructor(
         seenMessageIds.add(tempId)
         _messages.value = (_messages.value + optimistic).sortedBy { it.createdAt }
 
-        // Send via socket
+        // Send via socket (backend expects "text" field, not "content")
         val payload = JSONObject().apply {
             put("chatId", chatId)
-            put("content", content)
+            put("text", content)
             put("type", "TEXT")
         }
         SocketManager.emit("message:send", payload) { response ->
@@ -211,7 +235,7 @@ fun ChatScreen(
     val listState = rememberLazyListState()
 
     LaunchedEffect(chatId) {
-        viewModel.loadMessages(chatId)
+        viewModel.loadMessages(chatId, otherUserId)
     }
 
     // Auto-scroll to bottom on new messages
@@ -399,7 +423,7 @@ fun MessageBubble(message: Message, isMine: Boolean) {
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 Text(
-                    message.content ?: "",
+                    message.text ?: message.content ?: "",
                     color = textColor,
                     fontSize = 15.sp
                 )

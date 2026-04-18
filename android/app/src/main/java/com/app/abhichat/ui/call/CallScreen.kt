@@ -1,5 +1,6 @@
 package com.app.abhichat.ui.call
 
+import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -12,12 +13,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.abhichat.BuildConfig
+import com.app.abhichat.data.model.LiveKitTokenRequest
+import com.app.abhichat.data.model.TokenResponse
 import com.app.abhichat.data.socket.SocketManager
+import io.livekit.android.LiveKit
+import io.livekit.android.events.RoomEvent
+import io.livekit.android.events.collect
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.json.JSONObject
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import com.app.abhichat.data.api.ApiService
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 
 @Composable
 fun CallScreen(
@@ -25,36 +39,114 @@ fun CallScreen(
     targetUserId: String,
     callerName: String,
     callType: String,
+    livekitRoom: String? = null,
+    isOutgoing: Boolean = true,
     onEnd: () -> Unit
 ) {
-    var callState by remember { mutableStateOf("CALLING") } // CALLING, CONNECTED, ENDED
+    val context = LocalContext.current
+    val application = context.applicationContext as Application
+    val prefs = remember { context.getSharedPreferences("abhi_chat_prefs", 0) }
+    val scope = rememberCoroutineScope()
+
+    var callState by remember { mutableStateOf(if (isOutgoing) "CALLING" else "CONNECTING") }
     var isMuted by remember { mutableStateOf(false) }
     var isSpeaker by remember { mutableStateOf(false) }
+    var isVideoEnabled by remember { mutableStateOf(callType == "VIDEO") }
     var duration by remember { mutableStateOf(0) }
-    var callId by remember { mutableStateOf("") }
+    var roomName by remember { mutableStateOf(livekitRoom ?: "") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Initiate call via socket
-    LaunchedEffect(Unit) {
-        val payload = JSONObject().apply {
-            put("targetUserId", targetUserId)
-            put("chatId", chatId)
-            put("type", callType)
-        }
-        SocketManager.emit("call:initiate", payload) { response ->
-            if (response.isNotEmpty()) {
-                try {
-                    val data = response[0] as JSONObject
-                    callId = data.optString("callId", "")
-                } catch (_: Exception) {}
+    // LiveKit room instance
+    val room = remember { LiveKit.create(application) }
+
+    // Build API client for token request
+    val apiService = remember {
+        val token = prefs.getString("access_token", "") ?: ""
+        val client = OkHttpClient.Builder()
+            .addInterceptor(Interceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .addHeader("Authorization", "Bearer $token")
+                    .build()
+                chain.proceed(request)
+            })
+            .build()
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.API_URL + "/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
+    }
+
+    // Connect to LiveKit when we have a room name
+    fun connectToLiveKit(finalRoomName: String) {
+        scope.launch {
+            try {
+                callState = "CONNECTING"
+                val tokenResponse: TokenResponse = apiService.getLiveKitToken(
+                    LiveKitTokenRequest(finalRoomName)
+                )
+                val livekitUrl = BuildConfig.API_URL
+                    .replace("https://", "wss://")
+                    .replace("http://", "ws://") + "/livekit/"
+
+                room.connect(livekitUrl, tokenResponse.token)
+
+                val localParticipant = room.localParticipant
+                localParticipant.setMicrophoneEnabled(true)
+                if (callType == "VIDEO") {
+                    localParticipant.setCameraEnabled(true)
+                }
+
+                callState = "CONNECTED"
+            } catch (e: Exception) {
+                errorMessage = "Connection failed: ${e.message}"
+                callState = "ENDED"
             }
         }
     }
 
-    // Listen for call events
+    // For outgoing calls: initiate via socket, wait for room-ready and answered events
     LaunchedEffect(Unit) {
-        SocketManager.on("call:answered") { _ ->
-            callState = "CONNECTED"
+        if (isOutgoing) {
+            SocketManager.on("call:room-ready") { args ->
+                if (args.isNotEmpty()) {
+                    try {
+                        val data = args[0] as JSONObject
+                        roomName = data.optString("livekitRoom", "")
+                    } catch (_: Exception) {}
+                }
+            }
+
+            SocketManager.on("call:answered") { args ->
+                if (args.isNotEmpty()) {
+                    try {
+                        val data = args[0] as JSONObject
+                        val answeredRoom = data.optString("livekitRoom", roomName)
+                        if (answeredRoom.isNotEmpty()) {
+                            roomName = answeredRoom
+                            connectToLiveKit(answeredRoom)
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
+
+            val payload = JSONObject().apply {
+                put("targetUserId", targetUserId)
+                put("chatId", chatId)
+                put("type", callType)
+            }
+            SocketManager.emit("call:initiate", payload)
+        } else {
+            // Incoming call: connect immediately with the provided room name
+            if (!livekitRoom.isNullOrEmpty()) {
+                connectToLiveKit(livekitRoom)
+            }
         }
+    }
+
+    // Listen for call end/reject events
+    LaunchedEffect(Unit) {
         SocketManager.on("call:ended") { _ ->
             callState = "ENDED"
         }
@@ -63,13 +155,37 @@ fun CallScreen(
         }
     }
 
-    // Call timeout (45 seconds)
+    // Collect LiveKit room events
+    LaunchedEffect(room) {
+        room.events.collect { event ->
+            when (event) {
+                is RoomEvent.ParticipantConnected -> {
+                    callState = "CONNECTED"
+                }
+                is RoomEvent.ParticipantDisconnected -> {
+                    if (room.remoteParticipants.isEmpty()) {
+                        callState = "ENDED"
+                    }
+                }
+                is RoomEvent.Disconnected -> {
+                    callState = "ENDED"
+                }
+                else -> {}
+            }
+        }
+    }
+
+    // Call timeout (45 seconds for outgoing)
     LaunchedEffect(callState) {
         if (callState == "CALLING") {
             delay(45000)
             if (callState == "CALLING") {
                 callState = "ENDED"
-                endCall(callId)
+                val payload = JSONObject().apply {
+                    put("targetUserId", targetUserId)
+                    put("chatId", chatId)
+                }
+                SocketManager.emit("call:end", payload)
             }
         }
     }
@@ -95,6 +211,8 @@ fun CallScreen(
     // Cleanup
     DisposableEffect(Unit) {
         onDispose {
+            room.disconnect()
+            SocketManager.off("call:room-ready")
             SocketManager.off("call:answered")
             SocketManager.off("call:ended")
             SocketManager.off("call:rejected")
@@ -137,7 +255,6 @@ fun CallScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Caller Name
             Text(
                 callerName,
                 color = Color.White,
@@ -147,20 +264,19 @@ fun CallScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Call Status
             Text(
                 when (callState) {
                     "CALLING" -> if (callType == "VIDEO") "Video Calling..." else "Calling..."
+                    "CONNECTING" -> "Connecting..."
                     "CONNECTED" -> formatDuration(duration)
-                    "ENDED" -> "Call Ended"
+                    "ENDED" -> errorMessage ?: "Call Ended"
                     else -> ""
                 },
                 color = Color.White.copy(alpha = 0.7f),
                 fontSize = 16.sp
             )
 
-            // Call type icon
-            if (callType == "VIDEO") {
+            if (callType == "VIDEO" && callState != "CONNECTED") {
                 Spacer(modifier = Modifier.height(8.dp))
                 Icon(
                     Icons.Default.Videocam,
@@ -175,18 +291,35 @@ fun CallScreen(
             // Call Controls
             if (callState != "ENDED") {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Mute
                     CallControlButton(
                         icon = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
                         label = if (isMuted) "Unmute" else "Mute",
                         isActive = isMuted,
-                        onClick = { isMuted = !isMuted }
+                        onClick = {
+                            isMuted = !isMuted
+                            scope.launch {
+                                room.localParticipant.setMicrophoneEnabled(!isMuted)
+                            }
+                        }
                     )
 
-                    // Speaker
+                    if (callType == "VIDEO") {
+                        CallControlButton(
+                            icon = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                            label = if (isVideoEnabled) "Camera" else "Camera Off",
+                            isActive = !isVideoEnabled,
+                            onClick = {
+                                isVideoEnabled = !isVideoEnabled
+                                scope.launch {
+                                    room.localParticipant.setCameraEnabled(isVideoEnabled)
+                                }
+                            }
+                        )
+                    }
+
                     CallControlButton(
                         icon = if (isSpeaker) Icons.Default.VolumeUp else Icons.Default.VolumeDown,
                         label = if (isSpeaker) "Speaker" else "Earpiece",
@@ -194,11 +327,15 @@ fun CallScreen(
                         onClick = { isSpeaker = !isSpeaker }
                     )
 
-                    // End Call
                     FloatingActionButton(
                         onClick = {
                             callState = "ENDED"
-                            endCall(callId)
+                            room.disconnect()
+                            val payload = JSONObject().apply {
+                                put("targetUserId", targetUserId)
+                                put("chatId", chatId)
+                            }
+                            SocketManager.emit("call:end", payload)
                         },
                         containerColor = Color.Red,
                         modifier = Modifier.size(64.dp),
@@ -217,7 +354,7 @@ fun CallScreen(
 
         // E2E Encryption badge
         Text(
-            "🔒 End-to-end encrypted",
+            "\uD83D\uDD12 End-to-end encrypted",
             color = Color.White.copy(alpha = 0.4f),
             fontSize = 12.sp,
             modifier = Modifier
@@ -250,13 +387,6 @@ fun CallControlButton(
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-    }
-}
-
-private fun endCall(callId: String) {
-    if (callId.isNotEmpty()) {
-        val payload = JSONObject().apply { put("callId", callId) }
-        SocketManager.emit("call:end", payload)
     }
 }
 

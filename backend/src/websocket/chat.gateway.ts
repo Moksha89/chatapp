@@ -223,17 +223,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       select: { displayName: true, profilePhoto: true },
     });
 
+    // Generate a shared LiveKit room name for both participants
+    const livekitRoom = `call-${data.chatId}-${Date.now()}`;
+
+    // Send incoming call to target with room name
     this.server.to(`user:${data.targetUserId}`).emit('call:incoming', {
       callerId: userId,
       callerName: caller?.displayName,
       callerPhoto: caller?.profilePhoto,
       chatId: data.chatId,
       type: data.type,
+      livekitRoom,
+    });
+
+    // Send room name back to caller so they know which room to join
+    client.emit('call:room-ready', {
+      chatId: data.chatId,
+      targetUserId: data.targetUserId,
+      livekitRoom,
     });
 
     // Auto-timeout: mark call as missed after 45s
     setTimeout(async () => {
-      // Check if call is still ringing for this target
       this.server.to(`user:${data.targetUserId}`).emit('call:timeout', {
         callerId: userId,
         chatId: data.chatId,
@@ -244,13 +255,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('call:answer')
   async handleCallAnswer(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { callerId: string; chatId: string; sdp?: any },
+    @MessageBody() data: { callerId: string; chatId: string; livekitRoom?: string },
   ) {
     const userId = (client as any).userId;
     this.server.to(`user:${data.callerId}`).emit('call:answered', {
       answererId: userId,
       chatId: data.chatId,
-      sdp: data.sdp,
+      livekitRoom: data.livekitRoom,
     });
   }
 
