@@ -36,6 +36,7 @@ export default function CallDialog({ call, currentUser, onEnd }: CallDialogProps
   const callStateRef = useRef(callState);
   callStateRef.current = callState;
   const livekitRoomRef = useRef<string | null>(null);
+  const callIdRef = useRef<string | null>((call as any).callId || null);
 
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://abhi.so/livekit/';
 
@@ -109,9 +110,10 @@ export default function CallDialog({ call, currentUser, onEnd }: CallDialogProps
       }
     }, 45000);
 
-    // For outgoing calls: backend sends us the shared room name
-    const handleRoomReady = (data: { livekitRoom: string }) => {
+    // For outgoing calls: backend sends us the shared room name and callId
+    const handleRoomReady = (data: { livekitRoom: string; callId?: string }) => {
       livekitRoomRef.current = data.livekitRoom;
+      if (data.callId) callIdRef.current = data.callId;
     };
 
     // When callee answers, both sides connect to the same LiveKit room
@@ -179,7 +181,11 @@ export default function CallDialog({ call, currentUser, onEnd }: CallDialogProps
     roomRef.current?.disconnect();
     const target = call.targetUserId || call.callerId;
     if (target) {
-      socketService.emit('call:end', { targetUserId: target, chatId: call.chatId });
+      socketService.emit('call:end', {
+        targetUserId: target,
+        chatId: call.chatId,
+        callId: callIdRef.current,
+      });
     }
     onEnd();
   }, [call, onEnd]);

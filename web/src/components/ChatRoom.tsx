@@ -76,6 +76,8 @@ export default function ChatRoom({ chatId, chat, currentUser, onBack, onStartCal
       // Mark as read if from other user
       if (msg.senderId !== currentUser?.id) {
         api.markRead(chatId).catch(() => {});
+        // Also notify sender via socket so their checkmarks update to READ
+        socketService.emit('message:read', { chatId, messageIds: [msg.id] });
       }
     };
 

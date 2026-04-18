@@ -110,7 +110,19 @@ export default function ChatApp({ user, onLogout }: ChatAppProps) {
     setActiveChat(chat);
     // Clear unread
     setChats((prev) => prev.map((c) => c.id === chat.id ? { ...c, unreadCount: 0 } : c));
-    api.markRead(chat.id).catch(() => {});
+    api.markRead(chat.id).then(() => {
+      // Notify senders via socket so their checkmarks update to READ
+      // Get unread message IDs from chat to notify
+      api.getMessages(chat.id).then((msgs: any[]) => {
+        const raw = Array.isArray(msgs) ? msgs : (msgs as any)?.messages || [];
+        const unreadIds = raw
+          .filter((m: any) => m.senderId !== currentUser?.id && m.status !== 'READ')
+          .map((m: any) => m.id);
+        if (unreadIds.length > 0) {
+          socketService.emit('message:read', { chatId: chat.id, messageIds: unreadIds });
+        }
+      }).catch(() => {});
+    }).catch(() => {});
   };
 
   const handleNewChat = async (otherUser: any) => {
@@ -172,11 +184,12 @@ export default function ChatApp({ user, onLogout }: ChatAppProps) {
 
   const handleAnswerCall = () => {
     if (incomingCall) {
-      // Send answer with the shared LiveKit room name so caller knows to connect
+      // Send answer with the shared LiveKit room name and callId so backend can update record
       socketService.emit('call:answer', {
         callerId: incomingCall.callerId,
         chatId: incomingCall.chatId,
         livekitRoom: incomingCall.livekitRoom,
+        callId: incomingCall.callId,
       });
       setActiveCall({ ...incomingCall, isOutgoing: false });
       setIncomingCall(null);
@@ -185,17 +198,25 @@ export default function ChatApp({ user, onLogout }: ChatAppProps) {
 
   const handleDeclineCall = () => {
     if (incomingCall) {
-      socketService.emit('call:reject', { callerId: incomingCall.callerId, chatId: incomingCall.chatId });
+      socketService.emit('call:reject', {
+        callerId: incomingCall.callerId,
+        chatId: incomingCall.chatId,
+        callId: incomingCall.callId,
+      });
       setIncomingCall(null);
     }
   };
 
-  const handleEndCall = () => {
+  const handleEndCall = useCallback(() => {
     if (activeCall) {
-      socketService.emit('call:end', { targetUserId: activeCall.targetUserId || activeCall.callerId, chatId: activeCall.chatId });
+      socketService.emit('call:end', {
+        targetUserId: activeCall.targetUserId || activeCall.callerId,
+        chatId: activeCall.chatId,
+        callId: activeCall.callId,
+      });
     }
     setActiveCall(null);
-  };
+  }, [activeCall]);
 
   const filteredChats = chats.filter((c) =>
     !searchQuery || c.title?.toLowerCase().includes(searchQuery.toLowerCase())
