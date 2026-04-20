@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1000002923381",
+    "project_id": "abhi-chart",
+    "storage_bucket": "abhi-chart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1000002923381:android:1d8229d288fe5a8b25c13c",
+        "android_client_info": {
+          "package_name": "com.app.abhichat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCX71QLQn7SgW9mNlbVP8Z6tm-KMWU1hRE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
