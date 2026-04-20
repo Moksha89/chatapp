@@ -78,6 +78,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun setupSocketListeners(chatId: String) {
+        // Listen for incoming messages from other users
         SocketManager.on("message:new") { args ->
             if (args.isNotEmpty()) {
                 try {
@@ -106,6 +107,54 @@ class ChatViewModel @Inject constructor(
                             viewModelScope.launch {
                                 try { apiService.markRead(chatId) } catch (_: Exception) {}
                             }
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Listen for message:sent confirmation from backend (updates optimistic message)
+        SocketManager.on("message:sent") { args ->
+            if (args.isNotEmpty()) {
+                try {
+                    val raw = args[0] as JSONObject
+                    val tempId = raw.optString("tempId", "")
+                    val msgObj = if (raw.has("message")) raw.getJSONObject("message") else null
+                    if (tempId.isNotEmpty() && msgObj != null) {
+                        val realId = msgObj.optString("id", tempId)
+                        seenMessageIds.add(realId)
+                        _messages.value = _messages.value.map {
+                            if (it.id == tempId) it.copy(id = realId, status = "SENT") else it
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Listen for message:delivered status update
+        SocketManager.on("message:delivered") { args ->
+            if (args.isNotEmpty()) {
+                try {
+                    val raw = args[0] as JSONObject
+                    val messageId = raw.optString("messageId", "")
+                    if (messageId.isNotEmpty()) {
+                        _messages.value = _messages.value.map {
+                            if (it.id == messageId) it.copy(status = "DELIVERED") else it
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Listen for message:read status update
+        SocketManager.on("message:read") { args ->
+            if (args.isNotEmpty()) {
+                try {
+                    val raw = args[0] as JSONObject
+                    val messageId = raw.optString("messageId", "")
+                    if (messageId.isNotEmpty()) {
+                        _messages.value = _messages.value.map {
+                            if (it.id == messageId) it.copy(status = "READ") else it
                         }
                     }
                 } catch (_: Exception) {}
@@ -180,22 +229,29 @@ class ChatViewModel @Inject constructor(
         seenMessageIds.add(tempId)
         _messages.value = (_messages.value + optimistic).sortedBy { it.createdAt }
 
-        // Send via socket (backend expects "text" field, not "content")
+        // Send via socket — include tempId so backend can echo it back
         val payload = JSONObject().apply {
             put("chatId", chatId)
             put("text", content)
             put("type", "TEXT")
+            put("tempId", tempId)
         }
         SocketManager.emit("message:send", payload) { response ->
+            // NestJS @SubscribeMessage return value comes as ack callback args
             if (response.isNotEmpty()) {
                 try {
                     val data = response[0] as JSONObject
                     val realId = data.optString("id", tempId)
-                    seenMessageIds.add(realId)
-                    _messages.value = _messages.value.map {
-                        if (it.id == tempId) it.copy(id = realId, status = "SENT") else it
+                    val error = data.optString("error", "")
+                    if (error.isEmpty()) {
+                        seenMessageIds.add(realId)
+                        _messages.value = _messages.value.map {
+                            if (it.id == tempId) it.copy(id = realId, status = "SENT") else it
+                        }
                     }
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                    // Ack failed — rely on message:sent event listener as fallback
+                }
             }
         }
     }
@@ -209,6 +265,9 @@ class ChatViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         SocketManager.off("message:new")
+        SocketManager.off("message:sent")
+        SocketManager.off("message:delivered")
+        SocketManager.off("message:read")
         SocketManager.off("typing:start")
         SocketManager.off("typing:stop")
         SocketManager.off("user:online")
