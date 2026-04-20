@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import LandingPage from '@/components/LandingPage';
 import LoginPage from '@/components/LoginPage';
 import ChatApp from '@/components/ChatApp';
 import api from '@/lib/api';
 import socketService from '@/lib/socket';
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [view, setView] = useState<'landing' | 'login' | 'chat'>('landing');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,7 +19,7 @@ export default function Home() {
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
-        setIsLoggedIn(true);
+        setView('chat');
         socketService.connect(token);
       }
     }
@@ -30,7 +31,7 @@ export default function Home() {
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
-    setIsLoggedIn(true);
+    setView('chat');
     socketService.connect(token);
   };
 
@@ -38,7 +39,7 @@ export default function Home() {
     api.clearToken();
     socketService.disconnect();
     setUser(null);
-    setIsLoggedIn(false);
+    setView('landing');
   };
 
   if (loading) {
@@ -52,7 +53,11 @@ export default function Home() {
     );
   }
 
-  if (!isLoggedIn) {
+  if (view === 'landing') {
+    return <LandingPage onOpenWebApp={() => setView('login')} />;
+  }
+
+  if (view === 'login') {
     return <LoginPage onLogin={handleLogin} />;
   }
 

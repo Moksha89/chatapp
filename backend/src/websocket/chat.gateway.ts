@@ -118,6 +118,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = (client as any).userId;
     if (!userId) return;
 
+    console.log(`[MSG] message:send from ${userId} in chat ${data.chatId}, tempId=${data.tempId}`);
+
     try {
       const message = await this.prisma.message.create({
         data: {
@@ -133,22 +135,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         },
       });
 
+      console.log(`[MSG] Created message ${message.id} in DB`);
+
       // Update chat's updatedAt
       await this.prisma.chat.update({
         where: { id: data.chatId },
         data: { updatedAt: new Date() },
       });
 
-      // Send confirmation to sender
-      client.emit('message:sent', { tempId: data.tempId, message });
+      // Send confirmation to sender via BOTH emit and ack
+      const sentPayload = { tempId: data.tempId, message };
+      client.emit('message:sent', sentPayload);
 
       // Send to all other members of the chat
       const members = await this.prisma.chatMember.findMany({
         where: { chatId: data.chatId, userId: { not: userId } },
       });
 
+      console.log(`[MSG] Delivering to ${members.length} other member(s)`);
+
       for (const member of members) {
         this.server.to(`user:${member.userId}`).emit('message:new', { message });
+        console.log(`[MSG] Emitted message:new to user:${member.userId}`);
 
         // Mark as delivered if user is online
         const isOnline = await this.redis.isOnline(member.userId);
@@ -158,10 +166,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             data: { status: 'DELIVERED' },
           });
           client.emit('message:delivered', { messageId: message.id });
+          console.log(`[MSG] Marked DELIVERED (${member.userId} is online)`);
         } else {
           // User is offline — send FCM push notification
           const sender = message.sender;
           const senderName = sender?.displayName || 'Someone';
+          console.log(`[MSG] ${member.userId} is offline, sending FCM push`);
           await this.notifications.sendMessageNotification(
             member.userId,
             senderName,
@@ -170,9 +180,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           );
         }
       }
+
+      // Return via ack callback so Android client gets confirmation
+      return { id: message.id, tempId: data.tempId, status: 'SENT' };
     } catch (err) {
       console.error('Message send error:', (err as Error).message);
       client.emit('message:error', { tempId: data.tempId, error: 'Failed to send message' });
+      return { error: 'Failed to send message', tempId: data.tempId };
     }
   }
 
